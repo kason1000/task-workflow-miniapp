@@ -4,7 +4,7 @@ import { api } from './services/api';
 import { Task } from './types';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
-import { CreateTaskForm } from './components/CreateTaskForm';  // Add this import
+import { CreateTaskForm } from './components/CreateTaskForm';
 
 type View = 'list' | 'detail' | 'create';
 
@@ -22,7 +22,7 @@ function App() {
     
     try {
       // Initialize Telegram WebApp
-      const webApp = initTelegramWebApp();
+      initTelegramWebApp();  // Removed unused variable
       const tgUser = getTelegramUser();
       
       console.log('Telegram user:', tgUser);
