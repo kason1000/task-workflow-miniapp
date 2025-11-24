@@ -22,11 +22,15 @@ function App() {
     
     try {
       // Initialize Telegram WebApp
-      initTelegramWebApp();  // Removed unused variable
+      initTelegramWebApp();
       const tgUser = getTelegramUser();
       
       console.log('Telegram user:', tgUser);
       setUser(tgUser);
+
+      // Check for taskId in URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const taskIdParam = urlParams.get('taskId');
 
       // Fetch user role
       const fetchRole = async () => {
@@ -35,6 +39,19 @@ function App() {
           const roleData = await api.getMyRole();
           console.log('Role data:', roleData);
           setRole(roleData.role);
+
+          // If taskId in URL, load that task directly
+          if (taskIdParam) {
+            console.log('Loading task from URL:', taskIdParam);
+            try {
+              const task = await api.getTask(taskIdParam);
+              setSelectedTask(task);
+              setView('detail');
+            } catch (err) {
+              console.error('Failed to load task from URL:', err);
+              // Continue to list view if task load fails
+            }
+          }
         } catch (error: any) {
           console.error('Failed to fetch role:', error);
           setError(error.message);
@@ -57,6 +74,9 @@ function App() {
       const freshTask = await api.getTask(task.id);
       setSelectedTask(freshTask);
       setView('detail');
+      
+      // Update URL without reload
+      window.history.pushState({}, '', `?taskId=${task.id}`);
     } catch (error: any) {
       console.error('Failed to fetch task:', error);
       alert('Failed to load task: ' + error.message);
@@ -67,6 +87,9 @@ function App() {
     setSelectedTask(null);
     setView('list');
     setRefreshKey(prev => prev + 1);
+    
+    // Clear URL params
+    window.history.pushState({}, '', window.location.pathname);
   };
 
   const handleTaskUpdated = () => {
