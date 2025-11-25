@@ -21,7 +21,12 @@ const statusColors: Record<TaskStatus, string> = {
 
 export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
   const [loading, setLoading] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<{ type: 'photo' | 'video', fileId: string, setIndex: number } | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<{
+    type: 'photo' | 'video';
+    fileId: string;
+    setIndex: number;
+    photoIndex?: number;
+  } | null>(null);
 
   const canTransition = (to: TaskStatus): boolean => {
     const transitions: Record<string, string[]> = {
@@ -40,8 +45,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleTransition = async (to: TaskStatus) => {
     const confirmed = await showConfirm(`Transition task to ${to}?`);
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.transitionTask(task.id, to);
       hapticFeedback.success();
@@ -58,8 +65,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleArchive = async () => {
     const confirmed = await showConfirm('Archive this task?');
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.archiveTask(task.id);
       hapticFeedback.success();
@@ -76,8 +85,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleRestore = async () => {
     const confirmed = await showConfirm('Restore this task?');
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.restoreTask(task.id);
       hapticFeedback.success();
@@ -94,8 +105,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleDelete = async () => {
     const confirmed = await showConfirm('⚠️ Permanently delete this task? This cannot be undone!');
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.heavy();
+
     try {
       await api.deleteTask(task.id);
       hapticFeedback.success();
@@ -109,12 +122,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  // Get Telegram file URL (you'll need to implement this based on your bot token)
-  const getTelegramFileUrl = (fileId: string) => {
-    // This is a placeholder - you'll need to get the actual file path from Telegram API
-    // For now, return a placeholder or implement a backend endpoint to get the file URL
-    return `https://api.telegram.org/file/bot<YOUR_BOT_TOKEN>/${fileId}`;
-  };
+  // Calculate total media count
+  const totalPhotos = task.sets.reduce((sum, set) => sum + (set.photos?.length || 0), 0);
+  const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
+  const totalMedia = totalPhotos + totalVideos;
 
   return (
     <div>
@@ -147,114 +158,159 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       </div>
 
       {/* Media Gallery */}
-      <div className="card">
-        <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>📁 Media Gallery</h3>
-        {task.sets.map((set, setIndex) => {
-          const hasMedia = (set.photos && set.photos.length > 0) || set.video;
+      {totalMedia > 0 && (
+        <div className="card">
+          <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>
+            📁 Media Gallery ({totalMedia} {totalMedia === 1 ? 'file' : 'files'})
+          </h3>
           
-          if (!hasMedia) return null;
+          {task.sets.map((set, setIndex) => {
+            const hasPhotos = set.photos && set.photos.length > 0;
+            const hasVideo = !!set.video;
+            
+            if (!hasPhotos && !hasVideo) return null;
 
-          return (
-            <div
-              key={setIndex}
-              style={{
-                marginBottom: '16px',
-                padding: '12px',
-                background: 'var(--tg-theme-bg-color)',
-                borderRadius: '8px',
-              }}
-            >
-              <h4 style={{ marginBottom: '12px', fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
-                📦 Set {setIndex + 1}
-              </h4>
+            return (
+              <div
+                key={setIndex}
+                style={{
+                  marginBottom: '16px',
+                  padding: '12px',
+                  background: 'var(--tg-theme-bg-color)',
+                  borderRadius: '8px',
+                }}
+              >
+                <h4 style={{ 
+                  marginBottom: '12px', 
+                  fontSize: '14px', 
+                  color: 'var(--tg-theme-text-color)',
+                  fontWeight: 600
+                }}>
+                  📦 Set {setIndex + 1}
+                </h4>
 
-              {/* Photos */}
-              {set.photos && set.photos.length > 0 && (
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ 
-                    fontSize: '13px', 
-                    color: 'var(--tg-theme-hint-color)', 
-                    marginBottom: '8px' 
-                  }}>
-                    📸 Photos ({set.photos.length}/3)
+                {/* Photos Grid */}
+                {hasPhotos && (
+                  <div style={{ marginBottom: hasVideo ? '12px' : '0' }}>
+                    <div style={{ 
+                      fontSize: '13px', 
+                      color: 'var(--tg-theme-hint-color)', 
+                      marginBottom: '8px' 
+                    }}>
+                      📸 Photos ({set.photos.length}/3)
+                    </div>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(3, 1fr)', 
+                      gap: '8px' 
+                    }}>
+                      {set.photos.map((photo, photoIndex) => (
+                        <div
+                          key={photoIndex}
+                          onClick={() => {
+                            hapticFeedback.light();
+                            setSelectedMedia({ 
+                              type: 'photo', 
+                              fileId: photo.file_id, 
+                              setIndex,
+                              photoIndex 
+                            });
+                          }}
+                          style={{
+                            aspectRatio: '1',
+                            background: 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '32px',
+                            border: '2px solid var(--tg-theme-button-color)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            transition: 'transform 0.2s',
+                          }}
+                          onMouseDown={(e) => {
+                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(0.95)';
+                          }}
+                          onMouseUp={(e) => {
+                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
+                          }}
+                        >
+                          📷
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '4px',
+                            right: '4px',
+                            background: 'rgba(0,0,0,0.6)',
+                            color: 'white',
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 600
+                          }}>
+                            {photoIndex + 1}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(3, 1fr)', 
-                    gap: '8px' 
-                  }}>
-                    {set.photos.map((photo, photoIndex) => (
-                      <div
-                        key={photoIndex}
-                        onClick={() => {
-                          hapticFeedback.light();
-                          setSelectedMedia({ type: 'photo', fileId: photo.file_id, setIndex });
-                        }}
-                        style={{
-                          aspectRatio: '1',
-                          background: 'var(--tg-theme-secondary-bg-color)',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '24px',
-                          border: '2px solid var(--tg-theme-button-color)',
-                        }}
-                      >
-                        📷
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Video */}
-              {set.video && (
-                <div>
-                  <div style={{ 
-                    fontSize: '13px', 
-                    color: 'var(--tg-theme-hint-color)', 
-                    marginBottom: '8px' 
-                  }}>
-                    🎥 Video
+                {/* Video */}
+                {hasVideo && (
+                  <div>
+                    <div style={{ 
+                      fontSize: '13px', 
+                      color: 'var(--tg-theme-hint-color)', 
+                      marginBottom: '8px' 
+                    }}>
+                      🎥 Video
+                    </div>
+                    <div
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setSelectedMedia({ 
+                          type: 'video', 
+                          fileId: set.video!.file_id, 
+                          setIndex 
+                        });
+                      }}
+                      style={{
+                        width: '100%',
+                        aspectRatio: '16/9',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '48px',
+                        border: '2px solid #8b5cf6',
+                        transition: 'transform 0.2s',
+                      }}
+                      onMouseDown={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.transform = 'scale(0.98)';
+                      }}
+                      onMouseUp={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
+                      }}
+                    >
+                      ▶️
+                    </div>
                   </div>
-                  <div
-                    onClick={() => {
-                      hapticFeedback.light();
-                      setSelectedMedia({ type: 'video', fileId: set.video.file_id, setIndex });
-                    }}
-                    style={{
-                      width: '100%',
-                      aspectRatio: '16/9',
-                      background: 'var(--tg-theme-secondary-bg-color)',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      border: '2px solid var(--tg-theme-button-color)',
-                    }}
-                  >
-                    ▶️
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {task.sets.every(set => (!set.photos || set.photos.length === 0) && !set.video) && (
-          <div style={{ 
-            padding: '20px', 
-            textAlign: 'center', 
-            color: 'var(--tg-theme-hint-color)' 
-          }}>
-            No media uploaded yet
-          </div>
-        )}
-      </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Sets Information */}
       <div className="card">
@@ -263,6 +319,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           const hasPhotos = set.photos.length >= 3;
           const hasVideo = task.labels.video ? !!set.video : true;
           const isComplete = hasPhotos && hasVideo;
+
           return (
             <div
               key={index}
@@ -321,7 +378,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       <div className="card">
         <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>Actions</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {/* Transition buttons */}
           {task.status === 'New' && canTransition('Received') && (
             <button onClick={() => handleTransition('Received')} disabled={loading}>
               Mark as Received
@@ -350,7 +406,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Mark as Completed
             </button>
           )}
-          {/* Archive/Restore */}
           {!task.archived && (task.status === 'Submitted' || task.status === 'Completed') && (
             ['Viewer', 'Lead', 'Admin'].includes(userRole) && (
               <button
@@ -371,7 +426,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Restore Task
             </button>
           )}
-          {/* Delete (Admin only) */}
           {userRole === 'Admin' && (
             <button
               onClick={handleDelete}
@@ -396,39 +450,54 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             bottom: 0,
             background: 'rgba(0, 0, 0, 0.95)',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
             padding: '20px',
           }}
         >
-          <div style={{ maxWidth: '100%', maxHeight: '100%', textAlign: 'center' }}>
+          <div style={{ 
+            maxWidth: '100%', 
+            maxHeight: '100%', 
+            textAlign: 'center',
+            color: 'white'
+          }}>
             <div style={{ 
-              color: 'white', 
-              marginBottom: '12px',
-              fontSize: '14px' 
+              marginBottom: '16px',
+              fontSize: '16px',
+              fontWeight: 600
             }}>
-              Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? 'Photo' : 'Video'}
+              Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? `Photo ${(selectedMedia.photoIndex || 0) + 1}` : 'Video'}
             </div>
+            
             <div style={{ 
-              color: 'white', 
-              fontSize: '48px',
-              padding: '40px' 
+              fontSize: '64px',
+              padding: '40px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              marginBottom: '16px'
             }}>
               {selectedMedia.type === 'photo' ? '📷' : '▶️'}
             </div>
+            
             <div style={{ 
-              color: 'var(--tg-theme-hint-color)', 
               fontSize: '12px',
-              marginTop: '12px' 
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: '8px',
+              fontFamily: 'monospace'
             }}>
-              File ID: {selectedMedia.fileId.substring(0, 20)}...
+              File ID: {selectedMedia.fileId.substring(0, 30)}...
             </div>
+            
             <div style={{ 
-              color: 'white', 
               fontSize: '14px',
               marginTop: '20px',
-              opacity: 0.7
+              opacity: 0.7,
+              padding: '12px 24px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              display: 'inline-block'
             }}>
               Tap anywhere to close
             </div>

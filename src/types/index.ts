@@ -1,5 +1,4 @@
 export type Role = 'Admin' | 'Lead' | 'Member' | 'Viewer';
-
 export type TaskStatus = 'New' | 'Received' | 'Submitted' | 'Redo' | 'Completed' | 'Archived';
 
 export interface Upload {
@@ -9,8 +8,16 @@ export interface Upload {
 }
 
 export interface TaskSet {
-  photos: Array<{ file_id: string; by: number }>;
-  video?: { file_id: string; by: number };
+  photos: Array<{ 
+    file_id: string; 
+    by: number;
+    uploadedAt: string;  // Added this field
+  }>;
+  video?: { 
+    file_id: string; 
+    by: number;
+    uploadedAt: string;  // Added this field
+  };
 }
 
 export interface Task {
@@ -19,6 +26,7 @@ export interface Task {
   status: TaskStatus;
   labels: { video: boolean };
   requireSets: number;
+  completedSets: number;  // Added this field
   sets: TaskSet[];
   createdPhoto: { file_id: string; locked: true; by: number };
   uploads: Upload[];
@@ -27,6 +35,13 @@ export interface Task {
   createdAt: string;
   archived: boolean;
   version: number;
+  lastModifiedBy?: number;  // Added optional fields
+  lastModifiedAt?: string;
+  telegramChatId?: number;
+  telegramMessageId?: number;
+  lockedTo?: number;
+  lockedAt?: string;
+  lockedByRole?: string;
 }
 
 export interface User {
