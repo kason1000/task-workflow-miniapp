@@ -300,6 +300,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             
             if (!hasPhotos && !hasVideo) return null;
 
+            const fileCount = (set.photos?.length || 0) + (hasVideo ? 1 : 0);
+
             return (
               <div
                 key={setIndex}
@@ -310,14 +312,40 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   borderRadius: '8px',
                 }}
               >
-                <h4 style={{ 
-                  marginBottom: '12px', 
-                  fontSize: '14px', 
-                  color: 'var(--tg-theme-text-color)',
-                  fontWeight: 600
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginBottom: '12px' 
                 }}>
-                  📦 Set {setIndex + 1}
-                </h4>
+                  <h4 style={{ 
+                    fontSize: '14px', 
+                    color: 'var(--tg-theme-text-color)',
+                    fontWeight: 600,
+                    margin: 0
+                  }}>
+                    📦 Set {setIndex + 1}
+                  </h4>
+                  {/* Share button for this set */}
+                  <button
+                    onClick={async () => {
+                      hapticFeedback.medium();
+                      // Open share screen with this specific task
+                      window.location.href = `?taskId=${task.id}&action=share`;
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      background: 'var(--tg-theme-button-color)',
+                      color: 'var(--tg-theme-button-text-color)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📤 Share ({fileCount})
+                  </button>
+                </div>
 
                 {/* Photos Grid */}
                 {hasPhotos && (
@@ -338,77 +366,48 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         const imageUrl = mediaCache[photo.file_id];
                         
                         return (
-                          <div key={photoIndex} style={{ position: 'relative' }}>
-                            <div
-                              onClick={() => {
-                                hapticFeedback.light();
-                                setSelectedMedia({ 
-                                  type: 'photo', 
-                                  fileId: photo.file_id, 
-                                  setIndex,
-                                  photoIndex 
-                                });
-                              }}
-                              style={{
-                                aspectRatio: '1',
-                                background: imageUrl 
-                                  ? `url(${imageUrl}) center/cover` 
-                                  : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '32px',
-                                border: '2px solid var(--tg-theme-button-color)',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                transition: 'transform 0.2s',
-                              }}
-                            >
-                              {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
-                              <div style={{
-                                position: 'absolute',
-                                bottom: '4px',
-                                right: '4px',
-                                background: 'rgba(0,0,0,0.6)',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontWeight: 600
-                              }}>
-                                {photoIndex + 1}
-                              </div>
+                          <div
+                            key={photoIndex}
+                            onClick={() => {
+                              hapticFeedback.light();
+                              setSelectedMedia({ 
+                                type: 'photo', 
+                                fileId: photo.file_id, 
+                                setIndex,
+                                photoIndex 
+                              });
+                            }}
+                            style={{
+                              aspectRatio: '1',
+                              background: imageUrl 
+                                ? `url(${imageUrl}) center/cover` 
+                                : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '32px',
+                              border: '2px solid var(--tg-theme-button-color)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              transition: 'transform 0.2s',
+                            }}
+                          >
+                            {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '4px',
+                              right: '4px',
+                              background: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              fontSize: '10px',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 600
+                            }}>
+                              {photoIndex + 1}
                             </div>
-                            {/* Share button overlay */}
-                            {imageUrl && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  shareMedia(photo.file_id, 'photo', setIndex, photoIndex);
-                                }}
-                                style={{
-                                  position: 'absolute',
-                                  top: '4px',
-                                  right: '4px',
-                                  background: 'rgba(0,0,0,0.7)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '50%',
-                                  width: '28px',
-                                  height: '28px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '14px',
-                                  cursor: 'pointer',
-                                  zIndex: 10
-                                }}
-                              >
-                                📤
-                              </button>
-                            )}
                           </div>
                         );
                       })}
@@ -418,7 +417,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
                 {/* Video */}
                 {hasVideo && (
-                  <div style={{ position: 'relative' }}>
+                  <div>
                     <div style={{ 
                       fontSize: '13px', 
                       color: 'var(--tg-theme-hint-color)', 
@@ -455,34 +454,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     >
                       {!mediaCache[set.video.file_id] && (loadingMedia.has(set.video.file_id) ? '⏳' : '▶️')}
                     </div>
-                    {/* Share button for video */}
-                    {mediaCache[set.video.file_id] && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          shareMedia(set.video!.file_id, 'video', setIndex);
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: '38px',
-                          right: '8px',
-                          background: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '36px',
-                          height: '36px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '18px',
-                          cursor: 'pointer',
-                          zIndex: 10
-                        }}
-                      >
-                        📤
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -616,8 +587,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           )}
         </div>
       </div>
-
-      {/* Media Viewer Modal with Share Options */}
+      
+      {/* Media Viewer Modal - Simplified (no share buttons) */}
       {selectedMedia && (
         <div
           onClick={() => setSelectedMedia(null)}
@@ -649,7 +620,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     alt="Task photo"
                     style={{
                       maxWidth: '100%',
-                      maxHeight: '60vh',
+                      maxHeight: '70vh',
                       borderRadius: '8px',
                       marginBottom: '16px'
                     }}
@@ -660,69 +631,20 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     controls
                     style={{
                       maxWidth: '100%',
-                      maxHeight: '60vh',
+                      maxHeight: '70vh',
                       borderRadius: '8px',
                       marginBottom: '16px'
                     }}
                   />
                 )}
-                
-                {/* Action buttons */}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '12px' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      shareMedia(
-                        selectedMedia.fileId, 
-                        selectedMedia.type, 
-                        selectedMedia.setIndex, 
-                        selectedMedia.photoIndex
-                      );
-                    }}
-                    style={{
-                      background: 'var(--tg-theme-button-color)',
-                      color: 'var(--tg-theme-button-text-color)',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    📤 Share
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      downloadMedia(
-                        selectedMedia.fileId, 
-                        selectedMedia.type, 
-                        selectedMedia.setIndex, 
-                        selectedMedia.photoIndex
-                      );
-                    }}
-                    style={{
-                      background: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      fontSize: '16px',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    💾 Download
-                  </button>
-                </div>
               </>
             ) : (
               <div style={{ 
                 fontSize: '64px', 
                 padding: '40px',
                 background: 'rgba(255,255,255,0.1)',
-                borderRadius: '16px'
+                borderRadius: '16px',
+                marginBottom: '16px'
               }}>
                 {selectedMedia.type === 'photo' ? '📷' : '▶️'}
               </div>
