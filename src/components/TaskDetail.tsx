@@ -44,7 +44,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       const files: File[] = [];
       
       const totalFiles = (set.photos?.length || 0) + (set.video ? 1 : 0);
-      console.log(`📥 Preparing ${totalFiles} files for sharing...`);
+      console.log(`📤 Preparing ${totalFiles} files for sharing...`);
 
       // Collect photos
       if (set.photos) {
@@ -298,7 +298,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         }}>
           <h3 style={{ fontSize: '16px', margin: 0 }}>Sets Progress</h3>
           
-          {/* Share All Sets button (top right) - FIXED EMOJI */}
+          {/* Share All Sets button (top right) */}
           {task.requireSets > 1 && totalMedia > 0 && (
             <button
               onClick={async () => {
@@ -415,7 +415,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   </div>
                 </div>
                 
-                {/* Share button - FIXED EMOJI */}
+                {/* Share button */}
                 {fileCount > 0 && (
                   <button
                     onClick={async () => {
@@ -439,11 +439,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 )}
               </div>
 
-              {/* Media Grid - UNIFIED (photos + video in same grid) */}
+              {/* Media Grid - ALL IN ONE ROW (dynamic columns) */}
               {(hasPhotos || hasVideo) && (
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gridTemplateColumns: `repeat(${fileCount}, 1fr)`,
                   gap: '8px' 
                 }}>
                   {/* Render Photos */}
@@ -497,7 +497,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     );
                   })}
 
-                  {/* Render Video - INLINE with same size */}
+                  {/* Render Video - INLINE, same size, better styling */}
                   {hasVideo && (
                     <div
                       key="video"
@@ -524,18 +524,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         transition: 'transform 0.2s',
                       }}
                     >
-                      {/* Play button */}
+                      {/* Play button - WHITE background instead of purple */}
                       <div style={{
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: 'rgba(139, 92, 246, 0.9)',
+                        background: 'rgba(255, 255, 255, 0.95)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '16px',
+                        fontSize: '14px',
                         marginBottom: '4px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                       }}>
                         ▶️
                       </div>
@@ -658,74 +658,324 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Media Viewer Modal */}
-      {selectedMedia && (
-        <div
-          onClick={() => setSelectedMedia(null)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-        >
-          <div style={{ maxWidth: '100%', maxHeight: '100%', textAlign: 'center' }}>
-            <div style={{ marginBottom: '16px', color: 'white', fontSize: '16px', fontWeight: 600 }}>
-              Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? `Photo ${(selectedMedia.photoIndex || 0) + 1}` : 'Video'}
+      {/* Media Viewer Modal - Enhanced with Swipe & Thumbnails */}
+      {selectedMedia && (() => {
+        // Build complete media array for current set
+        const currentSet = task.sets[selectedMedia.setIndex];
+        const allMedia: Array<{
+          type: 'photo' | 'video';
+          fileId: string;
+          photoIndex?: number;
+        }> = [];
+        
+        // Add all photos
+        currentSet.photos?.forEach((photo, idx) => {
+          allMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
+        });
+        
+        // Add video at the end
+        if (currentSet.video) {
+          allMedia.push({ type: 'video', fileId: currentSet.video.file_id });
+        }
+        
+        // Find current index
+        const currentIndex = allMedia.findIndex(m => m.fileId === selectedMedia.fileId);
+        
+        // Navigation functions
+        const goToPrevious = () => {
+          hapticFeedback.light();
+          const prevIndex = currentIndex === 0 ? allMedia.length - 1 : currentIndex - 1;
+          const prevMedia = allMedia[prevIndex];
+          setSelectedMedia({
+            type: prevMedia.type,
+            fileId: prevMedia.fileId,
+            setIndex: selectedMedia.setIndex,
+            photoIndex: prevMedia.photoIndex
+          });
+        };
+        
+        const goToNext = () => {
+          hapticFeedback.light();
+          const nextIndex = (currentIndex + 1) % allMedia.length;
+          const nextMedia = allMedia[nextIndex];
+          setSelectedMedia({
+            type: nextMedia.type,
+            fileId: nextMedia.fileId,
+            setIndex: selectedMedia.setIndex,
+            photoIndex: nextMedia.photoIndex
+          });
+        };
+        
+        const goToMedia = (index: number) => {
+          hapticFeedback.light();
+          const media = allMedia[index];
+          setSelectedMedia({
+            type: media.type,
+            fileId: media.fileId,
+            setIndex: selectedMedia.setIndex,
+            photoIndex: media.photoIndex
+          });
+        };
+        
+        // Touch handling for swipe
+        const [touchStart, setTouchStart] = useState<number | null>(null);
+        const [touchEnd, setTouchEnd] = useState<number | null>(null);
+        
+        const minSwipeDistance = 50;
+        
+        const onTouchStart = (e: React.TouchEvent) => {
+          setTouchEnd(null);
+          setTouchStart(e.targetTouches[0].clientX);
+        };
+        
+        const onTouchMove = (e: React.TouchEvent) => {
+          setTouchEnd(e.targetTouches[0].clientX);
+        };
+        
+        const onTouchEnd = () => {
+          if (!touchStart || !touchEnd) return;
+          
+          const distance = touchStart - touchEnd;
+          const isLeftSwipe = distance > minSwipeDistance;
+          const isRightSwipe = distance < -minSwipeDistance;
+          
+          if (isLeftSwipe) {
+            goToNext();
+          }
+          if (isRightSwipe) {
+            goToPrevious();
+          }
+        };
+        
+        return (
+          <div
+            onClick={() => setSelectedMedia(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.95)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              zIndex: 1000,
+              padding: '20px 20px 80px 20px',
+            }}
+          >
+            {/* Header */}
+            <div style={{ width: '100%', textAlign: 'center', color: 'white' }}>
+              <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+                Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? `Photo ${(selectedMedia.photoIndex || 0) + 1}` : 'Video'}
+              </div>
+              <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                {currentIndex + 1} of {allMedia.length}
+              </div>
             </div>
             
-            {mediaCache[selectedMedia.fileId] ? (
-              <>
-                {selectedMedia.type === 'photo' ? (
+            {/* Main Content Area with Swipe */}
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              style={{ 
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                position: 'relative'
+              }}
+            >
+              {/* Navigation Arrows (visible on sides) */}
+              {allMedia.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToPrevious();
+                    }}
+                    style={{
+                      position: 'absolute',
+                      left: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'rgba(255,255,255,0.2)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      borderRadius: '50%',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '20px',
+                      zIndex: 10
+                    }}
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToNext();
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'rgba(255,255,255,0.2)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      borderRadius: '50%',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '20px',
+                      zIndex: 10
+                    }}
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+              
+              {/* Media Display */}
+              {mediaCache[selectedMedia.fileId] ? (
+                selectedMedia.type === 'photo' ? (
                   <img 
                     src={mediaCache[selectedMedia.fileId]} 
                     alt="Task photo"
                     style={{
                       maxWidth: '100%',
-                      maxHeight: '70vh',
+                      maxHeight: '100%',
                       borderRadius: '8px',
-                      marginBottom: '16px'
+                      objectFit: 'contain'
                     }}
                   />
                 ) : (
                   <video 
                     src={mediaCache[selectedMedia.fileId]}
                     controls
+                    autoPlay
                     style={{
                       maxWidth: '100%',
-                      maxHeight: '70vh',
-                      borderRadius: '8px',
-                      marginBottom: '16px'
+                      maxHeight: '100%',
+                      borderRadius: '8px'
                     }}
+                    onClick={(e) => e.stopPropagation()} // Prevent closing on video controls
                   />
-                )}
-              </>
-            ) : (
-              <div style={{ 
-                fontSize: '64px', 
-                padding: '40px',
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '16px',
-                marginBottom: '16px'
-              }}>
-                {selectedMedia.type === 'photo' ? '📷' : '▶️'}
-              </div>
-            )}
+                )
+              ) : (
+                <div style={{ 
+                  fontSize: '64px', 
+                  padding: '40px',
+                  background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '16px'
+                }}>
+                  {selectedMedia.type === 'photo' ? '📷' : '▶️'}
+                </div>
+              )}
+            </div>
             
-            <div style={{ fontSize: '14px', marginTop: '20px', opacity: 0.7, color: 'white' }}>
-              Tap anywhere to close
+            {/* iOS-Style Thumbnail Strip at Bottom */}
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{ 
+                width: '100%',
+                background: 'rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(10px)',
+                padding: '12px',
+                borderRadius: '12px',
+                position: 'fixed',
+                bottom: '20px',
+                left: '20px',
+                right: '20px',
+                maxWidth: 'calc(100% - 40px)'
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
+              }}>
+                {allMedia.map((media, index) => {
+                  const isActive = index === currentIndex;
+                  const thumbnailUrl = mediaCache[media.fileId];
+                  
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => goToMedia(index)}
+                      style={{
+                        minWidth: '60px',
+                        width: '60px',
+                        height: '60px',
+                        background: thumbnailUrl
+                          ? `url(${thumbnailUrl}) center/cover`
+                          : 'var(--tg-theme-secondary-bg-color)',
+                        borderRadius: '8px',
+                        border: isActive ? '3px solid white' : '2px solid rgba(255,255,255,0.3)',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        opacity: isActive ? 1 : 0.6,
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {media.type === 'video' && (
+                        <div style={{
+                          position: 'absolute',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: 'rgba(255,255,255,0.9)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px'
+                        }}>
+                          ▶️
+                        </div>
+                      )}
+                      {!thumbnailUrl && (
+                        <div style={{ fontSize: '24px' }}>
+                          {media.type === 'photo' ? '📷' : '🎥'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Swipe hint */}
+              {allMedia.length > 1 && (
+                <div style={{
+                  textAlign: 'center',
+                  color: 'rgba(255,255,255,0.6)',
+                  fontSize: '11px',
+                  marginTop: '8px'
+                }}>
+                  ← Swipe to navigate →
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
