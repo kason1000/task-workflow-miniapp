@@ -144,8 +144,15 @@ class ApiService {
     return this.request<any>('/roles/analytics/submissions');
   }
 
+  // Media - Original endpoint for displaying images
   async getMediaUrl(fileId: string) {
     return this.request<{ fileUrl: string; filePath: string }>(`/media?fileId=${fileId}`);
+  }
+
+  // Media - NEW: Proxied endpoint for iOS sharing (bypasses CORS)
+  async getProxiedMediaUrl(fileId: string) {
+    const proxyUrl = `${config.apiBaseUrl}/media/proxy/${fileId}`;
+    return { fileUrl: proxyUrl, fileId };
   }
 }
 

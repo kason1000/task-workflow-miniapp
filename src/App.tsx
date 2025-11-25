@@ -5,8 +5,9 @@ import { Task } from './types';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
 import { CreateTaskForm } from './components/CreateTaskForm';
+import { ShareScreen } from './components/ShareScreen';
 
-type View = 'list' | 'detail' | 'create';
+type View = 'list' | 'detail' | 'create' | 'share';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -19,18 +20,17 @@ function App() {
 
   useEffect(() => {
     console.log('Initializing app...');
-    
     try {
       // Initialize Telegram WebApp
       initTelegramWebApp();
       const tgUser = getTelegramUser();
-      
       console.log('Telegram user:', tgUser);
       setUser(tgUser);
 
-      // Check for taskId in URL params
+      // Check for URL params
       const urlParams = new URLSearchParams(window.location.search);
       const taskIdParam = urlParams.get('taskId');
+      const actionParam = urlParams.get('action');
 
       // Fetch user role
       const fetchRole = async () => {
@@ -40,8 +40,15 @@ function App() {
           console.log('Role data:', roleData);
           setRole(roleData.role);
 
-          // If taskId in URL, load that task directly
-          if (taskIdParam) {
+          // Handle different URL scenarios
+          if (taskIdParam && actionParam === 'share') {
+            // Open share screen directly
+            console.log('Opening share screen for task:', taskIdParam);
+            const task = await api.getTask(taskIdParam);
+            setSelectedTask(task);
+            setView('share');
+          } else if (taskIdParam) {
+            // Open task detail
             console.log('Loading task from URL:', taskIdParam);
             try {
               const task = await api.getTask(taskIdParam);
@@ -49,7 +56,6 @@ function App() {
               setView('detail');
             } catch (err) {
               console.error('Failed to load task from URL:', err);
-              // Continue to list view if task load fails
             }
           }
         } catch (error: any) {
@@ -74,7 +80,6 @@ function App() {
       const freshTask = await api.getTask(task.id);
       setSelectedTask(freshTask);
       setView('detail');
-      
       // Update URL without reload
       window.history.pushState({}, '', `?taskId=${task.id}`);
     } catch (error: any) {
@@ -87,9 +92,17 @@ function App() {
     setSelectedTask(null);
     setView('list');
     setRefreshKey(prev => prev + 1);
-    
     // Clear URL params
     window.history.pushState({}, '', window.location.pathname);
+  };
+
+  const handleBackToDetail = () => {
+    if (selectedTask) {
+      setView('detail');
+      window.history.pushState({}, '', `?taskId=${selectedTask.id}`);
+    } else {
+      handleBackToList();
+    }
   };
 
   const handleTaskUpdated = () => {
@@ -165,6 +178,13 @@ function App() {
         <CreateTaskForm
           onBack={handleBackToList}
           onTaskCreated={handleTaskCreated}
+        />
+      )}
+
+      {view === 'share' && selectedTask && (
+        <ShareScreen
+          taskId={selectedTask.id}
+          onBack={handleBackToDetail}
         />
       )}
     </div>
