@@ -260,13 +260,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   return (
     <div>
-      {/* Header */}
+      {/* Header - Updated back button style */}
       <div className="card">
         <button
           onClick={onBack}
+          className="button-secondary"
           style={{
-            background: 'var(--tg-theme-secondary-bg-color)',
-            color: 'var(--tg-theme-text-color)',
+            padding: '8px 16px',
             marginBottom: '12px',
           }}
         >
@@ -288,46 +288,135 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Media Gallery */}
-      {totalMedia > 0 && (
-        <div className="card">
-          <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>
-            📁 Media Gallery ({totalMedia} {totalMedia === 1 ? 'file' : 'files'})
-          </h3>
+      {/* Combined Sets Progress with Media Gallery */}
+      <div className="card">
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '12px' 
+        }}>
+          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets Progress</h3>
           
-          {task.sets.map((set, setIndex) => {
-            const hasPhotos = set.photos && set.photos.length > 0;
-            const hasVideo = !!set.video;
-            
-            if (!hasPhotos && !hasVideo) return null;
+          {/* Share All Sets button (top right) */}
+          {task.requireSets > 1 && totalMedia > 0 && (
+            <button
+              onClick={async () => {
+                setLoading(true);
+                hapticFeedback.medium();
+                
+                try {
+                  const files: File[] = [];
 
-            const fileCount = (set.photos?.length || 0) + (hasVideo ? 1 : 0);
+                  for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
+                    const set = task.sets[setIndex];
+                    
+                    if (set.photos) {
+                      for (let i = 0; i < set.photos.length; i++) {
+                        const photo = set.photos[i];
+                        const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+                        const response = await fetch(fileUrl);
+                        
+                        if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
+                        
+                        const blob = await response.blob();
+                        const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+                        files.push(file);
+                      }
+                    }
 
-            return (
-              <div
-                key={setIndex}
-                style={{
-                  marginBottom: '16px',
-                  padding: '12px',
-                  background: 'var(--tg-theme-bg-color)',
-                  borderRadius: '8px',
-                }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '12px' 
-                }}>
-                  <h4 style={{ 
-                    fontSize: '14px', 
-                    color: 'var(--tg-theme-text-color)',
-                    fontWeight: 600,
-                    margin: 0
-                  }}>
-                    📦 Set {setIndex + 1}
-                  </h4>
-                  {/* Share button for this set */}
+                    if (set.video) {
+                      const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+                      const response = await fetch(fileUrl);
+                      
+                      if (!response.ok) throw new Error(`Failed to fetch video from set ${setIndex + 1}`);
+                      
+                      const blob = await response.blob();
+                      const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
+                      files.push(file);
+                    }
+                  }
+
+                  await new Promise(resolve => setTimeout(resolve, 500));
+
+                  if (navigator.share && navigator.canShare({ files })) {
+                    await navigator.share({
+                      title: task.title,
+                      text: `Sharing ${files.length} files from all sets`,
+                      files
+                    });
+                    
+                    hapticFeedback.success();
+                    showAlert('✅ Shared all sets!');
+                  }
+                } catch (error: any) {
+                  if (error.name !== 'AbortError') {
+                    hapticFeedback.error();
+                    showAlert(`Failed to share: ${error.message}`);
+                  }
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                background: loading ? '#6b7280' : '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              {loading ? '⏳' : `📤 Share All (${totalMedia})`}
+            </button>
+          )}
+        </div>
+
+        {task.sets.map((set, setIndex) => {
+          const hasPhotos = set.photos && set.photos.length > 0;
+          const hasVideo = !!set.video;
+          const photoCount = set.photos?.length || 0;
+          const hasEnoughPhotos = photoCount >= 3;
+          const videoRequired = task.labels.video;
+          const hasRequiredVideo = videoRequired ? hasVideo : true;
+          const isComplete = hasEnoughPhotos && hasRequiredVideo;
+          const fileCount = photoCount + (hasVideo ? 1 : 0);
+
+          return (
+            <div
+              key={setIndex}
+              style={{
+                padding: '12px',
+                background: 'var(--tg-theme-bg-color)',
+                borderRadius: '8px',
+                marginBottom: '8px',
+              }}
+            >
+              {/* Set Header with Share Button */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '12px' 
+              }}>
+                <div>
+                  <strong style={{ fontSize: '14px' }}>Set {setIndex + 1}</strong>
+                  <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', marginTop: '4px' }}>
+                    📷 {photoCount}/3 {hasEnoughPhotos ? '✓' : ''}
+                    {videoRequired && ` • 🎥 ${hasVideo ? '✓' : '✗'}`}
+                    {isComplete && (
+                      <span style={{ color: '#10b981', marginLeft: '8px' }}>✓ Complete</span>
+                    )}
+                    {!isComplete && (
+                      <span style={{ color: '#f59e0b', marginLeft: '8px' }}>⏳ Incomplete</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Share button for individual set */}
+                {fileCount > 0 && (
                   <button
                     onClick={async () => {
                       hapticFeedback.medium();
@@ -345,88 +434,77 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       opacity: loading ? 0.6 : 1
                     }}
                   >
-                    {loading ? '⏳ Preparing...' : `📤 Share (${fileCount})`}
+                    {loading ? '⏳' : `📤 ${fileCount}`}
                   </button>
-                </div>
-
-                {/* Photos Grid */}
-                {hasPhotos && (
-                  <div style={{ marginBottom: hasVideo ? '12px' : '0' }}>
-                    <div style={{ 
-                      fontSize: '13px', 
-                      color: 'var(--tg-theme-hint-color)', 
-                      marginBottom: '8px' 
-                    }}>
-                      📸 Photos ({set.photos.length}/3)
-                    </div>
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(3, 1fr)', 
-                      gap: '8px' 
-                    }}>
-                      {set.photos.map((photo, photoIndex) => {
-                        const imageUrl = mediaCache[photo.file_id];
-                        
-                        return (
-                          <div
-                            key={photoIndex}
-                            onClick={() => {
-                              hapticFeedback.light();
-                              setSelectedMedia({ 
-                                type: 'photo', 
-                                fileId: photo.file_id, 
-                                setIndex,
-                                photoIndex 
-                              });
-                            }}
-                            style={{
-                              aspectRatio: '1',
-                              background: imageUrl 
-                                ? `url(${imageUrl}) center/cover` 
-                                : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '32px',
-                              border: '2px solid var(--tg-theme-button-color)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              transition: 'transform 0.2s',
-                            }}
-                          >
-                            {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
-                            <div style={{
-                              position: 'absolute',
-                              bottom: '4px',
-                              right: '4px',
-                              background: 'rgba(0,0,0,0.6)',
-                              color: 'white',
-                              fontSize: '10px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontWeight: 600
-                            }}>
-                              {photoIndex + 1}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
                 )}
+              </div>
 
-                {/* Video */}
-                {hasVideo && (
-                  <div>
-                    <div style={{ 
-                      fontSize: '13px', 
-                      color: 'var(--tg-theme-hint-color)', 
-                      marginBottom: '8px' 
-                    }}>
-                      🎥 Video
+              {/* Media Grid (only if has uploads) */}
+              {(hasPhotos || hasVideo) && (
+                <div>
+                  {/* Photos Grid */}
+                  {hasPhotos && (
+                    <div style={{ marginBottom: hasVideo ? '8px' : '0' }}>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(3, 1fr)', 
+                        gap: '8px' 
+                      }}>
+                        {set.photos.map((photo, photoIndex) => {
+                          const imageUrl = mediaCache[photo.file_id];
+                          
+                          return (
+                            <div
+                              key={photoIndex}
+                              onClick={() => {
+                                hapticFeedback.light();
+                                setSelectedMedia({ 
+                                  type: 'photo', 
+                                  fileId: photo.file_id, 
+                                  setIndex,
+                                  photoIndex 
+                                });
+                              }}
+                              style={{
+                                aspectRatio: '1',
+                                background: imageUrl 
+                                  ? `url(${imageUrl}) center/cover` 
+                                  : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '32px',
+                                border: '2px solid var(--tg-theme-button-color)',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                transition: 'transform 0.2s',
+                              }}
+                            >
+                              {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '4px',
+                                right: '4px',
+                                background: 'rgba(0,0,0,0.6)',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 600
+                              }}>
+                                {photoIndex + 1}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
+                  )}
+
+                  {/* Video - Fixed black box issue */}
+                  {hasVideo && (
                     <div
                       onClick={() => {
                         hapticFeedback.light();
@@ -439,136 +517,60 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       style={{
                         width: '100%',
                         aspectRatio: '16/9',
-                        background: mediaCache[set.video.file_id]
-                          ? `url(${mediaCache[set.video.file_id]}) center/cover`
-                          : 'linear-gradient(135deg, #8b5cf6 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '48px',
                         border: '2px solid #8b5cf6',
                         position: 'relative',
                         overflow: 'hidden',
                         transition: 'transform 0.2s',
                       }}
                     >
-                      {!mediaCache[set.video.file_id] && (loadingMedia.has(set.video.file_id) ? '⏳' : '▶️')}
+                      {/* Play button overlay */}
+                      <div style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px',
+                        marginBottom: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                      }}>
+                        ▶️
+                      </div>
+                      <div style={{
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                      }}>
+                        Tap to view video
+                      </div>
+                      {loadingMedia.has(set.video.file_id) && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          background: 'rgba(0,0,0,0.6)',
+                          color: 'white',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px'
+                        }}>
+                          ⏳ Loading...
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Share All Sets button (if multiple sets) */}
-      {task.requireSets > 1 && totalMedia > 0 && (
-        <div className="card">
-          <button
-            onClick={async () => {
-              setLoading(true);
-              hapticFeedback.medium();
-              
-              try {
-                const files: File[] = [];
-
-                for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
-                  const set = task.sets[setIndex];
-                  
-                  if (set.photos) {
-                    for (let i = 0; i < set.photos.length; i++) {
-                      const photo = set.photos[i];
-                      const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
-                      const response = await fetch(fileUrl);
-                      
-                      if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
-                      
-                      const blob = await response.blob();
-                      const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-                      files.push(file);
-                    }
-                  }
-
-                  if (set.video) {
-                    const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-                    const response = await fetch(fileUrl);
-                    
-                    if (!response.ok) throw new Error(`Failed to fetch video from set ${setIndex + 1}`);
-                    
-                    const blob = await response.blob();
-                    const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
-                    files.push(file);
-                  }
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                if (navigator.share && navigator.canShare({ files })) {
-                  await navigator.share({
-                    title: task.title,
-                    text: `Sharing ${files.length} files from all sets`,
-                    files
-                  });
-                  
-                  hapticFeedback.success();
-                  showAlert('✅ Shared all sets!');
-                }
-              } catch (error: any) {
-                if (error.name !== 'AbortError') {
-                  hapticFeedback.error();
-                  showAlert(`Failed to share: ${error.message}`);
-                }
-              } finally {
-                setLoading(false);
-              }
-            }}
-            disabled={loading}
-            style={{
-              width: '100%',
-              background: loading ? '#6b7280' : '#10b981',
-              color: 'white'
-            }}
-          >
-            {loading ? '⏳ Preparing...' : `📤 Share All Sets (${totalMedia} files)`}
-          </button>
-        </div>
-      )}
-
-      {/* Sets Information */}
-      <div className="card">
-        <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>Sets Progress</h3>
-        {task.sets.map((set, index) => {
-          const hasPhotos = set.photos.length >= 3;
-          const hasVideo = task.labels.video ? !!set.video : true;
-          const isComplete = hasPhotos && hasVideo;
-
-          return (
-            <div
-              key={index}
-              style={{
-                padding: '12px',
-                background: 'var(--tg-theme-bg-color)',
-                borderRadius: '8px',
-                marginBottom: '8px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <strong>Set {index + 1}</strong>
-                {isComplete ? (
-                  <span style={{ color: '#10b981' }}>✓ Complete</span>
-                ) : (
-                  <span style={{ color: '#f59e0b' }}>⏳ Incomplete</span>
-                )}
-              </div>
-              <div style={{ fontSize: '14px', color: 'var(--tg-theme-hint-color)' }}>
-                <div>📷 Photos: {set.photos.length}/3 {hasPhotos ? '✓' : ''}</div>
-                {task.labels.video && (
-                  <div>🎥 Video: {set.video ? '✓' : '✗'}</div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
