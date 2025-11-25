@@ -143,6 +143,10 @@ class ApiService {
   async getSubmissionAnalytics() {
     return this.request<any>('/roles/analytics/submissions');
   }
+
+  async getMediaUrl(fileId: string) {
+    return this.request<{ fileUrl: string; filePath: string }>(`/media?fileId=${fileId}`);
+  }
 }
 
 export const api = new ApiService();

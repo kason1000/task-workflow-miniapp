@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
@@ -19,14 +19,48 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
+interface MediaCache {
+  [fileId: string]: string;
+}
+
 export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
   const [loading, setLoading] = useState(false);
+  const [mediaCache, setMediaCache] = useState<MediaCache>({});
+  const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
   const [selectedMedia, setSelectedMedia] = useState<{
     type: 'photo' | 'video';
     fileId: string;
     setIndex: number;
     photoIndex?: number;
   } | null>(null);
+
+  // Load media URL from backend
+  const loadMediaUrl = async (fileId: string) => {
+    if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
+    
+    setLoadingMedia(prev => new Set(prev).add(fileId));
+    
+    try {
+      const result = await api.getMediaUrl(fileId);
+      setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
+    } catch (error) {
+      console.error('Failed to load media:', error);
+    } finally {
+      setLoadingMedia(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+    }
+  };
+
+  // Load all media URLs when component mounts
+  useEffect(() => {
+    task.sets.forEach(set => {
+      set.photos?.forEach(photo => loadMediaUrl(photo.file_id));
+      if (set.video) loadMediaUrl(set.video.file_id);
+    });
+  }, [task.id]);
 
   const canTransition = (to: TaskStatus): boolean => {
     const transitions: Record<string, string[]> = {
@@ -204,58 +238,55 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       gridTemplateColumns: 'repeat(3, 1fr)', 
                       gap: '8px' 
                     }}>
-                      {set.photos.map((photo, photoIndex) => (
-                        <div
-                          key={photoIndex}
-                          onClick={() => {
-                            hapticFeedback.light();
-                            setSelectedMedia({ 
-                              type: 'photo', 
-                              fileId: photo.file_id, 
-                              setIndex,
-                              photoIndex 
-                            });
-                          }}
-                          style={{
-                            aspectRatio: '1',
-                            background: 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '32px',
-                            border: '2px solid var(--tg-theme-button-color)',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            transition: 'transform 0.2s',
-                          }}
-                          onMouseDown={(e) => {
-                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(0.95)';
-                          }}
-                          onMouseUp={(e) => {
-                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
-                          }}
-                        >
-                          📷
-                          <div style={{
-                            position: 'absolute',
-                            bottom: '4px',
-                            right: '4px',
-                            background: 'rgba(0,0,0,0.6)',
-                            color: 'white',
-                            fontSize: '10px',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontWeight: 600
-                          }}>
-                            {photoIndex + 1}
+                      {set.photos.map((photo, photoIndex) => {
+                        const imageUrl = mediaCache[photo.file_id];
+                        
+                        return (
+                          <div
+                            key={photoIndex}
+                            onClick={() => {
+                              hapticFeedback.light();
+                              setSelectedMedia({ 
+                                type: 'photo', 
+                                fileId: photo.file_id, 
+                                setIndex,
+                                photoIndex 
+                              });
+                            }}
+                            style={{
+                              aspectRatio: '1',
+                              background: imageUrl 
+                                ? `url(${imageUrl}) center/cover` 
+                                : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '32px',
+                              border: '2px solid var(--tg-theme-button-color)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              transition: 'transform 0.2s',
+                            }}
+                          >
+                            {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '4px',
+                              right: '4px',
+                              background: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              fontSize: '10px',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 600
+                            }}>
+                              {photoIndex + 1}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -282,7 +313,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       style={{
                         width: '100%',
                         aspectRatio: '16/9',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                        background: mediaCache[set.video.file_id]
+                          ? `url(${mediaCache[set.video.file_id]}) center/cover`
+                          : 'linear-gradient(135deg, #8b5cf6 0%, var(--tg-theme-secondary-bg-color) 100%)',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         display: 'flex',
@@ -290,19 +323,12 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         justifyContent: 'center',
                         fontSize: '48px',
                         border: '2px solid #8b5cf6',
+                        position: 'relative',
+                        overflow: 'hidden',
                         transition: 'transform 0.2s',
                       }}
-                      onMouseDown={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.transform = 'scale(0.98)';
-                      }}
-                      onMouseUp={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
-                      }}
                     >
-                      ▶️
+                      {!mediaCache[set.video.file_id] && (loadingMedia.has(set.video.file_id) ? '⏳' : '▶️')}
                     </div>
                   </div>
                 )}
@@ -457,48 +483,45 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             padding: '20px',
           }}
         >
-          <div style={{ 
-            maxWidth: '100%', 
-            maxHeight: '100%', 
-            textAlign: 'center',
-            color: 'white'
-          }}>
-            <div style={{ 
-              marginBottom: '16px',
-              fontSize: '16px',
-              fontWeight: 600
-            }}>
+          <div style={{ maxWidth: '100%', maxHeight: '100%', textAlign: 'center' }}>
+            <div style={{ marginBottom: '16px', color: 'white', fontSize: '16px', fontWeight: 600 }}>
               Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? `Photo ${(selectedMedia.photoIndex || 0) + 1}` : 'Video'}
             </div>
             
-            <div style={{ 
-              fontSize: '64px',
-              padding: '40px',
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              marginBottom: '16px'
-            }}>
-              {selectedMedia.type === 'photo' ? '📷' : '▶️'}
-            </div>
+            {mediaCache[selectedMedia.fileId] ? (
+              selectedMedia.type === 'photo' ? (
+                <img 
+                  src={mediaCache[selectedMedia.fileId]} 
+                  alt="Task photo"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    borderRadius: '8px'
+                  }}
+                />
+              ) : (
+                <video 
+                  src={mediaCache[selectedMedia.fileId]}
+                  controls
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    borderRadius: '8px'
+                  }}
+                />
+              )
+            ) : (
+              <div style={{ 
+                fontSize: '64px', 
+                padding: '40px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '16px'
+              }}>
+                {selectedMedia.type === 'photo' ? '📷' : '▶️'}
+              </div>
+            )}
             
-            <div style={{ 
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.6)',
-              marginBottom: '8px',
-              fontFamily: 'monospace'
-            }}>
-              File ID: {selectedMedia.fileId.substring(0, 30)}...
-            </div>
-            
-            <div style={{ 
-              fontSize: '14px',
-              marginTop: '20px',
-              opacity: 0.7,
-              padding: '12px 24px',
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              display: 'inline-block'
-            }}>
+            <div style={{ fontSize: '14px', marginTop: '20px', opacity: 0.7, color: 'white' }}>
               Tap anywhere to close
             </div>
           </div>
