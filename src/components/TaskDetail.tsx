@@ -24,6 +24,105 @@ interface MediaCache {
   [fileId: string]: string;
 }
 
+// Add this function inside your TaskDetail component
+const shareSetDirect = async (setIndex: number) => {
+  if (!task) return;
+  
+  setLoading(true); // Use existing loading state
+  hapticFeedback.medium();
+
+  try {
+    const set = task.sets[setIndex];
+    const files: File[] = [];
+    
+    const totalFiles = (set.photos?.length || 0) + (set.video ? 1 : 0);
+    console.log(`📥 Preparing ${totalFiles} files for sharing...`);
+
+    // Collect photos
+    if (set.photos) {
+      for (let i = 0; i < set.photos.length; i++) {
+        const photo = set.photos[i];
+        console.log(`📷 Fetching photo ${i + 1}/${set.photos.length}...`);
+        
+        const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+        const response = await fetch(fileUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch photo ${i + 1}: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        console.log(`✅ Photo ${i + 1} downloaded: ${blob.size} bytes`);
+        
+        if (blob.size < 1000) {
+          throw new Error(`Photo ${i + 1} is too small (${blob.size} bytes)`);
+        }
+        
+        const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+        files.push(file);
+      }
+    }
+
+    // Collect video
+    if (set.video) {
+      console.log(`🎥 Fetching video...`);
+      
+      const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+      const response = await fetch(fileUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch video: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      console.log(`✅ Video downloaded: ${blob.size} bytes`);
+      
+      if (blob.size < 1000) {
+        throw new Error(`Video is too small (${blob.size} bytes)`);
+      }
+      
+      const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
+      files.push(file);
+      
+      // Extra delay for video
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    console.log(`✅ All ${files.length} files ready`);
+
+    // Verify share capability
+    if (!navigator.share) {
+      throw new Error('Share API not available');
+    }
+
+    if (!navigator.canShare({ files })) {
+      throw new Error('Cannot share these file types');
+    }
+
+    // Trigger native share
+    await navigator.share({
+      title: `${task.title} - Set ${setIndex + 1}`,
+      text: `Sharing ${files.length} files from Set ${setIndex + 1}`,
+      files
+    });
+    
+    hapticFeedback.success();
+    showAlert('✅ Shared successfully!');
+    console.log('✅ Share completed successfully');
+    
+  } catch (error: any) {
+    console.error('❌ Share failed:', error);
+    if (error.name !== 'AbortError') {
+      hapticFeedback.error();
+      showAlert(`Failed to share: ${error.message}`);
+    } else {
+      console.log('ℹ️ Share cancelled by user');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
   const [loading, setLoading] = useState(false);
   const [mediaCache, setMediaCache] = useState<MediaCache>({});
@@ -330,20 +429,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   <button
                     onClick={async () => {
                       hapticFeedback.medium();
-                      // Open share screen with this specific task
-                      window.location.href = `?taskId=${task.id}&action=share`;
+                      await shareSetDirect(setIndex); // Direct share instead of navigation
                     }}
+                    disabled={loading}
                     style={{
                       padding: '6px 12px',
                       fontSize: '12px',
-                      background: 'var(--tg-theme-button-color)',
+                      background: loading ? '#6b7280' : 'var(--tg-theme-button-color)',
                       color: 'var(--tg-theme-button-text-color)',
                       border: 'none',
                       borderRadius: '6px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      opacity: loading ? 0.6 : 1
                     }}
                   >
-                    📤 Share ({fileCount})
+                    {loading ? '⏳ Preparing...' : `📤 Share (${fileCount})`}
                   </button>
                 </div>
 
@@ -459,6 +559,79 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Share All Sets button (if multiple sets) */}
+      {task.requireSets > 1 && totalMedia > 0 && (
+        <div style={{ marginTop: '12px' }}>
+          <button
+            onClick={async () => {
+              setLoading(true);
+              hapticFeedback.medium();
+              
+              try {
+                const files: File[] = [];
+
+                for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
+                  const set = task.sets[setIndex];
+                  
+                  if (set.photos) {
+                    for (let i = 0; i < set.photos.length; i++) {
+                      const photo = set.photos[i];
+                      const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+                      const response = await fetch(fileUrl);
+                      
+                      if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
+                      
+                      const blob = await response.blob();
+                      const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+                      files.push(file);
+                    }
+                  }
+
+                  if (set.video) {
+                    const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+                    const response = await fetch(fileUrl);
+                    
+                    if (!response.ok) throw new Error(`Failed to fetch video from set ${setIndex + 1}`);
+                    
+                    const blob = await response.blob();
+                    const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
+                    files.push(file);
+                  }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                if (navigator.share && navigator.canShare({ files })) {
+                  await navigator.share({
+                    title: task.title,
+                    text: `Sharing ${files.length} files from all sets`,
+                    files
+                  });
+                  
+                  hapticFeedback.success();
+                  showAlert('✅ Shared all sets!');
+                }
+              } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                  hapticFeedback.error();
+                  showAlert(`Failed to share: ${error.message}`);
+                }
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            style={{
+              width: '100%',
+              background: loading ? '#6b7280' : '#10b981',
+              color: 'white'
+            }}
+          >
+            {loading ? '⏳ Preparing...' : `📤 Share All Sets (${totalMedia} files)`}
+          </button>
         </div>
       )}
 
@@ -587,7 +760,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           )}
         </div>
       </div>
-      
+
       {/* Media Viewer Modal - Simplified (no share buttons) */}
       {selectedMedia && (
         <div
