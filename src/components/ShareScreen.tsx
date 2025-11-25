@@ -48,24 +48,34 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
       if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+          console.log(`📷 Photo ${i + 1} fileId:`, photo.file_id);
           
-          const response = await fetch(fileUrl);
-
-          if (!response.ok) {
-            console.error('Failed to fetch file:', response.status, await response.text());
-            throw new Error(`Failed to fetch file: ${response.status}`);
+          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+          console.log(`🌐 Fetching from:`, fileUrl);
+          
+          try {
+            const response = await fetch(fileUrl);
+            console.log(`✅ Response status:`, response.status);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`❌ Response error:`, errorText);
+              throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const blob = await response.blob();
+            console.log(`📦 Blob size:`, blob.size, 'bytes');
+            
+            if (blob.size < 1000) {
+              console.error(`⚠️ Suspiciously small file!`);
+            }
+            
+            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+            files.push(file);
+          } catch (fetchError) {
+            console.error(`❌ Fetch failed for photo ${i + 1}:`, fetchError);
+            throw fetchError;
           }
-
-          const blob = await response.blob();
-
-          if (blob.size < 1000) { // Files under 1KB are likely errors
-            console.error('File too small, likely error response:', blob.size);
-            throw new Error('Invalid file received from server');
-          }
-
-          const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-          files.push(file);
         }
       }
 
