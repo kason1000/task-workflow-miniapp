@@ -298,7 +298,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         }}>
           <h3 style={{ fontSize: '16px', margin: 0 }}>Sets Progress</h3>
           
-          {/* Share All Sets button (top right) */}
+          {/* Share All Sets button (top right) - FIXED EMOJI */}
           {task.requireSets > 1 && totalMedia > 0 && (
             <button
               onClick={async () => {
@@ -415,7 +415,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   </div>
                 </div>
                 
-                {/* Share button for individual set */}
+                {/* Share button - FIXED EMOJI */}
                 {fileCount > 0 && (
                   <button
                     onClick={async () => {
@@ -439,73 +439,68 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 )}
               </div>
 
-              {/* Media Grid (only if has uploads) */}
+              {/* Media Grid - UNIFIED (photos + video in same grid) */}
               {(hasPhotos || hasVideo) && (
-                <div>
-                  {/* Photos Grid */}
-                  {hasPhotos && (
-                    <div style={{ marginBottom: hasVideo ? '8px' : '0' }}>
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(3, 1fr)', 
-                        gap: '8px' 
-                      }}>
-                        {set.photos.map((photo, photoIndex) => {
-                          const imageUrl = mediaCache[photo.file_id];
-                          
-                          return (
-                            <div
-                              key={photoIndex}
-                              onClick={() => {
-                                hapticFeedback.light();
-                                setSelectedMedia({ 
-                                  type: 'photo', 
-                                  fileId: photo.file_id, 
-                                  setIndex,
-                                  photoIndex 
-                                });
-                              }}
-                              style={{
-                                aspectRatio: '1',
-                                background: imageUrl 
-                                  ? `url(${imageUrl}) center/cover` 
-                                  : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '32px',
-                                border: '2px solid var(--tg-theme-button-color)',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                transition: 'transform 0.2s',
-                              }}
-                            >
-                              {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
-                              <div style={{
-                                position: 'absolute',
-                                bottom: '4px',
-                                right: '4px',
-                                background: 'rgba(0,0,0,0.6)',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontWeight: 600
-                              }}>
-                                {photoIndex + 1}
-                              </div>
-                            </div>
-                          );
-                        })}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gap: '8px' 
+                }}>
+                  {/* Render Photos */}
+                  {hasPhotos && set.photos.map((photo, photoIndex) => {
+                    const imageUrl = mediaCache[photo.file_id];
+                    
+                    return (
+                      <div
+                        key={`photo-${photoIndex}`}
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setSelectedMedia({ 
+                            type: 'photo', 
+                            fileId: photo.file_id, 
+                            setIndex,
+                            photoIndex 
+                          });
+                        }}
+                        style={{
+                          aspectRatio: '1',
+                          background: imageUrl 
+                            ? `url(${imageUrl}) center/cover` 
+                            : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '32px',
+                          border: '2px solid var(--tg-theme-button-color)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          transition: 'transform 0.2s',
+                        }}
+                      >
+                        {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '4px',
+                          right: '4px',
+                          background: 'rgba(0,0,0,0.6)',
+                          color: 'white',
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 600
+                        }}>
+                          {photoIndex + 1}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
 
-                  {/* Video - Fixed black box issue */}
+                  {/* Render Video - INLINE with same size */}
                   {hasVideo && (
                     <div
+                      key="video"
                       onClick={() => {
                         hapticFeedback.light();
                         setSelectedMedia({ 
@@ -515,56 +510,54 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         });
                       }}
                       style={{
-                        width: '100%',
-                        aspectRatio: '16/9',
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                        aspectRatio: '1',
+                        background: 'var(--tg-theme-secondary-bg-color)',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        border: '2px solid #8b5cf6',
+                        border: '2px solid var(--tg-theme-hint-color)',
                         position: 'relative',
                         overflow: 'hidden',
                         transition: 'transform 0.2s',
                       }}
                     >
-                      {/* Play button overlay */}
+                      {/* Play button */}
                       <div style={{
-                        width: '60px',
-                        height: '60px',
+                        width: '36px',
+                        height: '36px',
                         borderRadius: '50%',
-                        background: 'rgba(255,255,255,0.9)',
+                        background: 'rgba(139, 92, 246, 0.9)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '24px',
-                        marginBottom: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                        fontSize: '16px',
+                        marginBottom: '4px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                       }}>
                         ▶️
                       </div>
                       <div style={{
-                        color: 'white',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                        color: 'var(--tg-theme-hint-color)',
+                        fontSize: '10px',
+                        fontWeight: 600
                       }}>
-                        Tap to view video
+                        Video
                       </div>
                       {loadingMedia.has(set.video.file_id) && (
                         <div style={{
                           position: 'absolute',
-                          top: '8px',
-                          right: '8px',
+                          top: '4px',
+                          right: '4px',
                           background: 'rgba(0,0,0,0.6)',
                           color: 'white',
-                          padding: '4px 8px',
+                          padding: '2px 4px',
                           borderRadius: '4px',
-                          fontSize: '12px'
+                          fontSize: '10px'
                         }}>
-                          ⏳ Loading...
+                          ⏳
                         </div>
                       )}
                     </div>
