@@ -33,6 +33,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     setIndex: number;
     photoIndex?: number;
   } | null>(null);
+  
+  // ADD THESE for swipe functionality
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Share set function - moved inside component
   const shareSetDirect = async (setIndex: number) => {
@@ -289,7 +293,34 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       </div>
 
       {/* Combined Sets Progress with Media Gallery */}
-      <div className="card">
+      <div className="card" style={{ position: 'relative' }}>
+        {/* Loading Overlay */}
+        {loading && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
+            <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
+              Preparing files...
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', marginTop: '4px' }}>
+              This may take a few seconds
+            </div>
+          </div>
+        )}
+        
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -658,7 +689,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Media Viewer Modal - Enhanced with Swipe & Thumbnails */}
+      {/* Media Viewer Modal - FIXED */}
       {selectedMedia && (() => {
         // Build complete media array for current set
         const currentSet = task.sets[selectedMedia.setIndex];
@@ -668,20 +699,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           photoIndex?: number;
         }> = [];
         
-        // Add all photos
         currentSet.photos?.forEach((photo, idx) => {
           allMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
         });
         
-        // Add video at the end
         if (currentSet.video) {
           allMedia.push({ type: 'video', fileId: currentSet.video.file_id });
         }
         
-        // Find current index
         const currentIndex = allMedia.findIndex(m => m.fileId === selectedMedia.fileId);
         
-        // Navigation functions
         const goToPrevious = () => {
           hapticFeedback.light();
           const prevIndex = currentIndex === 0 ? allMedia.length - 1 : currentIndex - 1;
@@ -717,10 +744,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           });
         };
         
-        // Touch handling for swipe
-        const [touchStart, setTouchStart] = useState<number | null>(null);
-        const [touchEnd, setTouchEnd] = useState<number | null>(null);
-        
         const minSwipeDistance = 50;
         
         const onTouchStart = (e: React.TouchEvent) => {
@@ -747,9 +770,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           }
         };
         
+        const isMediaLoading = !mediaCache[selectedMedia.fileId];
+        
         return (
           <div
-            onClick={() => setSelectedMedia(null)}
             style={{
               position: 'fixed',
               top: 0,
@@ -766,7 +790,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             }}
           >
             {/* Header */}
-            <div style={{ width: '100%', textAlign: 'center', color: 'white' }}>
+            <div style={{ width: '100%', textAlign: 'center', color: 'white', zIndex: 20 }}>
               <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
                 Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? `Photo ${(selectedMedia.photoIndex || 0) + 1}` : 'Video'}
               </div>
@@ -777,7 +801,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             
             {/* Main Content Area with Swipe */}
             <div 
-              onClick={(e) => e.stopPropagation()}
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
@@ -790,7 +813,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 position: 'relative'
               }}
             >
-              {/* Navigation Arrows (visible on sides) */}
+              {/* Navigation Arrows */}
               {allMedia.length > 1 && (
                 <>
                   <button
@@ -813,6 +836,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       justifyContent: 'center',
                       cursor: 'pointer',
                       fontSize: '20px',
+                      color: 'white',
                       zIndex: 10
                     }}
                   >
@@ -838,6 +862,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       justifyContent: 'center',
                       cursor: 'pointer',
                       fontSize: '20px',
+                      color: 'white',
                       zIndex: 10
                     }}
                   >
@@ -847,7 +872,17 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               )}
               
               {/* Media Display */}
-              {mediaCache[selectedMedia.fileId] ? (
+              {isMediaLoading ? (
+                <div style={{ 
+                  fontSize: '64px', 
+                  padding: '40px',
+                  background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '16px',
+                  color: 'white'
+                }}>
+                  ⏳
+                </div>
+              ) : (
                 selectedMedia.type === 'photo' ? (
                   <img 
                     src={mediaCache[selectedMedia.fileId]} 
@@ -864,27 +899,20 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     src={mediaCache[selectedMedia.fileId]}
                     controls
                     autoPlay
+                    playsInline
                     style={{
                       maxWidth: '100%',
                       maxHeight: '100%',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
+                      backgroundColor: '#000'
                     }}
-                    onClick={(e) => e.stopPropagation()} // Prevent closing on video controls
+                    onClick={(e) => e.stopPropagation()}
                   />
                 )
-              ) : (
-                <div style={{ 
-                  fontSize: '64px', 
-                  padding: '40px',
-                  background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '16px'
-                }}>
-                  {selectedMedia.type === 'photo' ? '📷' : '▶️'}
-                </div>
               )}
             </div>
             
-            {/* iOS-Style Thumbnail Strip at Bottom */}
+            {/* iOS-Style Thumbnail Strip */}
             <div 
               onClick={(e) => e.stopPropagation()}
               style={{ 
@@ -897,7 +925,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 bottom: '20px',
                 left: '20px',
                 right: '20px',
-                maxWidth: 'calc(100% - 40px)'
+                maxWidth: 'calc(100% - 40px)',
+                zIndex: 20
               }}
             >
               <div style={{
@@ -961,17 +990,38 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 })}
               </div>
               
-              {/* Swipe hint */}
-              {allMedia.length > 1 && (
-                <div style={{
-                  textAlign: 'center',
-                  color: 'rgba(255,255,255,0.6)',
-                  fontSize: '11px',
-                  marginTop: '8px'
-                }}>
-                  ← Swipe to navigate →
-                </div>
-              )}
+              {/* Close button and hint */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: '8px'
+              }}>
+                {allMedia.length > 1 ? (
+                  <div style={{
+                    color: 'rgba(255,255,255,0.6)',
+                    fontSize: '11px'
+                  }}>
+                    ← Swipe →
+                  </div>
+                ) : (
+                  <div />
+                )}
+                <button
+                  onClick={() => setSelectedMedia(null)}
+                  style={{
+                    padding: '4px 12px',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  ✕ Close
+                </button>
+              </div>
             </div>
           </div>
         );
