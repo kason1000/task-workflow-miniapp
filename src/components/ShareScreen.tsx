@@ -23,9 +23,12 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
       const data = await api.getTask(taskId);
       setTask(data);
       
-      // If only 1 set, auto-trigger share
+      // If only 1 set, auto-trigger share AFTER a delay to ensure files load
       if (data.requireSets === 1) {
-        await shareSet(0);
+        // Wait a bit to show loading state, then trigger share
+        setTimeout(async () => {
+          await shareSet(0);
+        }, 300); // Small delay to ensure component is ready
       }
     } catch (error: any) {
       showAlert(`Failed to load task: ${error.message}`);
@@ -43,81 +46,89 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
     try {
       const set = task.sets[setIndex];
       const files: File[] = [];
+      
+      // Calculate total files to show progress
+      const totalFiles = (set.photos?.length || 0) + (set.video ? 1 : 0);
+      console.log(`📥 Preparing ${totalFiles} files for sharing...`);
 
-      // Collect photos
+      // Collect photos with individual await
       if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          console.log(`📷 Photo ${i + 1} fileId:`, photo.file_id);
+          console.log(`📷 Fetching photo ${i + 1}/${set.photos.length}...`);
           
           const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
-          console.log(`🌐 Fetching from:`, fileUrl);
+          const response = await fetch(fileUrl);
           
-          try {
-            const response = await fetch(fileUrl);
-            console.log(`✅ Response status:`, response.status);
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error(`❌ Response error:`, errorText);
-              throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-            
-            const blob = await response.blob();
-            console.log(`📦 Blob size:`, blob.size, 'bytes');
-            
-            if (blob.size < 1000) {
-              console.error(`⚠️ Suspiciously small file!`);
-            }
-            
-            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-            files.push(file);
-          } catch (fetchError) {
-            console.error(`❌ Fetch failed for photo ${i + 1}:`, fetchError);
-            throw fetchError;
+          if (!response.ok) {
+            throw new Error(`Failed to fetch photo ${i + 1}: ${response.status}`);
           }
+          
+          const blob = await response.blob();
+          console.log(`✅ Photo ${i + 1} downloaded: ${blob.size} bytes`);
+          
+          if (blob.size < 1000) {
+            throw new Error(`Photo ${i + 1} is too small (${blob.size} bytes) - likely an error`);
+          }
+          
+          const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+          files.push(file);
         }
       }
 
-      // Collect video
+      // Collect video with extra wait time
       if (set.video) {
+        console.log(`🎥 Fetching video...`);
+        
         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
         const response = await fetch(fileUrl);
-
+        
         if (!response.ok) {
-          console.error('Failed to fetch file:', response.status, await response.text());
-          throw new Error(`Failed to fetch file: ${response.status}`);
+          throw new Error(`Failed to fetch video: ${response.status}`);
         }
-
+        
         const blob = await response.blob();
-
-        if (blob.size < 1000) { // Files under 1KB are likely errors
-          console.error('File too small, likely error response:', blob.size);
-          throw new Error('Invalid file received from server');
+        console.log(`✅ Video downloaded: ${blob.size} bytes`);
+        
+        if (blob.size < 1000) {
+          throw new Error(`Video is too small (${blob.size} bytes) - likely an error`);
         }
-
+        
         const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
         files.push(file);
+        
+        // Extra delay for video to ensure it's fully processed
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      console.log(`✅ All ${files.length} files ready, total size: ${files.reduce((sum, f) => sum + f.size, 0)} bytes`);
+
+      // Verify share capability
+      if (!navigator.share) {
+        throw new Error('Share API not available');
+      }
+
+      if (!navigator.canShare({ files })) {
+        throw new Error('Cannot share these file types');
       }
 
       // Trigger native share
-      if (navigator.share && navigator.canShare({ files })) {
-        await navigator.share({
-          title: `${task.title} - Set ${setIndex + 1}`,
-          text: `Sharing ${files.length} files from Set ${setIndex + 1}`,
-          files
-        });
-        
-        hapticFeedback.success();
-      } else {
-        throw new Error('Share not supported');
-      }
+      await navigator.share({
+        title: `${task.title} - Set ${setIndex + 1}`,
+        text: `Sharing ${files.length} files from Set ${setIndex + 1}`,
+        files
+      });
+      
+      hapticFeedback.success();
+      console.log('✅ Share completed successfully');
       
     } catch (error: any) {
-      console.error('Share failed:', error);
+      console.error('❌ Share failed:', error);
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
-        showAlert('Failed to share. Please try again.');
+        showAlert(`Failed to share: ${error.message}`);
+      } else {
+        console.log('ℹ️ Share cancelled by user');
       }
     } finally {
       setSharing(false);
@@ -210,11 +221,26 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
         </div>
         <h2 style={{ marginBottom: '16px' }}>{task.title}</h2>
         <div style={{ color: 'var(--tg-theme-hint-color)', marginBottom: '24px' }}>
-          {sharing ? 'Preparing files...' : 'Share cancelled'}
+          {sharing ? 'Preparing files for sharing...' : 'Ready to share'}
         </div>
-        <button onClick={onBack}>
-          ← Back to Task
-        </button>
+        {!sharing && (
+          <>
+            <button 
+              onClick={() => shareSet(0)}
+              style={{ marginBottom: '12px', width: '100%' }}
+            >
+              📤 Share Again
+            </button>
+            <button onClick={onBack}>
+              ← Back to Task
+            </button>
+          </>
+        )}
+        {sharing && (
+          <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>
+            Downloading {(task.sets[0].photos?.length || 0) + (task.sets[0].video ? 1 : 0)} files...
+          </div>
+        )}
       </div>
     );
   }
