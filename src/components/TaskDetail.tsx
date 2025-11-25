@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
-import WebApp from '@twa-dev/sdk';
 
 interface TaskDetailProps {
   task: Task;
@@ -35,31 +34,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     photoIndex?: number;
   } | null>(null);
 
-  // Load media URL from backend
-  const loadMediaUrl = async (fileId: string) => {
-    if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
-    
-    setLoadingMedia(prev => new Set(prev).add(fileId));
-    
-    try {
-      const result = await api.getMediaUrl(fileId);
-      setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
-    } catch (error) {
-      console.error('Failed to load media:', error);
-    } finally {
-      setLoadingMedia(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(fileId);
-        return newSet;
-      });
-    }
-  };
-
-  // Add this function inside your TaskDetail component
+  // Share set function - moved inside component
   const shareSetDirect = async (setIndex: number) => {
-    if (!task) return;
-    
-    setLoading(true); // Use existing loading state
+    setLoading(true);
     hapticFeedback.medium();
 
     try {
@@ -154,98 +131,23 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  // Native share function
-  const shareMedia = async (fileId: string, type: 'photo' | 'video', setIndex: number, photoIndex?: number) => {
+  // Load media URL from backend
+  const loadMediaUrl = async (fileId: string) => {
+    if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
+    
+    setLoadingMedia(prev => new Set(prev).add(fileId));
+    
     try {
-      hapticFeedback.medium();
-      
-      const mediaUrl = mediaCache[fileId];
-      if (!mediaUrl) {
-        showAlert('Please wait for media to load');
-        return;
-      }
-
-      // Check if Web Share API is available
-      if (!navigator.share) {
-        showAlert('Share not supported on this device');
-        return;
-      }
-
-      // Fetch the file as blob with proper error handling
-      const response = await fetch(mediaUrl, {
-        mode: 'cors',
-        credentials: 'omit'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch media: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      
-      // Set proper MIME type
-      const mimeType = type === 'photo' ? 'image/jpeg' : 'video/mp4';
-      const fileName = type === 'photo' 
-        ? `task_${task.id}_set${setIndex + 1}_photo${photoIndex! + 1}.jpg`
-        : `task_${task.id}_set${setIndex + 1}_video.mp4`;
-      
-      const file = new File([blob], fileName, { type: mimeType });
-
-      // Check if file sharing is supported
-      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
-        throw new Error('File type not supported for sharing');
-      }
-
-      await navigator.share({
-        title: `${task.title} - Set ${setIndex + 1}`,
-        text: `${type === 'photo' ? 'Photo' : 'Video'} from ${task.title}`,
-        files: [file]
-      });
-
-      hapticFeedback.success();
-    } catch (error: any) {
-      console.error('Share failed:', error);
-      
-      if (error.name === 'AbortError') {
-        // User cancelled - this is ok
-        return;
-      }
-      
-      // Fallback: offer download instead
-      showAlert('Share failed. Try downloading instead.');
-      await downloadMedia(fileId, type, setIndex, photoIndex);
-    }
-  };
-
-  // Download media function (alternative to share)
-  const downloadMedia = async (fileId: string, type: 'photo' | 'video', setIndex: number, photoIndex?: number) => {
-    try {
-      hapticFeedback.medium();
-      
-      const mediaUrl = mediaCache[fileId];
-      if (!mediaUrl) {
-        showAlert('Please wait for media to load');
-        return;
-      }
-
-      const fileName = type === 'photo' 
-        ? `task_${task.id}_set${setIndex + 1}_photo${photoIndex! + 1}.jpg`
-        : `task_${task.id}_set${setIndex + 1}_video.mp4`;
-
-      // Create temporary link and trigger download
-      const link = document.createElement('a');
-      link.href = mediaUrl;
-      link.download = fileName;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      hapticFeedback.success();
-      showAlert('Download started!');
+      const result = await api.getMediaUrl(fileId);
+      setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
     } catch (error) {
-      console.error('Download failed:', error);
-      showAlert('Failed to download. Please try again.');
+      console.error('Failed to load media:', error);
+    } finally {
+      setLoadingMedia(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
     }
   };
 
@@ -429,7 +331,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   <button
                     onClick={async () => {
                       hapticFeedback.medium();
-                      await shareSetDirect(setIndex); // Direct share instead of navigation
+                      await shareSetDirect(setIndex);
                     }}
                     disabled={loading}
                     style={{
@@ -564,7 +466,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
       {/* Share All Sets button (if multiple sets) */}
       {task.requireSets > 1 && totalMedia > 0 && (
-        <div style={{ marginTop: '12px' }}>
+        <div className="card">
           <button
             onClick={async () => {
               setLoading(true);
@@ -761,7 +663,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Media Viewer Modal - Simplified (no share buttons) */}
+      {/* Media Viewer Modal */}
       {selectedMedia && (
         <div
           onClick={() => setSelectedMedia(null)}
