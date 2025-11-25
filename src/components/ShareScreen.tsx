@@ -51,7 +51,19 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
           const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
           
           const response = await fetch(fileUrl);
+
+          if (!response.ok) {
+            console.error('Failed to fetch file:', response.status, await response.text());
+            throw new Error(`Failed to fetch file: ${response.status}`);
+          }
+
           const blob = await response.blob();
+
+          if (blob.size < 1000) { // Files under 1KB are likely errors
+            console.error('File too small, likely error response:', blob.size);
+            throw new Error('Invalid file received from server');
+          }
+
           const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
           files.push(file);
         }
@@ -61,7 +73,19 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
       if (set.video) {
         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
         const response = await fetch(fileUrl);
+
+        if (!response.ok) {
+          console.error('Failed to fetch file:', response.status, await response.text());
+          throw new Error(`Failed to fetch file: ${response.status}`);
+        }
+
         const blob = await response.blob();
+
+        if (blob.size < 1000) { // Files under 1KB are likely errors
+          console.error('File too small, likely error response:', blob.size);
+          throw new Error('Invalid file received from server');
+        }
+
         const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
         files.push(file);
       }
