@@ -67,34 +67,54 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       }
 
       // Check if Web Share API is available
-      if (navigator.share) {
-        // Fetch the file as blob
-        const response = await fetch(mediaUrl);
-        const blob = await response.blob();
-        
-        const fileName = type === 'photo' 
-          ? `task_${task.id}_set${setIndex + 1}_photo${photoIndex! + 1}.jpg`
-          : `task_${task.id}_set${setIndex + 1}_video.mp4`;
-        
-        const file = new File([blob], fileName, { type: blob.type });
-
-        await navigator.share({
-          title: `${task.title} - Set ${setIndex + 1}`,
-          text: `${type === 'photo' ? 'Photo' : 'Video'} from ${task.title}`,
-          files: [file]
-        });
-
-        hapticFeedback.success();
-      } else {
-        // Fallback: copy link or download
-        showAlert('Share not supported. Link copied to clipboard!');
-        await navigator.clipboard.writeText(mediaUrl);
+      if (!navigator.share) {
+        showAlert('Share not supported on this device');
+        return;
       }
+
+      // Fetch the file as blob with proper error handling
+      const response = await fetch(mediaUrl, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch media: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      
+      // Set proper MIME type
+      const mimeType = type === 'photo' ? 'image/jpeg' : 'video/mp4';
+      const fileName = type === 'photo' 
+        ? `task_${task.id}_set${setIndex + 1}_photo${photoIndex! + 1}.jpg`
+        : `task_${task.id}_set${setIndex + 1}_video.mp4`;
+      
+      const file = new File([blob], fileName, { type: mimeType });
+
+      // Check if file sharing is supported
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+        throw new Error('File type not supported for sharing');
+      }
+
+      await navigator.share({
+        title: `${task.title} - Set ${setIndex + 1}`,
+        text: `${type === 'photo' ? 'Photo' : 'Video'} from ${task.title}`,
+        files: [file]
+      });
+
+      hapticFeedback.success();
     } catch (error: any) {
       console.error('Share failed:', error);
-      if (error.name !== 'AbortError') {
-        showAlert('Failed to share. Please try again.');
+      
+      if (error.name === 'AbortError') {
+        // User cancelled - this is ok
+        return;
       }
+      
+      // Fallback: offer download instead
+      showAlert('Share failed. Try downloading instead.');
+      await downloadMedia(fileId, type, setIndex, photoIndex);
     }
   };
 
