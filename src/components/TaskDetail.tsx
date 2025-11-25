@@ -82,18 +82,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
         const response = await fetch(fileUrl);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch video: ${response.status}`);
-        }
-        
         const blob = await response.blob();
-        console.log(`✅ Video downloaded: ${blob.size} bytes`);
         
-        if (blob.size < 1000) {
-          throw new Error(`Video is too small (${blob.size} bytes)`);
-        }
+        // Get actual MIME type from response
+        const actualMimeType = response.headers.get('content-type') || 'video/mp4';
+        console.log('🎥 Video MIME type from server:', actualMimeType);
         
-        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
+        // Use the server's MIME type
+        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { 
+          type: actualMimeType 
+        });
         files.push(file);
         
         // Extra delay for video
@@ -110,6 +108,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       if (!navigator.canShare({ files })) {
         throw new Error('Cannot share these file types');
       }
+
+      console.log('📤 Files being shared:');
+      files.forEach((file, idx) => {
+        console.log(`  ${idx + 1}. ${file.name} - ${file.type} - ${file.size} bytes`);
+      });
 
       // Trigger native share
       await navigator.share({
@@ -320,7 +323,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             </div>
           </div>
         )}
-        
+
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
