@@ -411,14 +411,17 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               allSetMedia.push({ type: 'video', fileId: set.video.file_id });
             }
 
-            console.log(`Set ${setIndex + 1} - Total media items:`, allSetMedia.length, allSetMedia);
+            // Calculate dynamic width based on number of items
+            // Each item is 80px + 8px gap = 88px per item, plus 24px padding
+            const cardWidth = (allSetMedia.length * 88) + 24;
+            const minCardWidth = Math.max(cardWidth, 280);
 
             return (
               <div
                 key={setIndex}
                 style={{
-                  minWidth: '320px',
-                  maxWidth: '320px',
+                  minWidth: `${minCardWidth}px`,
+                  maxWidth: `${minCardWidth}px`,
                   flex: '0 0 auto',
                   background: 'var(--tg-theme-bg-color)',
                   borderRadius: '8px',
@@ -490,14 +493,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   )}
                 </div>
 
-                {/* Media Row - SINGLE HORIZONTAL ROW */}
+                {/* Media Row - ALL ITEMS IN ONE ROW WITHOUT SCROLL */}
                 <div style={{
                   display: 'flex',
                   gap: '8px',
-                  overflowX: 'auto',
-                  paddingBottom: '4px',
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none'
+                  flexWrap: 'nowrap'
                 }}>
                   {allSetMedia.map((media, mediaIndex) => {
                     const isPhoto = media.type === 'photo';
@@ -513,9 +513,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         <div
                           key={`photo-${photoIndex}`}
                           style={{
-                            width: '90px',
-                            height: '90px',
-                            minWidth: '90px',
+                            width: '80px',
+                            height: '80px',
+                            minWidth: '80px',
                             position: 'relative',
                             flexShrink: 0
                           }}
@@ -541,7 +541,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '32px',
+                              fontSize: '28px',
                               border: '2px solid var(--tg-theme-button-color)',
                               overflow: 'hidden'
                             }}
@@ -576,14 +576,14 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '50%',
-                                width: '24px',
-                                height: '24px',
-                                minWidth: '24px',
-                                minHeight: '24px',
+                                width: '22px',
+                                height: '22px',
+                                minWidth: '22px',
+                                minHeight: '22px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 cursor: 'pointer',
                                 zIndex: 10,
                                 padding: 0
@@ -600,9 +600,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         <div
                           key={`video-${setIndex}`}
                           style={{
-                            width: '90px',
-                            height: '90px',
-                            minWidth: '90px',
+                            width: '80px',
+                            height: '80px',
+                            minWidth: '80px',
                             position: 'relative',
                             flexShrink: 0
                           }}
@@ -631,21 +631,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                             }}
                           >
                             <div style={{
-                              width: '32px',
-                              height: '32px',
+                              width: '28px',
+                              height: '28px',
                               borderRadius: '50%',
                               background: 'rgba(255,255,255,0.95)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '12px',
+                              fontSize: '11px',
                               marginBottom: '4px'
                             }}>
                               ▶️
                             </div>
                             <div style={{
                               color: 'var(--tg-theme-hint-color)',
-                              fontSize: '9px',
+                              fontSize: '8px',
                               fontWeight: 600
                             }}>
                               Video
@@ -665,14 +665,14 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               color: 'white',
                               border: 'none',
                               borderRadius: '50%',
-                              width: '24px',
-                              height: '24px',
-                              minWidth: '24px',
-                              minHeight: '24px',
+                              width: '22px',
+                              height: '22px',
+                              minWidth: '22px',
+                              minHeight: '22px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '12px',
+                              fontSize: '11px',
                               cursor: 'pointer',
                               zIndex: 10,
                               padding: 0
