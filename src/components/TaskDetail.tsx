@@ -402,14 +402,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               photoIndex?: number;
             }> = [];
 
-            if (hasPhotos) {
+            if (hasPhotos && set.photos) {
               set.photos.forEach((photo, idx) => {
                 allSetMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
               });
             }
-            if (hasVideo) {
+            if (hasVideo && set.video) {
               allSetMedia.push({ type: 'video', fileId: set.video.file_id });
             }
+
+            console.log(`Set ${setIndex + 1} - Total media items:`, allSetMedia.length, allSetMedia);
 
             return (
               <div
@@ -434,22 +436,22 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   gap: '8px',
                   height: '36px'
                 }}>
-                  <div style={{ 
-                    flex: 1, 
+                  <div style={{
+                    flex: 1,
                     minWidth: 0,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center'
                   }}>
-                    <div style={{ 
-                      fontSize: '14px', 
+                    <div style={{
+                      fontSize: '14px',
                       fontWeight: 'bold',
                       marginBottom: '2px'
                     }}>
                       Set {setIndex + 1}
                     </div>
-                    <div style={{ 
-                      fontSize: '11px', 
+                    <div style={{
+                      fontSize: '11px',
                       color: 'var(--tg-theme-hint-color)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -501,7 +503,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     const isPhoto = media.type === 'photo';
                     const fileId = media.fileId;
                     const photoIndex = media.photoIndex;
-                    
+
                     if (isPhoto) {
                       const imageUrl = mediaCache[fileId];
                       const isCreatedPhoto = fileId === task.createdPhoto?.file_id;
@@ -596,7 +598,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       // Video thumbnail
                       return (
                         <div
-                          key="video"
+                          key={`video-${setIndex}`}
                           style={{
                             width: '90px',
                             height: '90px',
