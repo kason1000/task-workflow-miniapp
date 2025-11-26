@@ -24,14 +24,26 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     status?: TaskStatus;
     archived: boolean;
   }>({ archived: false });
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
 
   const fetchTasks = async () => {
     setLoading(true);
     setError(null);
-    
     try {
       const response = await api.getTasks(filter.status, filter.archived);
       setTasks(response.tasks);
+      
+      // Load thumbnails for tasks with createdPhoto
+      response.tasks.forEach(async (task) => {
+        if (task.createdPhoto && !thumbnails[task.createdPhoto.file_id]) {
+          try {
+            const { fileUrl } = await api.getMediaUrl(task.createdPhoto.file_id);
+            setThumbnails(prev => ({ ...prev, [task.createdPhoto!.file_id]: fileUrl }));
+          } catch (err) {
+            console.error(`Failed to load thumbnail for task ${task.id}:`, err);
+          }
+        }
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to fetch tasks');
     } finally {
@@ -122,7 +134,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             ))}
           </div>
         </div>
-
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
             onClick={handleArchiveToggle}
@@ -135,7 +146,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           >
             {filter.archived ? '📦 Showing Archived' : '📋 Show Active'}
           </button>
-
           <button
             onClick={handleRefresh}
             style={{
@@ -181,7 +191,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              <TaskCard task={task} />
+              <TaskCard task={task} thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined} />
             </div>
           ))}
         </div>
@@ -190,7 +200,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string }) {
   const completedSets = task.sets.filter((set) => {
     const hasPhotos = set.photos.length >= 3;
     const hasVideo = task.labels.video ? !!set.video : true;
@@ -200,62 +210,92 @@ function TaskCard({ task }: { task: Task }) {
   const progress = (completedSets / task.requireSets) * 100;
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', flex: 1, marginRight: '12px' }}>
-          {task.title}
-        </h3>
-        <span className={`badge ${statusColors[task.status]}`}>
-          {task.status}
-        </span>
-      </div>
-
-      {/* Progress */}
-      <div style={{ marginBottom: '8px' }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          fontSize: '12px', 
-          color: 'var(--tg-theme-hint-color)',
-          marginBottom: '4px' 
-        }}>
-          <span>Progress</span>
-          <span>{completedSets}/{task.requireSets} sets</span>
-        </div>
-        <div style={{
-          height: '6px',
-          background: 'var(--tg-theme-bg-color)',
-          borderRadius: '3px',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            height: '100%',
-            width: `${progress}%`,
-            background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
-            transition: 'width 0.3s',
-          }} />
-        </div>
-      </div>
-
-      {/* Meta Info */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '12px', 
-        fontSize: '12px', 
-        color: 'var(--tg-theme-hint-color)',
-        flexWrap: 'wrap'
+    <div style={{ display: 'flex', gap: '12px' }}>
+      {/* Thumbnail on the left */}
+      <div style={{
+        width: '80px',
+        height: '80px',
+        minWidth: '80px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        background: thumbnailUrl 
+          ? `url(${thumbnailUrl}) center/cover`
+          : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '32px',
+        border: '2px solid var(--tg-theme-secondary-bg-color)'
       }}>
-        {task.labels.video && (
-          <span>🎥 Video required</span>
-        )}
-        <span>📅 {new Date(task.createdAt).toLocaleDateString()}</span>
-        {task.doneBy && (
-          <span>✅ Submitted</span>
-        )}
-        {task.archived && (
-          <span>📦 Archived</span>
-        )}
+        {!thumbnailUrl && '📷'}
+      </div>
+
+      {/* Task content on the right */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <h3 style={{ 
+            fontSize: '16px', 
+            fontWeight: '600', 
+            flex: 1, 
+            marginRight: '12px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            {task.title}
+          </h3>
+          <span className={`badge ${statusColors[task.status]}`}>
+            {task.status}
+          </span>
+        </div>
+
+        {/* Progress */}
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: '12px',
+            color: 'var(--tg-theme-hint-color)',
+            marginBottom: '4px'
+          }}>
+            <span>Progress</span>
+            <span>{completedSets}/{task.requireSets} sets</span>
+          </div>
+          <div style={{
+            height: '6px',
+            background: 'var(--tg-theme-bg-color)',
+            borderRadius: '3px',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${progress}%`,
+              background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
+              transition: 'width 0.3s',
+            }} />
+          </div>
+        </div>
+
+        {/* Meta Info */}
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          fontSize: '12px',
+          color: 'var(--tg-theme-hint-color)',
+          flexWrap: 'wrap'
+        }}>
+          {task.labels.video && (
+            <span>🎥 Video required</span>
+          )}
+          <span>📅 {new Date(task.createdAt).toLocaleDateString()}</span>
+          {task.doneBy && (
+            <span>✅ Submitted</span>
+          )}
+          {task.archived && (
+            <span>📦 Archived</span>
+          )}
+        </div>
       </div>
     </div>
   );
