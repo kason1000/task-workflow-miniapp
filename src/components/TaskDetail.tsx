@@ -401,7 +401,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               <div
                 key={setIndex}
                 style={{
-                  minWidth: '280px',
+                  minWidth: '320px',
+                  maxWidth: '320px',
                   flex: '0 0 auto',
                   background: 'var(--tg-theme-bg-color)',
                   borderRadius: '8px',
@@ -410,30 +411,42 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   scrollSnapAlign: 'start'
                 }}
               >
-                {/* Set Header - FIXED: Single Line */}
+                {/* Set Header - SINGLE LINE */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   marginBottom: '12px',
-                  gap: '8px'
+                  gap: '8px',
+                  height: '36px'
                 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <strong style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>
+                  <div style={{ 
+                    flex: 1, 
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      fontWeight: 'bold',
+                      marginBottom: '2px'
+                    }}>
                       Set {setIndex + 1}
-                    </strong>
+                    </div>
                     <div style={{ 
                       fontSize: '11px', 
                       color: 'var(--tg-theme-hint-color)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1
                     }}>
                       📷 {photoCount}/3 {hasEnoughPhotos ? '✓' : ''}
                       {videoRequired && ` • 🎥 ${hasVideo ? '✓' : '✗'}`}
                       {isComplete
-                        ? <span style={{ color: '#10b981', marginLeft: '4px' }}>✓</span>
-                        : <span style={{ color: '#f59e0b', marginLeft: '4px' }}>⏳</span>}
+                        ? <span style={{ color: '#10b981' }}> ✓</span>
+                        : <span style={{ color: '#f59e0b' }}> ⏳</span>}
                     </div>
                   </div>
                   {fileCount > 0 && (
@@ -452,7 +465,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         borderRadius: '6px',
                         cursor: 'pointer',
                         flexShrink: 0,
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        height: '32px'
                       }}
                     >
                       📤 {fileCount}
@@ -460,11 +474,14 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   )}
                 </div>
 
-                {/* Media Grid - Compact 2-column layout */}
+                {/* Media Row - SINGLE HORIZONTAL ROW */}
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '8px'
+                  display: 'flex',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  paddingBottom: '4px',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
                 }}>
                   {hasPhotos && set.photos.map((photo, photoIndex) => {
                     const imageUrl = mediaCache[photo.file_id];
@@ -475,9 +492,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       <div
                         key={`photo-${photoIndex}`}
                         style={{
-                          width: '100%',
-                          paddingBottom: '100%',
-                          position: 'relative'
+                          width: '90px',
+                          height: '90px',
+                          minWidth: '90px',
+                          position: 'relative',
+                          flexShrink: 0
                         }}
                       >
                         <div
@@ -491,11 +510,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                             });
                           }}
                           style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
+                            width: '100%',
+                            height: '100%',
                             background: imageUrl
                               ? `url(${imageUrl}) center/cover`
                               : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
@@ -562,9 +578,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   {hasVideo && (
                     <div
                       style={{
-                        width: '100%',
-                        paddingBottom: '100%',
-                        position: 'relative'
+                        width: '90px',
+                        height: '90px',
+                        minWidth: '90px',
+                        position: 'relative',
+                        flexShrink: 0
                       }}
                     >
                       <div
@@ -577,11 +595,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                           });
                         }}
                         style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
+                          width: '100%',
+                          height: '100%',
                           background: 'var(--tg-theme-secondary-bg-color)',
                           borderRadius: '8px',
                           cursor: 'pointer',
@@ -594,21 +609,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         }}
                       >
                         <div style={{
-                          width: '36px',
-                          height: '36px',
+                          width: '32px',
+                          height: '32px',
                           borderRadius: '50%',
                           background: 'rgba(255,255,255,0.95)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '14px',
+                          fontSize: '12px',
                           marginBottom: '4px'
                         }}>
                           ▶️
                         </div>
                         <div style={{
                           color: 'var(--tg-theme-hint-color)',
-                          fontSize: '10px',
+                          fontSize: '9px',
                           fontWeight: 600
                         }}>
                           Video
