@@ -410,21 +410,30 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   scrollSnapAlign: 'start'
                 }}
               >
-                {/* Set Header */}
+                {/* Set Header - FIXED: Single Line */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px'
+                  alignItems: 'flex-start',
+                  marginBottom: '12px',
+                  gap: '8px'
                 }}>
-                  <div>
-                    <strong style={{ fontSize: '14px' }}>Set {setIndex + 1}</strong>
-                    <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', marginTop: '4px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>
+                      Set {setIndex + 1}
+                    </strong>
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: 'var(--tg-theme-hint-color)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
                       📷 {photoCount}/3 {hasEnoughPhotos ? '✓' : ''}
                       {videoRequired && ` • 🎥 ${hasVideo ? '✓' : '✗'}`}
                       {isComplete
-                        ? <span style={{ color: '#10b981', marginLeft: '8px' }}>✓ Complete</span>
-                        : <span style={{ color: '#f59e0b', marginLeft: '8px' }}>⏳ Incomplete</span>}
+                        ? <span style={{ color: '#10b981', marginLeft: '4px' }}>✓</span>
+                        : <span style={{ color: '#f59e0b', marginLeft: '4px' }}>⏳</span>}
                     </div>
                   </div>
                   {fileCount > 0 && (
@@ -441,7 +450,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         color: 'var(--tg-theme-button-text-color)',
                         border: 'none',
                         borderRadius: '6px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       📤 {fileCount}
@@ -530,12 +541,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               borderRadius: '50%',
                               width: '24px',
                               height: '24px',
+                              minWidth: '24px',
+                              minHeight: '24px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontSize: '12px',
                               cursor: 'pointer',
-                              zIndex: 10
+                              zIndex: 10,
+                              padding: 0
                             }}
                           >
                             ✕
@@ -616,12 +630,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                           borderRadius: '50%',
                           width: '24px',
                           height: '24px',
+                          minWidth: '24px',
+                          minHeight: '24px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '12px',
                           cursor: 'pointer',
-                          zIndex: 10
+                          zIndex: 10,
+                          padding: 0
                         }}
                       >
                         ✕
