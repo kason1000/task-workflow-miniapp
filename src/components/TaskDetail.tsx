@@ -19,6 +19,27 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
+// Add delete upload function
+const handleDeleteUpload = async (setIndex: number, fileId: string, uploadType: 'photo' | 'video', photoIndex?: number) => {
+  const confirmed = await showConfirm(`Delete this ${uploadType}?`);
+  if (!confirmed) return;
+
+  setLoading(true);
+  hapticFeedback.medium();
+
+  try {
+    await api.deleteUpload(task.id, fileId);
+    hapticFeedback.success();
+    showAlert(`✅ ${uploadType === 'photo' ? 'Photo' : 'Video'} deleted`);
+    onTaskUpdated(); // Refresh task data
+  } catch (error: any) {
+    hapticFeedback.error();
+    showAlert(`Error: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
 interface MediaCache {
   [fileId: string]: string;
 }
@@ -473,129 +494,183 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 )}
               </div>
 
-              {/* Media Grid - ALL IN ONE ROW (dynamic columns) */}
-              {(hasPhotos || hasVideo) && (
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: `repeat(${fileCount}, 1fr)`,
-                  gap: '8px' 
-                }}>
-                  {/* Render Photos */}
-                  {hasPhotos && set.photos.map((photo, photoIndex) => {
-                    const imageUrl = mediaCache[photo.file_id];
-                    
-                    return (
-                      <div
-                        key={`photo-${photoIndex}`}
-                        onClick={() => {
-                          hapticFeedback.light();
-                          setSelectedMedia({ 
-                            type: 'photo', 
-                            fileId: photo.file_id, 
-                            setIndex,
-                            photoIndex 
-                          });
-                        }}
-                        style={{
-                          aspectRatio: '1',
-                          background: imageUrl 
-                            ? `url(${imageUrl}) center/cover` 
-                            : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '32px',
-                          border: '2px solid var(--tg-theme-button-color)',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          transition: 'transform 0.2s',
-                        }}
-                      >
-                        {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '4px',
-                          right: '4px',
-                          background: 'rgba(0,0,0,0.6)',
-                          color: 'white',
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          fontWeight: 600
-                        }}>
-                          {photoIndex + 1}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Render Video - INLINE, same size, better styling */}
-                  {hasVideo && (
+              {/* Photos Grid with Delete Buttons */}
+              {hasPhotos && set.photos.map((photo, photoIndex) => {
+                const imageUrl = mediaCache[photo.file_id];
+                const isCreatedPhoto = photo.file_id === task.createdPhoto?.file_id;
+                const canDelete = !isCreatedPhoto; // You can add more role-based logic here
+                
+                return (
+                  <div
+                    key={`photo-${photoIndex}`}
+                    style={{
+                      aspectRatio: '1',
+                      position: 'relative'
+                    }}
+                  >
                     <div
-                      key="video"
                       onClick={() => {
                         hapticFeedback.light();
                         setSelectedMedia({ 
-                          type: 'video', 
-                          fileId: set.video!.file_id, 
-                          setIndex 
+                          type: 'photo', 
+                          fileId: photo.file_id, 
+                          setIndex,
+                          photoIndex 
                         });
                       }}
                       style={{
-                        aspectRatio: '1',
-                        background: 'var(--tg-theme-secondary-bg-color)',
+                        width: '100%',
+                        height: '100%',
+                        background: imageUrl 
+                          ? `url(${imageUrl}) center/cover` 
+                          : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        border: '2px solid var(--tg-theme-hint-color)',
-                        position: 'relative',
+                        fontSize: '32px',
+                        border: '2px solid var(--tg-theme-button-color)',
                         overflow: 'hidden',
                         transition: 'transform 0.2s',
                       }}
                     >
-                      {/* Play button - WHITE background instead of purple */}
+                      {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
+                      
+                      {/* Photo number badge */}
                       <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        marginBottom: '4px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                      }}>
-                        ▶️
-                      </div>
-                      <div style={{
-                        color: 'var(--tg-theme-hint-color)',
+                        position: 'absolute',
+                        bottom: '4px',
+                        right: '4px',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: 'white',
                         fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
                         fontWeight: 600
                       }}>
-                        Video
+                        {photoIndex + 1}
                       </div>
-                      {loadingMedia.has(set.video.file_id) && (
-                        <div style={{
+                    </div>
+                    
+                    {/* Delete button overlay */}
+                    {canDelete && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteUpload(setIndex, photo.file_id, 'photo', photoIndex);
+                        }}
+                        disabled={loading}
+                        style={{
                           position: 'absolute',
                           top: '4px',
-                          right: '4px',
-                          background: 'rgba(0,0,0,0.6)',
+                          left: '4px',
+                          background: 'rgba(239, 68, 68, 0.9)',
                           color: 'white',
-                          padding: '2px 4px',
-                          borderRadius: '4px',
-                          fontSize: '10px'
-                        }}>
-                          ⏳
-                        </div>
-                      )}
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          zIndex: 10,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Video with Delete Button */}
+              {hasVideo && (
+                <div
+                  key="video"
+                  style={{
+                    aspectRatio: '1',
+                    position: 'relative'
+                  }}
+                >
+                  <div
+                    onClick={() => {
+                      hapticFeedback.light();
+                      setSelectedMedia({ 
+                        type: 'video', 
+                        fileId: set.video!.file_id, 
+                        setIndex 
+                      });
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'var(--tg-theme-secondary-bg-color)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid var(--tg-theme-hint-color)',
+                      overflow: 'hidden',
+                      transition: 'transform 0.2s',
+                    }}
+                  >
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      marginBottom: '4px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    }}>
+                      ▶️
                     </div>
-                  )}
+                    <div style={{
+                      color: 'var(--tg-theme-hint-color)',
+                      fontSize: '10px',
+                      fontWeight: 600
+                    }}>
+                      Video
+                    </div>
+                  </div>
+                  
+                  {/* Delete button for video */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteUpload(setIndex, set.video!.file_id, 'video');
+                    }}
+                    disabled={loading}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      left: '4px',
+                      background: 'rgba(239, 68, 68, 0.9)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      zIndex: 10,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
             </div>
