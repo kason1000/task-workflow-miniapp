@@ -19,27 +19,6 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
-// Add delete upload function
-const handleDeleteUpload = async (setIndex: number, fileId: string, uploadType: 'photo' | 'video', photoIndex?: number) => {
-  const confirmed = await showConfirm(`Delete this ${uploadType}?`);
-  if (!confirmed) return;
-
-  setLoading(true);
-  hapticFeedback.medium();
-
-  try {
-    await api.deleteUpload(task.id, fileId);
-    hapticFeedback.success();
-    showAlert(`✅ ${uploadType === 'photo' ? 'Photo' : 'Video'} deleted`);
-    onTaskUpdated(); // Refresh task data
-  } catch (error: any) {
-    hapticFeedback.error();
-    showAlert(`Error: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
 interface MediaCache {
   [fileId: string]: string;
 }
@@ -55,97 +34,94 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     photoIndex?: number;
   } | null>(null);
   
-  // ADD THESE for swipe functionality
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  // Share set function - moved inside component
+  // Add delete upload function
+  const handleDeleteUpload = async (setIndex: number, fileId: string, uploadType: 'photo' | 'video', photoIndex?: number) => {
+    const confirmed = await showConfirm(`Delete this ${uploadType}?`);
+    if (!confirmed) return;
+    setLoading(true);
+    hapticFeedback.medium();
+    try {
+      await api.deleteUpload(task.id, fileId);
+      hapticFeedback.success();
+      showAlert(`✅ ${uploadType === 'photo' ? 'Photo' : 'Video'} deleted`);
+      onTaskUpdated();
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Share set function
   const shareSetDirect = async (setIndex: number) => {
     setLoading(true);
     hapticFeedback.medium();
-
     try {
       const set = task.sets[setIndex];
       const files: File[] = [];
-      
       const totalFiles = (set.photos?.length || 0) + (set.video ? 1 : 0);
       console.log(`📤 Preparing ${totalFiles} files for sharing...`);
 
-      // Collect photos
       if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
           console.log(`📷 Fetching photo ${i + 1}/${set.photos.length}...`);
-          
           const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
           const response = await fetch(fileUrl);
-          
           if (!response.ok) {
             throw new Error(`Failed to fetch photo ${i + 1}: ${response.status}`);
           }
-          
           const blob = await response.blob();
           console.log(`✅ Photo ${i + 1} downloaded: ${blob.size} bytes`);
-          
           if (blob.size < 1000) {
             throw new Error(`Photo ${i + 1} is too small (${blob.size} bytes)`);
           }
-          
           const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
           files.push(file);
         }
       }
 
-      // Collect video
       if (set.video) {
         console.log(`🎥 Fetching video...`);
-        
         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
         const response = await fetch(fileUrl);
-        
         const blob = await response.blob();
-        
-        // Get actual MIME type from response
         const actualMimeType = response.headers.get('content-type') || 'video/mp4';
         console.log('🎥 Video MIME type from server:', actualMimeType);
-        
-        // Use the server's MIME type
-        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { 
-          type: actualMimeType 
+        const file = new File([blob], `set${setIndex + 1}_video.mp4`, {
+          type: actualMimeType
         });
         files.push(file);
-        
-        // Extra delay for video
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       console.log(`✅ All ${files.length} files ready`);
 
-      // Verify share capability
       if (!navigator.share) {
         throw new Error('Share API not available');
       }
-
       if (!navigator.canShare({ files })) {
         throw new Error('Cannot share these file types');
       }
 
       console.log('📤 Files being shared:');
       files.forEach((file, idx) => {
-        console.log(`  ${idx + 1}. ${file.name} - ${file.type} - ${file.size} bytes`);
+        console.log(`${idx + 1}. ${file.name} - ${file.type} - ${file.size} bytes`);
       });
 
-      // Trigger native share
       await navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
         text: `Sharing ${files.length} files from Set ${setIndex + 1}`,
         files
       });
-      
+
       hapticFeedback.success();
       showAlert('✅ Shared successfully!');
       console.log('✅ Share completed successfully');
-      
     } catch (error: any) {
       console.error('❌ Share failed:', error);
       if (error.name !== 'AbortError') {
@@ -159,12 +135,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  // Load media URL from backend
   const loadMediaUrl = async (fileId: string) => {
     if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
-    
     setLoadingMedia(prev => new Set(prev).add(fileId));
-    
     try {
       const result = await api.getMediaUrl(fileId);
       setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
@@ -179,7 +152,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  // Load all media URLs when component mounts
   useEffect(() => {
     task.sets.forEach(set => {
       set.photos?.forEach(photo => loadMediaUrl(photo.file_id));
@@ -204,10 +176,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleTransition = async (to: TaskStatus) => {
     const confirmed = await showConfirm(`Transition task to ${to}?`);
     if (!confirmed) return;
-
     setLoading(true);
     hapticFeedback.medium();
-
     try {
       await api.transitionTask(task.id, to);
       hapticFeedback.success();
@@ -224,10 +194,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleArchive = async () => {
     const confirmed = await showConfirm('Archive this task?');
     if (!confirmed) return;
-
     setLoading(true);
     hapticFeedback.medium();
-
     try {
       await api.archiveTask(task.id);
       hapticFeedback.success();
@@ -244,10 +212,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleRestore = async () => {
     const confirmed = await showConfirm('Restore this task?');
     if (!confirmed) return;
-
     setLoading(true);
     hapticFeedback.medium();
-
     try {
       await api.restoreTask(task.id);
       hapticFeedback.success();
@@ -264,10 +230,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleDelete = async () => {
     const confirmed = await showConfirm('⚠️ Permanently delete this task? This cannot be undone!');
     if (!confirmed) return;
-
     setLoading(true);
     hapticFeedback.heavy();
-
     try {
       await api.deleteTask(task.id);
       hapticFeedback.success();
@@ -281,14 +245,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  // Calculate total media count
   const totalPhotos = task.sets.reduce((sum, set) => sum + (set.photos?.length || 0), 0);
   const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
   const totalMedia = totalPhotos + totalVideos;
 
   return (
     <div>
-      {/* Header - Updated back button style */}
+      {/* Header */}
       <div className="card">
         <button
           onClick={onBack}
@@ -316,9 +279,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Combined Sets Progress with Media Gallery */}
+      {/* Sets Progress - HORIZONTAL LAYOUT */}
       <div className="card" style={{ position: 'relative' }}>
-        {/* Loading Overlay */}
         {loading && (
           <div style={{
             position: 'absolute',
@@ -345,62 +307,49 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           </div>
         )}
 
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '12px' 
+          marginBottom: '12px'
         }}>
           <h3 style={{ fontSize: '16px', margin: 0 }}>Sets Progress</h3>
-          
-          {/* Share All Sets button (top right) */}
           {task.requireSets > 1 && totalMedia > 0 && (
             <button
               onClick={async () => {
                 setLoading(true);
                 hapticFeedback.medium();
-                
                 try {
                   const files: File[] = [];
-
                   for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
                     const set = task.sets[setIndex];
-                    
                     if (set.photos) {
                       for (let i = 0; i < set.photos.length; i++) {
                         const photo = set.photos[i];
                         const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
                         const response = await fetch(fileUrl);
-                        
                         if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
-                        
                         const blob = await response.blob();
                         const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
                         files.push(file);
                       }
                     }
-
                     if (set.video) {
                       const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
                       const response = await fetch(fileUrl);
-                      
                       if (!response.ok) throw new Error(`Failed to fetch video from set ${setIndex + 1}`);
-                      
                       const blob = await response.blob();
                       const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
                       files.push(file);
                     }
                   }
-
                   await new Promise(resolve => setTimeout(resolve, 500));
-
                   if (navigator.share && navigator.canShare({ files })) {
                     await navigator.share({
                       title: task.title,
                       text: `Sharing ${files.length} files from all sets`,
                       files
                     });
-                    
                     hapticFeedback.success();
                     showAlert('✅ Shared all sets!');
                   }
@@ -429,15 +378,14 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           )}
         </div>
 
-        {/* FLEX container so sets show in one row */}
+        {/* SINGLE ROW - Horizontal Scroll for Sets */}
         <div style={{
           display: 'flex',
-          flexDirection: 'row',
           gap: '12px',
           overflowX: 'auto',
           paddingBottom: '8px',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
+          scrollbarWidth: 'thin',
+          scrollSnapType: 'x mandatory'
         }}>
           {task.sets.map((set, setIndex) => {
             const hasPhotos = set.photos && set.photos.length > 0;
@@ -453,11 +401,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               <div
                 key={setIndex}
                 style={{
+                  minWidth: '280px',
                   flex: '0 0 auto',
-                  width: '200px',
                   background: 'var(--tg-theme-bg-color)',
                   borderRadius: '8px',
-                  padding: '12px'
+                  padding: '12px',
+                  border: '1px solid var(--tg-theme-secondary-bg-color)',
+                  scrollSnapAlign: 'start'
                 }}
               >
                 {/* Set Header */}
@@ -499,15 +449,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   )}
                 </div>
 
-                {/* Media previews in a single horizontal row */}
+                {/* Media Grid - Compact 2-column layout */}
                 <div style={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  gap: '8px',
-                  overflowX: 'auto',
-                  paddingBottom: '4px',
-                  scrollbarWidth: 'none', // Firefox
-                  msOverflowStyle: 'none' // IE/Edge
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '8px'
                 }}>
                   {hasPhotos && set.photos.map((photo, photoIndex) => {
                     const imageUrl = mediaCache[photo.file_id];
@@ -518,10 +464,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       <div
                         key={`photo-${photoIndex}`}
                         style={{
-                          width: '100px',
-                          height: '100px',
-                          position: 'relative',
-                          flex: '0 0 auto'
+                          width: '100%',
+                          paddingBottom: '100%',
+                          position: 'relative'
                         }}
                       >
                         <div
@@ -535,8 +480,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                             });
                           }}
                           style={{
-                            width: '100%',
-                            height: '100%',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
                             background: imageUrl
                               ? `url(${imageUrl}) center/cover`
                               : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
@@ -599,12 +547,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
                   {hasVideo && (
                     <div
-                      key="video"
                       style={{
-                        width: '100px',
-                        height: '100px',
-                        position: 'relative',
-                        flex: '0 0 auto'
+                        width: '100%',
+                        paddingBottom: '100%',
+                        position: 'relative'
                       }}
                     >
                       <div
@@ -617,8 +563,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                           });
                         }}
                         style={{
-                          width: '100%',
-                          height: '100%',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
                           background: 'var(--tg-theme-secondary-bg-color)',
                           borderRadius: '8px',
                           cursor: 'pointer',
@@ -775,26 +724,24 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Media Viewer Modal - FIXED */}
+      {/* Media Viewer Modal */}
       {selectedMedia && (() => {
-        // Build complete media array for current set
         const currentSet = task.sets[selectedMedia.setIndex];
         const allMedia: Array<{
           type: 'photo' | 'video';
           fileId: string;
           photoIndex?: number;
         }> = [];
-        
+
         currentSet.photos?.forEach((photo, idx) => {
           allMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
         });
-        
         if (currentSet.video) {
           allMedia.push({ type: 'video', fileId: currentSet.video.file_id });
         }
-        
+
         const currentIndex = allMedia.findIndex(m => m.fileId === selectedMedia.fileId);
-        
+
         const goToPrevious = () => {
           hapticFeedback.light();
           const prevIndex = currentIndex === 0 ? allMedia.length - 1 : currentIndex - 1;
@@ -806,7 +753,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             photoIndex: prevMedia.photoIndex
           });
         };
-        
+
         const goToNext = () => {
           hapticFeedback.light();
           const nextIndex = (currentIndex + 1) % allMedia.length;
@@ -818,7 +765,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             photoIndex: nextMedia.photoIndex
           });
         };
-        
+
         const goToMedia = (index: number) => {
           hapticFeedback.light();
           const media = allMedia[index];
@@ -829,25 +776,24 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             photoIndex: media.photoIndex
           });
         };
-        
+
         const minSwipeDistance = 50;
-        
+
         const onTouchStart = (e: React.TouchEvent) => {
           setTouchEnd(null);
           setTouchStart(e.targetTouches[0].clientX);
         };
-        
+
         const onTouchMove = (e: React.TouchEvent) => {
           setTouchEnd(e.targetTouches[0].clientX);
         };
-        
+
         const onTouchEnd = () => {
           if (!touchStart || !touchEnd) return;
-          
           const distance = touchStart - touchEnd;
           const isLeftSwipe = distance > minSwipeDistance;
           const isRightSwipe = distance < -minSwipeDistance;
-          
+
           if (isLeftSwipe) {
             goToNext();
           }
@@ -855,9 +801,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             goToPrevious();
           }
         };
-        
+
         const isMediaLoading = !mediaCache[selectedMedia.fileId];
-        
+
         return (
           <div
             style={{
@@ -884,13 +830,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 {currentIndex + 1} of {allMedia.length}
               </div>
             </div>
-            
+
             {/* Main Content Area with Swipe */}
-            <div 
+            <div
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
-              style={{ 
+              style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
@@ -956,11 +902,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   </button>
                 </>
               )}
-              
+
               {/* Media Display */}
               {isMediaLoading ? (
-                <div style={{ 
-                  fontSize: '64px', 
+                <div style={{
+                  fontSize: '64px',
                   padding: '40px',
                   background: 'rgba(255,255,255,0.1)',
                   borderRadius: '16px',
@@ -970,8 +916,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 </div>
               ) : (
                 selectedMedia.type === 'photo' ? (
-                  <img 
-                    src={mediaCache[selectedMedia.fileId]} 
+                  <img
+                    src={mediaCache[selectedMedia.fileId]}
                     alt="Task photo"
                     style={{
                       maxWidth: '100%',
@@ -981,7 +927,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     }}
                   />
                 ) : (
-                  <video 
+                  <video
                     src={mediaCache[selectedMedia.fileId]}
                     controls
                     autoPlay
@@ -997,11 +943,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 )
               )}
             </div>
-            
+
             {/* iOS-Style Thumbnail Strip */}
-            <div 
+            <div
               onClick={(e) => e.stopPropagation()}
-              style={{ 
+              style={{
                 width: '100%',
                 background: 'rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(10px)',
@@ -1026,7 +972,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 {allMedia.map((media, index) => {
                   const isActive = index === currentIndex;
                   const thumbnailUrl = mediaCache[media.fileId];
-                  
+
                   return (
                     <div
                       key={index}
@@ -1075,7 +1021,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   );
                 })}
               </div>
-              
+
               {/* Close button and hint */}
               <div style={{
                 display: 'flex',
