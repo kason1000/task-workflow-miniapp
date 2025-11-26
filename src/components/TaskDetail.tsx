@@ -429,140 +429,184 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           )}
         </div>
 
-        {/* FLEX container so sets show in one row */}
+        {/* Horizontal layout of uploads inside the set */}
         <div style={{
           display: 'flex',
           flexDirection: 'row',
-          gap: '12px',
+          gap: '8px',
           overflowX: 'auto',
-          paddingBottom: '8px',
+          paddingBottom: '4px',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'
         }}>
-          {task.sets.map((set, setIndex) => {
-            const hasPhotos = set.photos && set.photos.length > 0;
-            const hasVideo = !!set.video;
-            const photoCount = set.photos?.length || 0;
-            const hasEnoughPhotos = photoCount >= 3;
-            const videoRequired = task.labels.video;
-            const hasRequiredVideo = videoRequired ? hasVideo : true;
-            const isComplete = hasEnoughPhotos && hasRequiredVideo;
-            const fileCount = photoCount + (hasVideo ? 1 : 0);
-
+          {hasPhotos && set.photos.map((photo, photoIndex) => {
+            const imageUrl = mediaCache[photo.file_id];
+            const isCreatedPhoto = photo.file_id === task.createdPhoto?.file_id;
+            const canDelete = !isCreatedPhoto;
             return (
               <div
-                key={setIndex}
+                key={`photo-${photoIndex}`}
                 style={{
-                  flex: '0 0 auto',
-                  width: '200px',
-                  background: 'var(--tg-theme-bg-color)',
-                  borderRadius: '8px',
-                  padding: '12px'
+                  width: '100px',
+                  height: '100px',
+                  position: 'relative',
+                  flex: '0 0 auto'
                 }}
               >
-                {/* Set Header */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px'
-                }}>
-                  <div>
-                    <strong style={{ fontSize: '14px' }}>Set {setIndex + 1}</strong>
-                    <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', marginTop: '4px' }}>
-                      📷 {photoCount}/3 {hasEnoughPhotos ? '✓' : ''}
-                      {videoRequired && ` • 🎥 ${hasVideo ? '✓' : '✗'}`}
-                      {isComplete
-                        ? <span style={{ color: '#10b981', marginLeft: '8px' }}>✓ Complete</span>
-                        : <span style={{ color: '#f59e0b', marginLeft: '8px' }}>⏳ Incomplete</span>}
-                    </div>
+                <div
+                  onClick={() => {
+                    hapticFeedback.light();
+                    setSelectedMedia({
+                      type: 'photo',
+                      fileId: photo.file_id,
+                      setIndex,
+                      photoIndex
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: imageUrl
+                      ? `url(${imageUrl}) center/cover`
+                      : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '32px',
+                    border: '2px solid var(--tg-theme-button-color)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {!imageUrl && (loadingMedia.has(photo.file_id) ? '⏳' : '📷')}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '4px',
+                    right: '4px',
+                    background: 'rgba(0,0,0,0.6)',
+                    color: 'white',
+                    fontSize: '10px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 600
+                  }}>
+                    {photoIndex + 1}
                   </div>
-                  {fileCount > 0 && (
-                    <button
-                      onClick={async () => {
-                        hapticFeedback.medium();
-                        await shareSetDirect(setIndex);
-                      }}
-                      disabled={loading}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        background: loading ? '#6b7280' : 'var(--tg-theme-button-color)',
-                        color: 'var(--tg-theme-button-text-color)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      📤 {fileCount}
-                    </button>
-                  )}
                 </div>
-
-                {/* Media previews */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {hasPhotos && set.photos.map((photo, photoIndex) => {
-                    const imageUrl = mediaCache[photo.file_id];
-                    return (
-                      <div
-                        key={`photo-${photoIndex}`}
-                        style={{
-                          width: '60px',
-                          height: '60px',
-                          background: imageUrl
-                            ? `url(${imageUrl}) center/cover`
-                            : 'var(--tg-theme-secondary-bg-color)',
-                          borderRadius: '6px',
-                          position: 'relative',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => setSelectedMedia({
-                          type: 'photo',
-                          fileId: photo.file_id,
-                          setIndex,
-                          photoIndex
-                        })}
-                      >
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '2px',
-                          right: '2px',
-                          background: 'rgba(0,0,0,0.6)',
-                          color: '#fff',
-                          fontSize: '9px',
-                          padding: '2px 4px',
-                          borderRadius: '4px'
-                        }}>
-                          {photoIndex + 1}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {hasVideo && (
-                    <div
-                      style={{
-                        width: '60px',
-                        height: '60px',
-                        background: 'var(--tg-theme-secondary-bg-color)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => setSelectedMedia({
-                        type: 'video',
-                        fileId: set.video!.file_id,
-                        setIndex
-                      })}
-                    >
-                      ▶️
-                    </div>
-                  )}
-                </div>
+                {canDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteUpload(setIndex, photo.file_id, 'photo', photoIndex);
+                    }}
+                    disabled={loading}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      left: '4px',
+                      background: 'rgba(239, 68, 68, 0.9)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      zIndex: 10
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             );
           })}
+          {hasVideo && (
+            <div
+              key="video"
+              style={{
+                width: '100px',
+                height: '100px',
+                position: 'relative',
+                flex: '0 0 auto'
+              }}
+            >
+              <div
+                onClick={() => {
+                  hapticFeedback.light();
+                  setSelectedMedia({
+                    type: 'video',
+                    fileId: set.video!.file_id,
+                    setIndex
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid var(--tg-theme-hint-color)',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.95)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  marginBottom: '4px'
+                }}>
+                  ▶️
+                </div>
+                <div style={{
+                  color: 'var(--tg-theme-hint-color)',
+                  fontSize: '10px',
+                  fontWeight: 600
+                }}>
+                  Video
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteUpload(setIndex, set.video!.file_id, 'video');
+                }}
+                disabled={loading}
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  left: '4px',
+                  background: 'rgba(239, 68, 68, 0.9)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  zIndex: 10
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
