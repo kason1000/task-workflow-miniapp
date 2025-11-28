@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { Task, TaskStatus } from '../types';
-import { hapticFeedback, showAlert, getTelegramUser } from '../utils/telegram';
+import { hapticFeedback, showAlert } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 
 interface TaskListProps {
@@ -27,12 +27,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     archived: boolean;
   }>({ status: 'all', archived: false });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
-  
-  // Get user role to conditionally show archive filter
   const [userRole, setUserRole] = useState<string>('Member');
   
+  // Ref to store and restore scroll position
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+
   useEffect(() => {
-    // Fetch user role on mount
     const fetchUserRole = async () => {
       try {
         const roleData = await api.getMyRole();
@@ -48,7 +49,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setLoading(true);
     setError(null);
     try {
-      // Important: Pass status and archived correctly
       const statusFilter = filter.status === 'all' ? undefined : filter.status;
       
       console.log('📊 Fetching tasks with filters:', { 
@@ -93,7 +93,19 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     fetchTasks();
   }, [filter.status, filter.archived]);
 
+  // Restore scroll position after render
+  useEffect(() => {
+    if (scrollContainerRef.current && scrollPositionRef.current > 0) {
+      scrollContainerRef.current.scrollLeft = scrollPositionRef.current;
+    }
+  });
+
   const handleStatusFilter = (status?: TaskStatus) => {
+    // Save current scroll position
+    if (scrollContainerRef.current) {
+      scrollPositionRef.current = scrollContainerRef.current.scrollLeft;
+    }
+    
     hapticFeedback.light();
     setFilter({ ...filter, status: status || 'all' });
   };
@@ -158,91 +170,100 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     );
   }
 
-  // Check if user can see archived tasks (not Member)
   const canViewArchived = userRole !== 'Member';
 
   return (
     <div>
-      {/* Filter Bar - Single Row, Scrollable */}
-      <div className="card" style={{ marginBottom: '12px' }}>
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          overflowX: 'auto',
-          paddingBottom: '4px',
-          scrollbarWidth: 'thin',
-          WebkitOverflowScrolling: 'touch'
-        }}>
-          {/* Status Filters */}
-          <button
-            onClick={() => handleStatusFilter(undefined)}
+      {/* Filter Bar - Fixed Layout with Scrollable Status Filters */}
+      <div className="card" style={{ marginBottom: '12px', position: 'relative' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* Scrollable Status Filters */}
+          <div
+            ref={scrollContainerRef}
             style={{
-              padding: '8px 16px',
-              fontSize: '14px',
-              background: filter.status === 'all' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-              color: filter.status === 'all' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
+              display: 'flex',
+              gap: '8px',
+              overflowX: 'auto',
+              flex: 1,
+              scrollbarWidth: 'thin',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: '4px'
             }}
           >
-            📋 All
-          </button>
-          
-          {(['New', 'Received', 'Submitted', 'Redo', 'Completed'] as TaskStatus[]).map((status) => (
             <button
-              key={status}
-              onClick={() => handleStatusFilter(status)}
+              onClick={() => handleStatusFilter(undefined)}
               style={{
                 padding: '8px 16px',
                 fontSize: '14px',
-                background: filter.status === status ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                color: filter.status === status ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                background: filter.status === 'all' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                color: filter.status === 'all' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
                 whiteSpace: 'nowrap',
                 flexShrink: 0
               }}
             >
-              {status}
+              📋 All
             </button>
-          ))}
+            
+            {(['New', 'Received', 'Submitted', 'Redo', 'Completed'] as TaskStatus[]).map((status) => (
+              <button
+                key={status}
+                onClick={() => handleStatusFilter(status)}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  background: filter.status === status ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  color: filter.status === status ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
           
-          {/* Spacer to push archive and refresh to the right */}
-          <div style={{ flex: 1, minWidth: '8px' }} />
-          
-          {/* Archive Toggle - Only for non-Members, emoji only */}
-          {canViewArchived && (
+          {/* Fixed Right Side: Archive + Refresh */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px',
+            flexShrink: 0,
+            background: 'var(--tg-theme-secondary-bg-color)',
+            paddingLeft: '8px'
+          }}>
+            {canViewArchived && (
+              <button
+                onClick={handleArchiveToggle}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '18px',
+                  background: filter.archived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  minWidth: 'auto'
+                }}
+                title={filter.archived ? 'Show Active' : 'Show Archived'}
+              >
+                🗃️
+              </button>
+            )}
+            
             <button
-              onClick={handleArchiveToggle}
+              onClick={handleRefresh}
               style={{
                 padding: '8px 12px',
                 fontSize: '18px',
-                background: filter.archived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                color: 'var(--tg-theme-text-color)',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
                 minWidth: 'auto'
               }}
-              title={filter.archived ? 'Show Active' : 'Show Archived'}
+              title="Refresh"
             >
-              🗃️
+              🔄
             </button>
-          )}
-          
-          {/* Refresh Button */}
-          <button
-            onClick={handleRefresh}
-            style={{
-              padding: '8px 12px',
-              fontSize: '18px',
-              background: 'var(--tg-theme-secondary-bg-color)',
-              color: 'var(--tg-theme-text-color)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              minWidth: 'auto'
-            }}
-            title="Refresh"
-          >
-            🔄
-          </button>
+          </div>
         </div>
       </div>
 
@@ -285,7 +306,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           {tasks.map((task) => (
             <div key={task.id} className="card">
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
-                {/* Task Card - Clickable */}
                 <div 
                   onClick={() => onTaskClick(task)} 
                   style={{ 
@@ -300,7 +320,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   />
                 </div>
                 
-                {/* Send to Chat Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -342,7 +361,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         </div>
       )}
 
-      {/* Scrollbar styling */}
       <style>{`
         div::-webkit-scrollbar {
           height: 6px;
@@ -354,7 +372,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         div::-webkit-scrollbar-thumb {
           background: var(--tg-theme-hint-color);
           border-radius: 3px;
-          opacity: 0.5;
         }
         div::-webkit-scrollbar-thumb:hover {
           background: var(--tg-theme-button-color);
@@ -364,6 +381,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
+// TaskCard component remains the same
 function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string }) {
   const completedSets = task.sets.filter((set) => {
     const hasPhotos = set.photos.length >= 3;
@@ -374,7 +392,6 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
 
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
-      {/* Thumbnail */}
       <div style={{
         width: '80px',
         height: '80px',
@@ -393,9 +410,7 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
         {!thumbnailUrl && '📷'}
       </div>
 
-      {/* Task Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
           <h3 style={{ 
             fontSize: '16px', 
@@ -413,7 +428,6 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
           </span>
         </div>
 
-        {/* Progress */}
         <div style={{ marginBottom: '8px' }}>
           <div style={{
             display: 'flex',
@@ -440,7 +454,6 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
           </div>
         </div>
 
-        {/* Meta Info */}
         <div style={{
           display: 'flex',
           gap: '12px',
