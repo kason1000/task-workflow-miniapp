@@ -29,18 +29,20 @@ function App() {
       const tgUser = getTelegramUser();
       console.log('Telegram user:', tgUser);
       setUser(tgUser);
-
+  
+      // Declare URL params at the top level of useEffect
       const urlParams = new URLSearchParams(window.location.search);
       const taskIdParam = urlParams.get('taskId');
       const viewParam = urlParams.get('view');
-
+  
       const fetchRole = async () => {
         try {
           console.log('Fetching role...');
           const roleData = await api.getMyRole();
           console.log('Role data:', roleData);
           setRole(roleData.role);
-
+          
+          // Now taskIdParam and viewParam are accessible here
           if (taskIdParam) {
             console.log('Loading task from URL:', taskIdParam);
             try {
@@ -65,7 +67,7 @@ function App() {
           setLoading(false);
         }
       };
-
+      
       fetchRole();
     } catch (error: any) {
       console.error('Initialization error:', error);
