@@ -63,86 +63,51 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       
       const files: File[] = [];
       
-      console.log(`📤 Starting share for Set ${setIndex + 1}`);
-      console.log(`Photos: ${set.photos?.length || 0}, Video: ${!!set.video}`);
-      
-      // Collect photos
       if (set.photos && set.photos.length > 0) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          console.log(`📷 Fetching photo ${i + 1}/${set.photos.length} (${photo.file_id})`);
-          
-          try {
-            const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
-            const response = await fetch(fileUrl);
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error(`Fetch failed:`, response.status, errorText);
-              throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const blob = await response.blob();
-            console.log(`✅ Photo ${i + 1}: ${blob.size} bytes`);
-            
-            if (blob.size < 100) {
-              throw new Error(`Too small (${blob.size} bytes)`);
-            }
-            
-            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-            files.push(file);
-          } catch (photoError: any) {
-            console.error(`❌ Photo ${i + 1} failed:`, photoError);
-            throw new Error(`Photo ${i + 1}: ${photoError.message}`);
-          }
-        }
-      }
-      
-      // Collect video
-      if (set.video) {
-        console.log(`🎥 Fetching video (${set.video.file_id})`);
-        
-        try {
-          const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
           const response = await fetch(fileUrl);
           
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Fetch failed:`, response.status, errorText);
             throw new Error(`HTTP ${response.status}`);
           }
           
           const blob = await response.blob();
-          const contentType = response.headers.get('content-type') || 'video/mp4';
-          console.log(`✅ Video: ${blob.size} bytes, type: ${contentType}`);
-          
           if (blob.size < 100) {
             throw new Error(`Too small (${blob.size} bytes)`);
           }
           
-          const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
+          const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
           files.push(file);
-        } catch (videoError: any) {
-          console.error(`❌ Video failed:`, videoError);
-          throw new Error(`Video: ${videoError.message}`);
         }
       }
       
-      console.log(`✅ Prepared ${files.length} files`);
+      if (set.video) {
+        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+        const response = await fetch(fileUrl);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        const contentType = response.headers.get('content-type') || 'video/mp4';
+        
+        if (blob.size < 100) {
+          throw new Error(`Too small (${blob.size} bytes)`);
+        }
+        
+        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
+        files.push(file);
+      }
       
       if (files.length === 0) {
         throw new Error('No files to share');
       }
       
-      if (!navigator.share) {
-        throw new Error('Share API not available');
-      }
-      
-      const canShare = navigator.canShare({ files });
-      console.log(`Can share: ${canShare}`);
-      
-      if (!canShare) {
-        throw new Error('Cannot share these file types');
+      if (!navigator.share || !navigator.canShare({ files })) {
+        throw new Error('Share not supported');
       }
       
       await navigator.share({
@@ -151,11 +116,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       });
       
       hapticFeedback.success();
-      showAlert('✅ Shared successfully!');
       
     } catch (error: any) {
-      console.error('❌ Share failed:', error);
-      
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(`Failed to share: ${error.message}`);
@@ -167,9 +129,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
 
   const loadMediaUrl = async (fileId: string) => {
     if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
-
+    
     setLoadingMedia(prev => new Set(prev).add(fileId));
-
+    
     try {
       const result = await api.getMediaUrl(fileId);
       setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
@@ -192,10 +154,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   }, [task.id]);
 
   const canTransition = (to: TaskStatus): boolean => {
-    // Admin can do anything
-    if (userRole === 'Admin') {
-      return true;
-    }
+    if (userRole === 'Admin') return true;
 
     const transitions: Record<string, string[]> = {
       'New->Received': ['Member', 'Lead', 'Admin'],
@@ -204,7 +163,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       'Submitted->Completed': ['Lead', 'Admin'],
       'Submitted->Archived': ['Lead', 'Admin', 'Viewer'],
       'Completed->Archived': ['Lead', 'Admin', 'Viewer'],
-      'Redo->Submitted': ['Member', 'Lead', 'Admin'], // Added
+      'Redo->Submitted': ['Member', 'Lead', 'Admin'],
     };
     
     const key = `${task.status}->${to}`;
@@ -295,12 +254,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   const handleSendToChat = async () => {
     setLoading(true);
     hapticFeedback.medium();
-  
+
     try {
       await api.sendTaskToChat(task.id);
       hapticFeedback.success();
       
-      // Close Mini App and return to chat
       setTimeout(() => {
         WebApp.close();
       }, 300);
@@ -315,83 +273,106 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
   const totalMedia = totalPhotos + totalVideos;
 
+  // Get unique uploaders
+  const getUploaders = (): string[] => {
+    const uploaderIds = new Set<number>();
+    
+    task.sets.forEach(set => {
+      set.photos?.forEach(photo => uploaderIds.add(photo.by));
+      if (set.video) uploaderIds.add(set.video.by);
+    });
+    
+    return Array.from(uploaderIds).map(id => {
+      if (WebApp.initDataUnsafe?.user?.id === id) {
+        return WebApp.initDataUnsafe.user.first_name || `User ${id}`;
+      }
+      return `User ${id}`;
+    });
+  };
+
+  // Generate progress caption like task card in chat
+  const getProgressCaption = (): string => {
+    let completedSets = 0;
+    const setCaptions: string[] = [];
+
+    for (let i = 0; i < task.requireSets; i++) {
+      const set = task.sets[i] || { photos: [], video: undefined };
+      const photoCount = set.photos?.length || 0;
+      const hasVideo = !!set.video;
+      const videoRequired = task.labels.video;
+      
+      const maxPhotos = videoRequired ? 3 : (hasVideo ? 3 : 4);
+      const hasEnoughPhotos = photoCount >= maxPhotos;
+      const hasRequiredVideo = videoRequired ? hasVideo : true;
+      const isComplete = hasEnoughPhotos && hasRequiredVideo;
+
+      if (isComplete) {
+        completedSets++;
+        setCaptions.push(`✅ Set ${i + 1}`);
+      } else {
+        if (videoRequired) {
+          setCaptions.push(`Set ${i + 1}: 📸 ${photoCount}/3 🎥 ${hasVideo ? '1/1' : '0/1'}`);
+        } else {
+          setCaptions.push(`Set ${i + 1}: 📸 ${photoCount}/${maxPhotos}${hasVideo ? ' 🎥 1/1' : ''}`);
+        }
+      }
+    }
+
+    return `${completedSets}/${task.requireSets} sets complete\n\n${setCaptions.join('\n')}`;
+  };
+
+  const isViewer = userRole === 'Viewer';
+
   return (
     <div style={{ 
       minHeight: '100vh',
-      paddingBottom: '100px' // Space for fixed buttons
+      paddingBottom: '100px'
     }}>
-      <button onClick={onBack} style={{ marginBottom: '12px' }}>
-        ← Back
-      </button>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <h2 style={{ fontSize: '18px', margin: 0, flex: 1 }}>{task.title}</h2>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span className={`badge ${statusColors[task.status]}`}>
-            {task.status}
-          </span>
-          {task.labels.video && (
-            <span className="badge" style={{ background: '#8b5cf6', color: 'white' }}>
-              🎥 Video Required
-            </span>
-          )}
-        </div>
-      </div>
-      
-      {/* Meta Information - NOW FIRST, BEFORE SETS */}
+      {/* REMOVED: Second back button and title section */}
+
+      {/* Compact Information Section */}
       <div className="card">
-        <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>Information</h3>
-        <div style={{ fontSize: '14px', lineHeight: '1.8' }}>
-          {/* Status */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Status:</span>
-            <span className={`badge ${statusColors[task.status]}`}>
+        <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>📋 {task.title}</h3>
+        <div style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--tg-theme-hint-color)' }}>
+          <div style={{ marginBottom: '6px' }}>
+            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '11px' }}>
               {task.status}
             </span>
-          </div>
-          
-          {/* Created By - Show name from Telegram WebApp */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Created by:</span>
-            <span>
-              {WebApp.initDataUnsafe?.user?.id === task.createdBy 
-                ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
-                : `User ${task.createdBy}`}
-            </span>
-          </div>
-          
-          {/* Created At */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Created:</span>
-            <span>{new Date(task.createdAt).toLocaleString()}</span>
-          </div>
-          
-          {/* Submitted By (if exists) */}
-          {task.doneBy && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ color: 'var(--tg-theme-hint-color)' }}>Submitted by:</span>
-              <span>
-                {WebApp.initDataUnsafe?.user?.id === task.doneBy
-                  ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
-                  : `User ${task.doneBy}`}
+            {task.labels.video && (
+              <span className="badge" style={{ background: '#8b5cf6', color: 'white', fontSize: '11px', marginLeft: '6px' }}>
+                🎥 Video
               </span>
+            )}
+          </div>
+          
+          <div style={{ marginBottom: '4px' }}>
+            📅 {new Date(task.createdAt).toLocaleDateString()}
+          </div>
+          
+          <div style={{ marginBottom: '4px' }}>
+            👤 Created by {WebApp.initDataUnsafe?.user?.id === task.createdBy 
+              ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
+              : `User ${task.createdBy}`}
+          </div>
+          
+          {task.doneBy && (
+            <div style={{ marginBottom: '4px' }}>
+              ✅ Submitted by {WebApp.initDataUnsafe?.user?.id === task.doneBy
+                ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
+                : `User ${task.doneBy}`}
             </div>
           )}
           
-          {/* Required Sets */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Required sets:</span>
-            <span>{task.requireSets}</span>
-          </div>
-          
-          {/* Video Required */}
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Video required:</span>
-            <span>{task.labels.video ? '✅ Yes' : '❌ No'}</span>
-          </div>
+          {/* Show uploaders if there are any uploads */}
+          {totalMedia > 0 && getUploaders().length > 0 && (
+            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--tg-theme-secondary-bg-color)' }}>
+              📤 Uploaded by: {getUploaders().join(', ')}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Sets Progress - Shows ALL Sets */}
+      {/* Sets Section with Chat-Style Caption */}
       <div className="card" style={{ position: 'relative' }}>
         {loading && (
           <div style={{
@@ -422,7 +403,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           alignItems: 'center',
           marginBottom: '12px'
         }}>
-          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets ({task.requireSets})</h3>
+          <h3 style={{ fontSize: '16px', margin: 0 }}>Progress</h3>
           {totalMedia > 0 && (
             <button
               onClick={async () => {
@@ -488,7 +469,22 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           )}
         </div>
 
-        {/* Show ALL Required Sets */}
+        {/* Progress Caption - Same as task card */}
+        <div style={{
+          background: 'var(--tg-theme-bg-color)',
+          padding: '12px',
+          borderRadius: '8px',
+          fontSize: '13px',
+          lineHeight: '1.6',
+          marginBottom: '12px',
+          whiteSpace: 'pre-line',
+          fontFamily: 'monospace',
+          border: '1px solid var(--tg-theme-secondary-bg-color)'
+        }}>
+          {getProgressCaption()}
+        </div>
+
+        {/* Sets Display */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -500,41 +496,29 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             const photoCount = set.photos?.length || 0;
             const hasVideo = !!set.video;
             const fileCount = photoCount + (hasVideo ? 1 : 0);
-            const videoRequired = task.labels.video;
-            const maxPhotos = videoRequired ? 3 : (hasVideo ? 3 : 4);
-            const hasEnoughPhotos = photoCount >= maxPhotos;
-            const hasRequiredVideo = videoRequired ? hasVideo : true;
-            const isComplete = hasEnoughPhotos && hasRequiredVideo;
 
-            // Build media array
             const allSetMedia: Array<{
               type: 'photo' | 'video';
               fileId: string;
               photoIndex?: number;
             }> = [];
-
+            
             set.photos?.forEach((photo, idx) => {
               allSetMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
             });
-
+            
             if (set.video) {
               allSetMedia.push({ type: 'video', fileId: set.video.file_id });
             }
-
-            const cardWidth = Math.max((allSetMedia.length * 88) + 24, 280);
 
             return (
               <div
                 key={setIndex}
                 style={{
-                  minWidth: `${cardWidth}px`,
-                  maxWidth: `${cardWidth}px`,
-                  flex: '0 0 auto',
                   background: 'var(--tg-theme-bg-color)',
                   borderRadius: '8px',
                   padding: '12px',
-                  border: '1px solid var(--tg-theme-secondary-bg-color)',
-                  scrollSnapAlign: 'start'
+                  border: '1px solid var(--tg-theme-secondary-bg-color)'
                 }}
               >
                 {/* Set Header */}
@@ -542,15 +526,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: '12px',
-                  height: '36px'
+                  marginBottom: '12px'
                 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', marginBottom: '4px' }}>
-                      📸 {photoCount}/{maxPhotos} photos
-                      {videoRequired && ` • 🎥 ${hasVideo ? '1/1' : '0/1'} video`}
-                      {!videoRequired && hasVideo && ' • 🎥 1 video'}
-                    </div>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>
+                    Set {setIndex + 1}
                   </div>
                   
                   {fileCount > 0 && (
@@ -573,7 +552,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                 </div>
 
                 {/* Media Row */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {allSetMedia.length === 0 ? (
                     <div style={{
                       width: '80px',
@@ -628,7 +607,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                           >
                             {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
                             
-                            {media.type === 'video' && (
+                            {media.type === 'video' && imageUrl && (
                               <div style={{
                                 position: 'absolute',
                                 width: '28px',
@@ -644,7 +623,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                               </div>
                             )}
                             
-                            {media.type === 'photo' && (
+                            {media.type === 'photo' && imageUrl && (
                               <div style={{
                                 position: 'absolute',
                                 bottom: '4px',
@@ -701,7 +680,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Fixed Action Buttons */}
       <div style={{
         position: 'fixed',
         bottom: 0,
@@ -720,66 +699,40 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           gap: '8px',
           flexWrap: 'wrap'
         }}>
-          {/* Send to Chat - Top priority */}
+          {/* Primary Action: Send to Chat */}
           <button
             onClick={handleSendToChat}
             disabled={loading}
             style={{ 
-              width: '100%', 
+              flex: '1 1 100%',
               background: 'var(--tg-theme-button-color)',
               color: 'var(--tg-theme-button-text-color)',
-              fontWeight: '600'
+              fontWeight: '600',
+              padding: '12px',
+              fontSize: '15px'
             }}
           >
             💬 Send to Chat
           </button>
 
-          <button
-            onClick={async () => {
-              console.log('🧪 Testing media proxy...');
-              const set = task.sets[0];
-              if (set?.photos && set.photos.length > 0) {
-                const testFileId = set.photos[0].file_id;
-                console.log('Test file_id:', testFileId);
-                
-                try {
-                  const { fileUrl } = await api.getProxiedMediaUrl(testFileId);
-                  console.log('Proxy URL:', fileUrl);
-                  
-                  const response = await fetch(fileUrl);
-                  console.log('Response status:', response.status);
-                  console.log('Response headers:', [...response.headers.entries()]);
-                  
-                  const blob = await response.blob();
-                  console.log('Blob size:', blob.size, 'type:', blob.type);
-                  
-                  showAlert(`✅ Test passed! Size: ${blob.size} bytes`);
-                } catch (error: any) {
-                  console.error('Test failed:', error);
-                  showAlert(`❌ Test failed: ${error.message}`);
-                }
-              }
-            }}
-            style={{ background: '#gray', fontSize: '12px' }}
-          >
-            🧪 Test Media Proxy
-          </button>
-
+          {/* Status Transitions */}
           {task.status === 'New' && canTransition('Received') && (
-            <button onClick={() => handleTransition('Received')} disabled={loading}>
-              Mark as Received
+            <button 
+              onClick={() => handleTransition('Received')} 
+              disabled={loading}
+              style={{ flex: '1 1 calc(50% - 4px)' }}
+            >
+              📦 Receive
             </button>
           )}
           
-          {task.status === 'Received' && canTransition('Submitted') && (
-            <button onClick={() => handleTransition('Submitted')} disabled={loading}>
-              Submit Task
-            </button>
-          )}
-          
-          {task.status === 'Redo' && canTransition('Submitted') && (
-            <button onClick={() => handleTransition('Submitted')} disabled={loading}>
-              Submit Task
+          {(task.status === 'Received' || task.status === 'Redo') && canTransition('Submitted') && (
+            <button 
+              onClick={() => handleTransition('Submitted')} 
+              disabled={loading}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
+            >
+              ✅ Submit
             </button>
           )}
           
@@ -787,9 +740,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             <button
               onClick={() => handleTransition('Redo')}
               disabled={loading}
-              style={{ background: '#f59e0b' }}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
             >
-              Request Redo
+              🔄 Redo
             </button>
           )}
           
@@ -797,41 +750,43 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             <button
               onClick={() => handleTransition('Completed')}
               disabled={loading}
-              style={{ background: '#10b981' }}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
             >
-              Mark as Completed
+              ✅ Complete
             </button>
           )}
           
-          {!task.archived && (task.status === 'Submitted' || task.status === 'Completed') && (
+          {/* Archive/Restore */}
+          {!task.archived && (task.status === 'Submitted' || task.status === 'Completed') && 
             ['Viewer', 'Lead', 'Admin'].includes(userRole) && (
               <button
                 onClick={handleArchive}
                 disabled={loading}
-                style={{ background: '#6b7280' }}
+                style={{ flex: '1 1 calc(50% - 4px)', background: '#6b7280' }}
               >
-                Archive Task
+                🗃️ Archive
               </button>
             )
-          )}
+          }
           
           {task.archived && userRole === 'Admin' && (
             <button
               onClick={handleRestore}
               disabled={loading}
-              style={{ background: '#3b82f6' }}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#3b82f6' }}
             >
-              Restore Task
+              📤 Restore
             </button>
           )}
           
+          {/* Admin Actions */}
           {userRole === 'Admin' && (
             <button
               onClick={handleDelete}
               disabled={loading}
-              style={{ background: '#ef4444' }}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#ef4444', fontSize: '13px' }}
             >
-              Delete Permanently
+              🗑️ Delete
             </button>
           )}
         </div>
