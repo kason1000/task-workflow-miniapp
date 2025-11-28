@@ -4,10 +4,10 @@ import { api } from './services/api';
 import { Task } from './types';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
-import { CreateTaskForm } from './components/CreateTaskForm';
+import { CreateTaskMessage } from './components/CreateTaskMessage';
 import { ShareScreen } from './components/ShareScreen';
 
-type View = 'list' | 'detail' | 'create' | 'share';
+type View = 'list' | 'detail' | 'create' | 'share' | 'gallery';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -20,19 +20,18 @@ function App() {
 
   useEffect(() => {
     console.log('Initializing app...');
+    
     try {
-      // Initialize Telegram WebApp
       initTelegramWebApp();
       const tgUser = getTelegramUser();
       console.log('Telegram user:', tgUser);
       setUser(tgUser);
 
-      // Check for URL params
+      // Check URL params
       const urlParams = new URLSearchParams(window.location.search);
       const taskIdParam = urlParams.get('taskId');
-      const actionParam = urlParams.get('action');
+      const viewParam = urlParams.get('view');
 
-      // Fetch user role
       const fetchRole = async () => {
         try {
           console.log('Fetching role...');
@@ -40,20 +39,20 @@ function App() {
           console.log('Role data:', roleData);
           setRole(roleData.role);
 
-          // Handle different URL scenarios
-          if (taskIdParam && actionParam === 'share') {
-            // Open share screen directly
-            console.log('Opening share screen for task:', taskIdParam);
-            const task = await api.getTask(taskIdParam);
-            setSelectedTask(task);
-            setView('share');
-          } else if (taskIdParam) {
-            // Open task detail
+          // Handle URL params
+          if (taskIdParam) {
             console.log('Loading task from URL:', taskIdParam);
             try {
-              const task = await api.getTask(taskIdParam);
+              const { task } = await api.getTask(taskIdParam);
               setSelectedTask(task);
-              setView('detail');
+              
+              if (viewParam === 'gallery') {
+                setView('gallery');
+              } else if (viewParam === 'share') {
+                setView('share');
+              } else {
+                setView('detail');
+              }
             } catch (err) {
               console.error('Failed to load task from URL:', err);
             }
@@ -76,11 +75,9 @@ function App() {
 
   const handleTaskClick = async (task: Task) => {
     try {
-      // Fetch fresh task data
-      const freshTask = await api.getTask(task.id);
+      const { task: freshTask } = await api.getTask(task.id);
       setSelectedTask(freshTask);
       setView('detail');
-      // Update URL without reload
       window.history.pushState({}, '', `?taskId=${task.id}`);
     } catch (error: any) {
       console.error('Failed to fetch task:', error);
@@ -92,7 +89,6 @@ function App() {
     setSelectedTask(null);
     setView('list');
     setRefreshKey(prev => prev + 1);
-    // Clear URL params
     window.history.pushState({}, '', window.location.pathname);
   };
 
@@ -105,13 +101,15 @@ function App() {
     }
   };
 
-  const handleTaskUpdated = () => {
-    setRefreshKey(prev => prev + 1);
-    handleBackToList();
-  };
-
-  const handleTaskCreated = () => {
-    setView('list');
+  const handleTaskUpdated = async () => {
+    if (selectedTask) {
+      try {
+        const { task: freshTask } = await api.getTask(selectedTask.id);
+        setSelectedTask(freshTask);
+      } catch (error) {
+        console.error('Failed to refresh task:', error);
+      }
+    }
     setRefreshKey(prev => prev + 1);
   };
 
@@ -154,7 +152,7 @@ function App() {
               onClick={() => setView('create')}
               style={{ padding: '8px 16px', fontSize: '14px' }}
             >
-              + New Task
+              ℹ️ How to Create
             </button>
           )}
         </div>
@@ -175,10 +173,7 @@ function App() {
       )}
 
       {view === 'create' && (
-        <CreateTaskForm
-          onBack={handleBackToList}
-          onTaskCreated={handleTaskCreated}
-        />
+        <CreateTaskMessage onBack={handleBackToList} />
       )}
 
       {view === 'share' && selectedTask && (

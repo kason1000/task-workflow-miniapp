@@ -1,22 +1,16 @@
 export type Role = 'Admin' | 'Lead' | 'Member' | 'Viewer';
 export type TaskStatus = 'New' | 'Received' | 'Submitted' | 'Redo' | 'Completed' | 'Archived';
 
-export interface Upload {
-  file_id: string;
-  kind: 'image' | 'video';
-  by: number;
-}
-
 export interface TaskSet {
   photos: Array<{ 
     file_id: string; 
     by: number;
-    uploadedAt: string;  // Added this field
+    uploadedAt: string;
   }>;
   video?: { 
     file_id: string; 
     by: number;
-    uploadedAt: string;  // Added this field
+    uploadedAt: string;
   };
 }
 
@@ -26,19 +20,32 @@ export interface Task {
   status: TaskStatus;
   labels: { video: boolean };
   requireSets: number;
-  completedSets: number;  // Added this field
+  completedSets: number;
   sets: TaskSet[];
-  createdPhoto: { file_id: string; locked: true; by: number };
-  uploads: Upload[];
+  
+  // Created photo is the TASK PHOTO (locked, cannot be deleted)
+  createdPhoto: { 
+    file_id: string; 
+    by: number;
+  };
+  
   createdBy: number;
   doneBy: number | null;
   createdAt: string;
   archived: boolean;
   version: number;
-  lastModifiedBy?: number;  // Added optional fields
+  
+  // Optional fields
+  lastModifiedBy?: number;
   lastModifiedAt?: string;
   telegramChatId?: number;
   telegramMessageId?: number;
+  telegramCards?: Record<string, {
+    chatId: number;
+    messageId: number;
+    createdAt: string;
+    type: string;
+  }>;
   lockedTo?: number;
   lockedAt?: string;
   lockedByRole?: string;

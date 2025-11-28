@@ -3,12 +3,11 @@ import { config } from '../config';
 
 class ApiService {
   private getHeaders(): HeadersInit {
-    // In development, use mock auth
     if (config.useMockAuth) {
       console.log('Using mock authentication');
       return {
         'Content-Type': 'application/json',
-        'X-Test-Auth': `test:${config.mockUserId}:${config.mockRole}`,
+        'X-Test-Auth': `${config.mockUserId}:${config.mockRole}`,
       };
     }
 
@@ -43,7 +42,8 @@ class ApiService {
       throw new Error(error.message || 'Request failed');
     }
 
-    return response.json();
+    const data = await response.json();
+    return data.success ? data.data : data;
   }
 
   // Tasks
@@ -52,68 +52,22 @@ class ApiService {
     if (status) params.append('status', status);
     if (archived !== undefined) params.append('archived', archived.toString());
     
-    return this.request<{ tasks: any[]; count: number }>(
-      `/tasks?${params.toString()}`
-    );
+    return this.request<{ tasks: any[] }>(`/tasks?${params.toString()}`);
   }
 
   async getTask(taskId: string) {
-    return this.request<any>(`/tasks/${taskId}`);
+    return this.request<{ task: any }>(`/tasks/${taskId}`);
   }
 
-  async createTask(data: {
-    title: string;
-    labels: { video: boolean };
-    requireSets: number;
-    createdPhotoFileId: string;
-  }) {
-    return this.request<any>('/tasks', {
+  async transitionTask(taskId: string, status: string) {
+    return this.request<{ task: any }>(`/tasks/${taskId}/transition`, {
       method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async addPhotoToSet(taskId: string, setIndex: number, fileId: string) {
-    return this.request<any>(`/tasks/${taskId}/sets/${setIndex}/photos`, {
-      method: 'POST',
-      body: JSON.stringify({ file_id: fileId }),
-    });
-  }
-
-  async addVideoToSet(taskId: string, setIndex: number, fileId: string) {
-    return this.request<any>(`/tasks/${taskId}/sets/${setIndex}/video`, {
-      method: 'POST',
-      body: JSON.stringify({ file_id: fileId }),
-    });
-  }
-
-  async transitionTask(taskId: string, toStatus: string) {
-    return this.request<any>(`/tasks/${taskId}/transition`, {
-      method: 'POST',
-      body: JSON.stringify({ to: toStatus }),
-    });
-  }
-
-  async archiveTask(taskId: string) {
-    return this.request<any>(`/tasks/${taskId}/archive`, {
-      method: 'POST',
-    });
-  }
-
-  async restoreTask(taskId: string) {
-    return this.request<any>(`/tasks/${taskId}/restore`, {
-      method: 'POST',
+      body: JSON.stringify({ status }),
     });
   }
 
   async deleteTask(taskId: string) {
-    return this.request<any>(`/tasks/${taskId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async deleteUpload(taskId: string, fileId: string) {
-    return this.request<any>(`/tasks/${taskId}/uploads/${fileId}`, {
+    return this.request<void>(`/tasks/${taskId}`, {
       method: 'DELETE',
     });
   }
@@ -123,36 +77,25 @@ class ApiService {
     return this.request<{ userId: number; role: string }>('/roles/me');
   }
 
-  async getMySubmissions() {
-    return this.request<{ userId: number; submissionCount: number }>(
-      '/roles/me/submissions'
-    );
-  }
-
   async getAllRoles() {
-    return this.request<{ roles: any[]; count: number }>('/roles');
+    return this.request<{ roles: any[] }>('/roles');
   }
 
-  async setUserRole(userId: number, role: string) {
-    return this.request<any>(`/roles/${userId}`, {
+  async setRole(userId: number, role: string) {
+    return this.request<any>('/roles', {
       method: 'POST',
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ userId, role }),
     });
   }
 
-  async getSubmissionAnalytics() {
-    return this.request<any>('/roles/analytics/submissions');
-  }
-
-  // Media - Original endpoint for displaying images
+  // Media
   async getMediaUrl(fileId: string) {
-    return this.request<{ fileUrl: string; filePath: string }>(`/media?fileId=${fileId}`);
+    return this.request<{ url: string }>(`/media?fileId=${fileId}`);
   }
 
-  // Media - NEW: Proxied endpoint for iOS sharing (bypasses CORS)
   async getProxiedMediaUrl(fileId: string) {
     const proxyUrl = `${config.apiBaseUrl}/media/proxy/${fileId}`;
-    return { fileUrl: proxyUrl, fileId };
+    return { fileUrl: proxyUrl };
   }
 }
 
