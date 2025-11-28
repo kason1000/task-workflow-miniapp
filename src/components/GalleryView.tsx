@@ -38,6 +38,7 @@ export function GalleryView({
   const [actionLoading, setActionLoading] = useState(false);
   const [imageScale, setImageScale] = useState(1);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   const mediaContainerRef = useRef<HTMLDivElement>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
@@ -45,8 +46,6 @@ export function GalleryView({
   
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
-  const thumbnailTouchStartX = useRef<number>(0);
-  const thumbnailTouchEndX = useRef<number>(0);
   const initialDistance = useRef<number>(0);
   const initialScale = useRef<number>(1);
 
@@ -141,7 +140,7 @@ export function GalleryView({
   };
 
   const handleTouchEnd = () => {
-    if (imageScale > 1) return;
+    if (imageScale > 1 || isTransitioning) return;
     
     const swipeThreshold = 50;
     const diff = touchStartX.current - touchEndX.current;
@@ -163,47 +162,52 @@ export function GalleryView({
     }
   };
 
-  const handleThumbnailTouchStart = (e: React.TouchEvent) => {
-    thumbnailTouchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleThumbnailTouchEnd = (e: React.TouchEvent) => {
-    thumbnailTouchEndX.current = e.changedTouches[0].clientX;
-    // Allow native scrolling - no custom swipe logic needed
-  };
-
   const handlePreviousMedia = () => {
+    if (isTransitioning) return;
+    
     if (currentMediaIndex > 0) {
+      setIsTransitioning(true);
       setCurrentMediaIndex(prev => prev - 1);
       hapticFeedback.light();
+      setTimeout(() => setIsTransitioning(false), 300);
     } else if (currentSetIndex > 0) {
+      setIsTransitioning(true);
       setCurrentSetIndex(prev => prev - 1);
       hapticFeedback.light();
+      setTimeout(() => setIsTransitioning(false), 300);
     }
   };
 
   const handleNextMedia = () => {
+    if (isTransitioning) return;
+    
     if (currentMediaIndex < currentSetMedia.length - 1) {
+      setIsTransitioning(true);
       setCurrentMediaIndex(prev => prev + 1);
       hapticFeedback.light();
+      setTimeout(() => setIsTransitioning(false), 300);
     } else if (currentSetIndex < task.sets.length - 1) {
+      setIsTransitioning(true);
       setCurrentSetIndex(prev => prev + 1);
       hapticFeedback.light();
+      setTimeout(() => setIsTransitioning(false), 300);
     }
   };
 
   const handlePreviousSet = () => {
-    if (currentSetIndex > 0) {
-      setCurrentSetIndex(prev => prev - 1);
-      hapticFeedback.light();
-    }
+    if (isTransitioning || currentSetIndex === 0) return;
+    setIsTransitioning(true);
+    setCurrentSetIndex(prev => prev - 1);
+    hapticFeedback.light();
+    setTimeout(() => setIsTransitioning(false), 300);
   };
 
   const handleNextSet = () => {
-    if (currentSetIndex < task.sets.length - 1) {
-      setCurrentSetIndex(prev => prev + 1);
-      hapticFeedback.light();
-    }
+    if (isTransitioning || currentSetIndex === task.sets.length - 1) return;
+    setIsTransitioning(true);
+    setCurrentSetIndex(prev => prev + 1);
+    hapticFeedback.light();
+    setTimeout(() => setIsTransitioning(false), 300);
   };
 
   const handleDoubleTap = () => {
@@ -389,7 +393,51 @@ export function GalleryView({
       background: '#000',
       overflow: 'hidden'
     }}>
-      {/* Main Media Display Area */}
+      {/* Header with Close Button */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '56px',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 16px',
+        zIndex: 1000,
+        paddingTop: 'env(safe-area-inset-top)'
+      }}>
+        <div style={{ width: '40px' }} />
+        <div style={{
+          color: '#fff',
+          fontSize: '16px',
+          fontWeight: '600',
+          textAlign: 'center'
+        }}>
+          {task.title}
+        </div>
+        <button
+          onClick={onBack}
+          style={{
+            width: '36px',
+            height: '36px',
+            background: 'rgba(255,59,48,0.95)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(255,59,48,0.4)'
+          }}
+        >
+          <X size={20} strokeWidth={2.5} />
+        </button>
+      </div>
+
+      {/* Main Media Display Area - Properly Centered */}
       <div 
         ref={mediaContainerRef}
         onClick={(e) => {
@@ -408,63 +456,42 @@ export function GalleryView({
           justifyContent: 'center',
           position: 'relative',
           overflow: 'hidden',
-          touchAction: imageScale > 1 ? 'pan-x pan-y' : 'none'
+          touchAction: imageScale > 1 ? 'pan-x pan-y' : 'none',
+          marginTop: '56px',
+          marginBottom: '0'
         }}
       >
-        {/* Close Button - Top Right - High contrast */}
-        <button
-          onClick={onBack}
-          style={{
-            position: 'fixed',
-            top: '16px',
-            right: '16px',
-            width: '44px',
-            height: '44px',
-            background: '#ff3b30',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 1000,
-            boxShadow: '0 2px 12px rgba(255, 59, 48, 0.6)'
-          }}
-        >
-          <X size={24} strokeWidth={3} />
-        </button>
-
-        {/* Navigation Arrows - Vertically centered */}
-        {currentSetMedia.length > 1 && (
+        {/* Navigation Arrows - Larger Icons */}
+        {(currentSetMedia.length > 1 || task.sets.length > 1) && (
           <>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePreviousMedia();
               }}
-              disabled={currentMediaIndex === 0 && currentSetIndex === 0}
+              disabled={isTransitioning || (currentMediaIndex === 0 && currentSetIndex === 0)}
               style={{
                 position: 'absolute',
-                left: '16px',
+                left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '56px',
-                height: '56px',
-                background: 'rgba(0,0,0,0.6)',
+                width: '48px',
+                height: '48px',
+                background: 'rgba(0,0,0,0.7)',
                 color: '#fff',
-                border: '1px solid rgba(255,255,255,0.3)',
+                border: '1.5px solid rgba(255,255,255,0.4)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
                 zIndex: 100,
-                opacity: (currentMediaIndex === 0 && currentSetIndex === 0) ? 0.3 : 0.8,
-                backdropFilter: 'blur(4px)'
+                opacity: (isTransitioning || (currentMediaIndex === 0 && currentSetIndex === 0)) ? 0.3 : 0.9,
+                backdropFilter: 'blur(8px)',
+                transition: 'opacity 0.2s'
               }}
             >
-              <ChevronLeft size={32} strokeWidth={2.5} />
+              <ChevronLeft size={28} strokeWidth={2.5} />
             </button>
 
             <button
@@ -472,33 +499,34 @@ export function GalleryView({
                 e.stopPropagation();
                 handleNextMedia();
               }}
-              disabled={currentMediaIndex === currentSetMedia.length - 1 && currentSetIndex === task.sets.length - 1}
+              disabled={isTransitioning || (currentMediaIndex === currentSetMedia.length - 1 && currentSetIndex === task.sets.length - 1)}
               style={{
                 position: 'absolute',
-                right: '16px',
+                right: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '56px',
-                height: '56px',
-                background: 'rgba(0,0,0,0.6)',
+                width: '48px',
+                height: '48px',
+                background: 'rgba(0,0,0,0.7)',
                 color: '#fff',
-                border: '1px solid rgba(255,255,255,0.3)',
+                border: '1.5px solid rgba(255,255,255,0.4)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
                 zIndex: 100,
-                opacity: (currentMediaIndex === currentSetMedia.length - 1 && currentSetIndex === task.sets.length - 1) ? 0.3 : 0.8,
-                backdropFilter: 'blur(4px)'
+                opacity: (isTransitioning || (currentMediaIndex === currentSetMedia.length - 1 && currentSetIndex === task.sets.length - 1)) ? 0.3 : 0.9,
+                backdropFilter: 'blur(8px)',
+                transition: 'opacity 0.2s'
               }}
             >
-              <ChevronRight size={32} strokeWidth={2.5} />
+              <ChevronRight size={28} strokeWidth={2.5} />
             </button>
           </>
         )}
 
-        {/* Current Media with swipe animation */}
+        {/* Current Media - Centered */}
         <div
           style={{
             width: '100%',
@@ -507,7 +535,7 @@ export function GalleryView({
             alignItems: 'center',
             justifyContent: 'center',
             transform: swipeDirection === 'left' ? 'translateX(-100%)' : swipeDirection === 'right' ? 'translateX(100%)' : 'translateX(0)',
-            transition: swipeDirection ? 'transform 0.15s ease-out' : 'transform 0.3s ease-out',
+            transition: swipeDirection ? 'transform 0.15s ease-out' : 'none',
             opacity: swipeDirection ? 0.5 : 1
           }}
         >
@@ -517,12 +545,13 @@ export function GalleryView({
               src={currentUrl || ''}
               alt=""
               style={{
-                maxWidth: imageScale === 1 ? '95%' : 'none',
-                maxHeight: imageScale === 1 ? '95%' : 'none',
+                maxWidth: imageScale === 1 ? '92%' : 'none',
+                maxHeight: imageScale === 1 ? '92%' : 'none',
                 objectFit: 'contain',
                 transform: `scale(${imageScale})`,
                 transition: imageScale === 1 ? 'transform 0.3s' : 'none',
-                cursor: imageScale > 1 ? 'move' : 'pointer'
+                cursor: imageScale > 1 ? 'move' : 'pointer',
+                display: 'block'
               }}
             />
           ) : (
@@ -530,28 +559,39 @@ export function GalleryView({
               src={currentUrl || ''}
               controls
               style={{
-                width: '95%',
-                height: '95%',
-                objectFit: 'contain'
+                maxWidth: '92%',
+                maxHeight: '92%',
+                objectFit: 'contain',
+                display: 'block'
               }}
             />
           )}
         </div>
 
         {!currentUrl && (
-          <div style={{ color: '#fff', fontSize: '32px', zIndex: 10 }}>⏳</div>
+          <div style={{ 
+            color: '#fff', 
+            fontSize: '32px', 
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)'
+          }}>⏳</div>
         )}
         
         {currentMedia.type === 'photo' && imageScale === 1 && (
           <div style={{
             position: 'absolute',
-            bottom: '240px',
+            bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.5)',
-            fontSize: '11px',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: '12px',
             textAlign: 'center',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            background: 'rgba(0,0,0,0.5)',
+            padding: '4px 12px',
+            borderRadius: '12px'
           }}>
             Double tap to zoom
           </div>
@@ -567,7 +607,8 @@ export function GalleryView({
         background: 'rgba(0, 0, 0, 0.95)',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-        zIndex: 200
+        zIndex: 200,
+        backdropFilter: 'blur(10px)'
       }}>
         {/* Info Text */}
         <div style={{
@@ -592,73 +633,73 @@ export function GalleryView({
         </div>
 
         {/* Horizontal Thumbnail Strip with Set Navigation Arrows */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', padding: '12px 0' }}>
           {task.sets.length > 1 && (
             <>
               <button
                 onClick={handlePreviousSet}
-                disabled={currentSetIndex === 0}
+                disabled={isTransitioning || currentSetIndex === 0}
                 style={{
                   position: 'absolute',
-                  left: '4px',
+                  left: '8px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  width: '32px',
-                  height: '32px',
-                  background: 'rgba(0,0,0,0.8)',
+                  width: '36px',
+                  height: '36px',
+                  background: 'rgba(0,0,0,0.85)',
                   color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.3)',
+                  border: '1.5px solid rgba(255,255,255,0.4)',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   zIndex: 10,
-                  opacity: currentSetIndex === 0 ? 0.3 : 1
+                  opacity: (isTransitioning || currentSetIndex === 0) ? 0.3 : 1,
+                  backdropFilter: 'blur(4px)'
                 }}
               >
-                <ChevronLeft size={20} strokeWidth={2.5} />
+                <ChevronLeft size={22} strokeWidth={2.5} />
               </button>
 
               <button
                 onClick={handleNextSet}
-                disabled={currentSetIndex === task.sets.length - 1}
+                disabled={isTransitioning || currentSetIndex === task.sets.length - 1}
                 style={{
                   position: 'absolute',
-                  right: '4px',
+                  right: '8px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  width: '32px',
-                  height: '32px',
-                  background: 'rgba(0,0,0,0.8)',
+                  width: '36px',
+                  height: '36px',
+                  background: 'rgba(0,0,0,0.85)',
                   color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.3)',
+                  border: '1.5px solid rgba(255,255,255,0.4)',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   zIndex: 10,
-                  opacity: currentSetIndex === task.sets.length - 1 ? 0.3 : 1
+                  opacity: (isTransitioning || currentSetIndex === task.sets.length - 1) ? 0.3 : 1,
+                  backdropFilter: 'blur(4px)'
                 }}
               >
-                <ChevronRight size={20} strokeWidth={2.5} />
+                <ChevronRight size={22} strokeWidth={2.5} />
               </button>
             </>
           )}
 
           <div 
             ref={thumbnailContainerRef}
-            onTouchStart={handleThumbnailTouchStart}
-            onTouchEnd={handleThumbnailTouchEnd}
             style={{
               overflowX: 'auto',
               overflowY: 'hidden',
-              padding: '12px 48px',
+              padding: '0 52px',
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
               WebkitOverflowScrolling: 'touch',
-              cursor: 'grab'
+              scrollBehavior: 'smooth'
             }}
           >
             <div style={{ 
@@ -674,26 +715,29 @@ export function GalleryView({
                   <div
                     key={`${media.fileId}-${idx}`}
                     onClick={() => {
-                      setCurrentMediaIndex(idx);
-                      hapticFeedback.light();
+                      if (!isTransitioning) {
+                        setCurrentMediaIndex(idx);
+                        hapticFeedback.light();
+                      }
                     }}
                     style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '6px',
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '8px',
                       overflow: 'hidden',
                       cursor: 'pointer',
                       border: isActive 
                         ? '3px solid var(--tg-theme-button-color)' 
-                        : '2px solid rgba(255,255,255,0.2)',
+                        : '2px solid rgba(255,255,255,0.25)',
                       flexShrink: 0,
                       background: '#222',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       position: 'relative',
-                      transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                      transition: 'all 0.2s ease-out'
+                      transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                      transition: 'all 0.2s ease-out',
+                      boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.5)' : 'none'
                     }}
                   >
                     {thumbnailUrl ? (
@@ -711,21 +755,21 @@ export function GalleryView({
                         {media.type === 'video' && (
                           <div style={{
                             position: 'absolute',
-                            background: 'rgba(0,0,0,0.6)',
+                            background: 'rgba(0,0,0,0.7)',
                             borderRadius: '50%',
-                            width: '20px',
-                            height: '20px',
+                            width: '24px',
+                            height: '24px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '10px'
+                            fontSize: '12px'
                           }}>
                             ▶️
                           </div>
                         )}
                       </>
                     ) : (
-                      <span style={{ fontSize: '20px' }}>⏳</span>
+                      <span style={{ fontSize: '24px' }}>⏳</span>
                     )}
                   </div>
                 );
@@ -747,8 +791,10 @@ export function GalleryView({
               <div
                 key={idx}
                 onClick={() => {
-                  setCurrentSetIndex(idx);
-                  hapticFeedback.light();
+                  if (!isTransitioning) {
+                    setCurrentSetIndex(idx);
+                    hapticFeedback.light();
+                  }
                 }}
                 style={{
                   width: currentSetIndex === idx ? '28px' : '8px',
