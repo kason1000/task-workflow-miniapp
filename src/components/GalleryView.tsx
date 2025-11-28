@@ -19,6 +19,8 @@ interface MediaItem {
   fileId: string;
   setIndex: number;
   photoIndex?: number;
+  uploadedBy: number;
+  uploadedAt: string;
 }
 
 export function GalleryView({ 
@@ -30,15 +32,24 @@ export function GalleryView({
   initialPhotoIndex = 0
 }: GalleryViewProps) {
   const [currentSetIndex, setCurrentSetIndex] = useState(initialSetIndex);
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(initialPhotoIndex);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [imageScale, setImageScale] = useState(1);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   
   const mediaContainerRef = useRef<HTMLDivElement>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
+  // Touch handling for swipe
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
+  
+  // Pinch zoom handling
+  const initialDistance = useRef<number>(0);
+  const initialScale = useRef<number>(1);
 
   // Get current set's media
   const getCurrentSetMedia = (): MediaItem[] => {
@@ -52,7 +63,9 @@ export function GalleryView({
         type: 'photo',
         fileId: photo.file_id,
         setIndex: currentSetIndex,
-        photoIndex
+        photoIndex,
+        uploadedBy: photo.by,
+        uploadedAt: photo.uploadedAt
       });
     });
 
@@ -60,7 +73,9 @@ export function GalleryView({
       media.push({
         type: 'video',
         fileId: set.video.file_id,
-        setIndex: currentSetIndex
+        setIndex: currentSetIndex,
+        uploadedBy: set.video.by,
+        uploadedAt: set.video.uploadedAt
       });
     }
 
@@ -95,43 +110,56 @@ export function GalleryView({
         })();
       }
     });
-
-    // Find initial media in the set
-    if (initialPhotoIndex >= 0 && initialPhotoIndex < currentSetMedia.length) {
-      setCurrentMediaIndex(initialPhotoIndex);
-    }
   }, [task.id]);
 
-  // Handle set switching
+  // Reset zoom when media changes
   useEffect(() => {
-    setCurrentMediaIndex(0); // Reset to first media when set changes
-    
-    // Scroll thumbnail to current set
-    if (thumbnailContainerRef.current) {
-      const setWidth = 200; // Approximate width per set
-      thumbnailContainerRef.current.scrollLeft = currentSetIndex * setWidth;
-    }
+    setImageScale(1);
+    setImagePosition({ x: 0, y: 0 });
+  }, [currentMediaIndex, currentSetIndex]);
+
+  // Reset to first media when set changes
+  useEffect(() => {
+    setCurrentMediaIndex(0);
   }, [currentSetIndex]);
 
   // Swipe handlers for media navigation
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    if (e.touches.length === 1) {
+      touchStartX.current = e.touches[0].clientX;
+    } else if (e.touches.length === 2) {
+      // Pinch zoom start
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initialDistance.current = Math.sqrt(dx * dx + dy * dy);
+      initialScale.current = imageScale;
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.touches[0].clientX;
+    if (e.touches.length === 1) {
+      touchEndX.current = e.touches[0].clientX;
+    } else if (e.touches.length === 2 && currentMedia?.type === 'photo') {
+      // Pinch zoom
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const scale = (distance / initialDistance.current) * initialScale.current;
+      setImageScale(Math.min(Math.max(scale, 0.5), 3)); // Limit between 0.5x and 3x
+    }
   };
 
   const handleTouchEnd = () => {
+    if (imageScale > 1) return; // Don't swipe when zoomed
+    
     const swipeThreshold = 50;
     const diff = touchStartX.current - touchEndX.current;
 
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0) {
-        // Swiped left - next media
         handleNextMedia();
       } else {
-        // Swiped right - previous media
         handlePreviousMedia();
       }
     }
@@ -142,7 +170,6 @@ export function GalleryView({
       setCurrentMediaIndex(prev => prev - 1);
       hapticFeedback.light();
     } else if (currentSetIndex > 0) {
-      // Go to previous set
       setCurrentSetIndex(prev => prev - 1);
       hapticFeedback.light();
     }
@@ -153,9 +180,28 @@ export function GalleryView({
       setCurrentMediaIndex(prev => prev + 1);
       hapticFeedback.light();
     } else if (currentSetIndex < task.sets.length - 1) {
-      // Go to next set
       setCurrentSetIndex(prev => prev + 1);
       hapticFeedback.light();
+    }
+  };
+
+  // Thumbnail swipe for set switching
+  const handleThumbnailTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleThumbnailTouchEnd = () => {
+    const swipeThreshold = 100;
+    const diff = touchStartX.current - touchEndX.current;
+
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0 && currentSetIndex < task.sets.length - 1) {
+        setCurrentSetIndex(prev => prev + 1);
+        hapticFeedback.medium();
+      } else if (diff < 0 && currentSetIndex > 0) {
+        setCurrentSetIndex(prev => prev - 1);
+        hapticFeedback.medium();
+      }
     }
   };
 
@@ -191,7 +237,7 @@ export function GalleryView({
         files.push(file);
       }
       
-      setActionLoading(false); // Hide loading before share dialog
+      setActionLoading(false);
       
       if (navigator.share && navigator.canShare({ files })) {
         await navigator.share({
@@ -294,6 +340,26 @@ export function GalleryView({
     }
   };
 
+  // Double tap to reset zoom
+  const handleDoubleTap = () => {
+    if (imageScale === 1) {
+      setImageScale(2);
+      hapticFeedback.light();
+    } else {
+      setImageScale(1);
+      setImagePosition({ x: 0, y: 0 });
+      hapticFeedback.light();
+    }
+  };
+
+  // Get uploader name
+  const getUploaderName = (userId: number): string => {
+    if (WebApp.initDataUnsafe?.user?.id === userId) {
+      return WebApp.initDataUnsafe.user.first_name || `User ${userId}`;
+    }
+    return `User ${userId}`;
+  };
+
   if (loading || !currentMedia) {
     return (
       <div style={{ 
@@ -330,6 +396,7 @@ export function GalleryView({
             onBack();
           }
         }}
+        onDoubleClick={currentMedia.type === 'photo' ? handleDoubleTap : undefined}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -339,42 +406,47 @@ export function GalleryView({
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          padding: '16px',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          touchAction: imageScale > 1 ? 'pan-x pan-y' : 'none'
         }}
       >
-        {/* Close Button - Top Right */}
+        {/* Close Button - Top Right with higher z-index */}
         <button
           onClick={onBack}
           style={{
             position: 'absolute',
             top: '16px',
             right: '16px',
-            width: '40px',
-            height: '40px',
-            background: 'rgba(0,0,0,0.6)',
+            width: '44px',
+            height: '44px',
+            background: 'rgba(0,0,0,0.8)',
             color: '#fff',
-            border: 'none',
+            border: '2px solid rgba(255,255,255,0.3)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            zIndex: 20
+            zIndex: 1000,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
           }}
         >
-          <X size={24} />
+          <X size={24} strokeWidth={3} />
         </button>
 
         {/* Current Media */}
         {currentMedia.type === 'photo' ? (
           <img
+            ref={imageRef}
             src={currentUrl || ''}
             alt=""
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
+              maxWidth: imageScale === 1 ? '100%' : 'none',
+              maxHeight: imageScale === 1 ? '100%' : 'none',
+              objectFit: imageScale === 1 ? 'contain' : 'none',
+              transform: `scale(${imageScale}) translate(${imagePosition.x}px, ${imagePosition.y}px)`,
+              transition: imageScale === 1 ? 'transform 0.3s' : 'none',
+              cursor: imageScale > 1 ? 'move' : 'zoom-in'
             }}
           />
         ) : (
@@ -382,14 +454,31 @@ export function GalleryView({
             src={currentUrl || ''}
             controls
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%'
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain'
             }}
           />
         )}
 
         {!currentUrl && (
           <div style={{ color: '#fff', fontSize: '24px' }}>⏳</div>
+        )}
+        
+        {/* Zoom hint for photos */}
+        {currentMedia.type === 'photo' && imageScale === 1 && (
+          <div style={{
+            position: 'absolute',
+            bottom: '200px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: '12px',
+            textAlign: 'center',
+            pointerEvents: 'none'
+          }}>
+            Double tap to zoom
+          </div>
         )}
       </div>
 
@@ -399,29 +488,35 @@ export function GalleryView({
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
       }}>
-        {/* Fixed Info Text */}
+        {/* Compact Info Text - One Line */}
         <div style={{
-          padding: '12px 16px',
-          textAlign: 'center',
+          padding: '8px 16px',
           color: '#fff',
-          fontSize: '14px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+          fontSize: '11px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          gap: '8px'
         }}>
-          <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-            Set {currentSetIndex + 1} of {task.sets.length}
-          </div>
-          <div style={{ fontSize: '12px', color: '#aaa' }}>
-            {currentMedia.type === 'photo' 
-              ? `Photo ${(currentMedia.photoIndex ?? 0) + 1}`
-              : 'Video'}
+          <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontWeight: '600' }}>Set {currentSetIndex + 1}/{task.sets.length}</span>
             {' • '}
-            {currentMediaIndex + 1} / {currentSetMedia.length}
+            <span>{currentMedia.type === 'photo' ? `Photo ${(currentMedia.photoIndex ?? 0) + 1}` : 'Video'}</span>
+          </div>
+          <div style={{ color: '#aaa', flexShrink: 0 }}>
+            {getUploaderName(currentMedia.uploadedBy)}
+            {' • '}
+            {new Date(currentMedia.uploadedAt).toLocaleDateString()}
           </div>
         </div>
 
-        {/* Horizontal Thumbnail Strip - Current Set Only */}
+        {/* Horizontal Thumbnail Strip - Current Set Only, Swipeable */}
         <div 
           ref={thumbnailContainerRef}
+          onTouchStart={(e) => touchStartX.current = e.touches[0].clientX}
+          onTouchMove={(e) => touchEndX.current = e.touches[0].clientX}
+          onTouchEnd={handleThumbnailTouchEnd}
           style={{
             overflowX: 'auto',
             scrollSnapType: 'x mandatory',
@@ -507,7 +602,8 @@ export function GalleryView({
             display: 'flex',
             justifyContent: 'center',
             gap: '8px',
-            padding: '8px 16px'
+            padding: '8px 16px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             {task.sets.map((_, idx) => (
               <div
@@ -535,7 +631,7 @@ export function GalleryView({
         <div style={{
           display: 'flex',
           gap: '8px',
-          padding: '0 16px 8px'
+          padding: '12px 16px'
         }}>
           <button
             onClick={handleShareCurrentSet}
@@ -543,7 +639,7 @@ export function GalleryView({
             style={{
               flex: 1,
               padding: '12px',
-              background: 'rgba(59, 130, 246, 0.8)',
+              background: 'rgba(59, 130, 246, 0.9)',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -556,7 +652,7 @@ export function GalleryView({
             }}
           >
             <Share2 size={18} />
-            Share Set {currentSetIndex + 1}
+            Set {currentSetIndex + 1}
           </button>
 
           {canDelete && (
@@ -565,14 +661,15 @@ export function GalleryView({
                 onClick={handleDeleteCurrentMedia}
                 disabled={actionLoading}
                 style={{
-                  padding: '12px 16px',
+                  padding: '12px',
                   background: 'rgba(239, 68, 68, 0.8)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  minWidth: '48px'
                 }}
                 title="Delete current media"
               >
@@ -592,7 +689,7 @@ export function GalleryView({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '4px',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: '500'
                 }}
                 title="Delete entire set"
