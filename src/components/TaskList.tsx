@@ -226,6 +226,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         left: 0,
         right: 0,
         zIndex: 50,
+        marginTop: '12px',
         marginBottom: '12px',
         marginLeft: '0',
         marginRight: '0',
