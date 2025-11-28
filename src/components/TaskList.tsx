@@ -217,20 +217,22 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
 
   return (
-    <div style={{ paddingTop: '0' }}>
+    <div style={{ paddingTop: '110px' }}> {/* Reduced from 140px */}
       {/* Filter Bar - Fixed */}
       <div className="card" style={{ 
-        position: 'fixed',  // Changed from sticky to fixed
+        position: 'fixed',
         top: '49px',  // Height of header
         left: 0,
         right: 0,
         zIndex: 50,
-        marginTop: '12px',
-        marginBottom: '12px',
+        marginTop: '0',    // CHANGED: Remove top margin
+        marginBottom: '0', // CHANGED: Remove bottom margin
         marginLeft: '0',
         marginRight: '0',
         paddingLeft: '16px',
         paddingRight: '16px',
+        paddingTop: '12px',    // ADD: Internal padding
+        paddingBottom: '12px', // ADD: Internal padding
         background: 'var(--tg-theme-bg-color)',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
