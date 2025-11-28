@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Task, TaskStatus } from '../types';
 import { hapticFeedback, showAlert } from '../utils/telegram';
+import WebApp from '@twa-dev/sdk';
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
@@ -20,12 +21,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sendingToChat, setSendingToChat] = useState<string | null>(null);
   
-  // Add missing sending state
   const [sending, setSending] = useState<Record<string, boolean>>({});
   
-  // Fix filter type to use 'all' | TaskStatus instead of TaskStatus | undefined
   const [filter, setFilter] = useState<{
     status: 'all' | TaskStatus;
     archived: boolean;
@@ -37,12 +35,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setLoading(true);
     setError(null);
     try {
-      // Convert 'all' to undefined for API call
       const statusFilter = filter.status === 'all' ? undefined : filter.status;
       const data = await api.getTasks(statusFilter, filter.archived);
       setTasks(data.tasks);
       
-      // Load thumbnails for created photos
       const thumbnailPromises = data.tasks
         .filter((task: Task) => task.createdPhoto)
         .map(async (task: Task) => {
@@ -93,18 +89,22 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   };
 
   const handleSendToChat = async (taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent task click event
+    e.stopPropagation();
     
     try {
       setSending((prev: Record<string, boolean>) => ({ ...prev, [taskId]: true }));
       await api.sendTaskToChat(taskId);
       hapticFeedback.success();
       showAlert('✅ Task sent to chat!');
+      
+      // Close Mini App and return to chat after short delay
+      setTimeout(() => {
+        WebApp.close();
+      }, 500);
     } catch (error: any) {
       console.error('Failed to send task:', error);
       showAlert('❌ Failed to send task: ' + error.message);
       hapticFeedback.error();
-    } finally {
       setSending((prev: Record<string, boolean>) => ({ ...prev, [taskId]: false }));
     }
   };
@@ -136,6 +136,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     <div>
       {/* Filter Bar */}
       <div className="card">
+        {/* Status Filters */}
         <div style={{ marginBottom: '12px' }}>
           <h3 style={{ marginBottom: '8px', fontSize: '14px', color: 'var(--tg-theme-hint-color)' }}>
             Filter by Status
@@ -168,6 +169,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             ))}
           </div>
         </div>
+
+        {/* Archive Toggle and Refresh - FIXED */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
             onClick={handleArchiveToggle}
@@ -178,7 +181,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
             }}
           >
-            {filter.archived ? '📦 Showing Archived' : '📋 Show Active'}
+            {filter.archived ? '📋 Show Active' : '🗄️ Show Archived'}
           </button>
           <button
             onClick={handleRefresh}
@@ -192,34 +195,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             🔄 Refresh
           </button>
         </div>
-        <div style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          overflowX: 'auto', 
-          paddingBottom: '8px',
-          marginBottom: '12px'
-        }}>
-          {/* Existing status filters... */}
-          
-          {/* Archive Toggle */}
-          <button
-            onClick={() => setFilter({ ...filter, archived: !filter.archived })}
-            style={{
-              padding: '8px 16px',
-              fontSize: '14px',
-              background: filter.archived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-              color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {filter.archived ? '🗄️ Archived' : '📋 Active'}
-          </button>
-        </div>
       </div>
 
       {/* Task Count */}
       <div style={{ padding: '8px 0', color: 'var(--tg-theme-hint-color)', fontSize: '14px' }}>
         {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
+        {filter.archived && ' (archived)'}
       </div>
 
       {/* Task List */}
@@ -234,14 +215,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         <div>
           {tasks.map((task) => (
             <div key={task.id} className="card">
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                 {/* Task Card - Clickable - Takes most space */}
                 <div 
                   onClick={() => onTaskClick(task)} 
                   style={{ 
                     flex: 1, 
                     cursor: 'pointer',
-                    minWidth: 0 // Allow flex item to shrink below content size
+                    minWidth: 0
                   }}
                 >
                   <TaskCard 
@@ -250,22 +231,22 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   />
                 </div>
                 
-                {/* Send to Chat Button - On the side - Fixed width */}
+                {/* Send to Chat Button - FIXED: Smaller, speech bubble emoji */}
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent triggering task click
+                    e.stopPropagation();
                     handleSendToChat(task.id, e);
                   }}
                   disabled={sending[task.id]}
                   style={{
-                    width: '90px',
-                    padding: '12px 8px',
-                    fontSize: '12px',
+                    width: '60px',
+                    padding: '8px 4px',
+                    fontSize: '11px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
+                    gap: '4px',
                     background: sending[task.id] 
                       ? 'var(--tg-theme-secondary-bg-color)' 
                       : 'var(--tg-theme-button-color)',
@@ -275,14 +256,15 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     flexShrink: 0,
                     lineHeight: '1.2',
                     whiteSpace: 'normal',
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    borderRadius: '8px'
                   }}
                 >
-                  <span style={{ fontSize: '20px' }}>
-                    {sending[task.id] ? '⏳' : '📤'}
+                  <span style={{ fontSize: '24px' }}>
+                    {sending[task.id] ? '⏳' : '💬'}
                   </span>
-                  <span style={{ fontSize: '11px', fontWeight: '500' }}>
-                    {sending[task.id] ? 'Sending...' : 'Send to Chat'}
+                  <span style={{ fontSize: '10px', fontWeight: '500' }}>
+                    {sending[task.id] ? 'Sending' : 'Send'}
                   </span>
                 </button>
               </div>
@@ -300,12 +282,11 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
     const hasVideo = task.labels.video ? !!set.video : true;
     return hasPhotos && hasVideo;
   }).length;
-
   const progress = (completedSets / task.requireSets) * 100;
 
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
-      {/* Thumbnail on the left */}
+      {/* Thumbnail */}
       <div style={{
         width: '80px',
         height: '80px',
@@ -324,7 +305,7 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
         {!thumbnailUrl && '📷'}
       </div>
 
-      {/* Task content on the right */}
+      {/* Task Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
