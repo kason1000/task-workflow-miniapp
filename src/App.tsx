@@ -6,6 +6,7 @@ import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
 import { CreateTaskMessage } from './components/CreateTaskMessage';
 import { ShareScreen } from './components/ShareScreen';
+import { GalleryView } from './components/GalleryView';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery';
 
@@ -55,6 +56,7 @@ function App() {
               }
             } catch (err) {
               console.error('Failed to load task from URL:', err);
+              setError(`Failed to load task: ${err}`);
             }
           }
         } catch (error: any) {
@@ -179,6 +181,13 @@ function App() {
       {view === 'share' && selectedTask && (
         <ShareScreen
           taskId={selectedTask.id}
+          onBack={handleBackToDetail}
+        />
+      )}
+
+      {view === 'gallery' && selectedTask && (
+        <GalleryView
+          task={selectedTask}
           onBack={handleBackToDetail}
         />
       )}

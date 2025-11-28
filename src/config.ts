@@ -24,4 +24,8 @@ export const config = {
   // Your user ID for mock auth
   mockUserId: 8432601826,
   mockRole: 'Admin' as const,
+  
+  // Telegram bot token (only used for fallback in development, optional)
+  // In production, all media URLs come from the backend API
+  telegramBotToken: '',
 };

@@ -43,7 +43,16 @@ class ApiService {
     }
 
     const data = await response.json();
-    return data.success ? data.data : data;
+    
+    // Handle both {success: true, data: ...} and direct response
+    if (data.success !== undefined) {
+      if (!data.success) {
+        throw new Error(data.error?.message || 'Request failed');
+      }
+      return data.data;
+    }
+    
+    return data;
   }
 
   // Tasks
@@ -52,15 +61,19 @@ class ApiService {
     if (status) params.append('status', status);
     if (archived !== undefined) params.append('archived', archived.toString());
     
-    return this.request<{ tasks: any[] }>(`/tasks?${params.toString()}`);
+    const response = await this.request<any>(`/tasks?${params.toString()}`);
+    // Handle both {tasks: [...]} and direct array
+    return { tasks: response.tasks || response };
   }
 
   async getTask(taskId: string) {
-    return this.request<{ task: any }>(`/tasks/${taskId}`);
+    const response = await this.request<any>(`/tasks/${taskId}`);
+    // Handle both {task: ...} and direct object
+    return { task: response.task || response };
   }
 
   async transitionTask(taskId: string, status: string) {
-    return this.request<{ task: any }>(`/tasks/${taskId}/transition`, {
+    return this.request<any>(`/tasks/${taskId}/transition`, {
       method: 'POST',
       body: JSON.stringify({ status }),
     });
@@ -89,12 +102,32 @@ class ApiService {
   }
 
   // Media
-  async getMediaUrl(fileId: string) {
-    return this.request<{ url: string }>(`/media?fileId=${fileId}`);
+  async getMediaUrl(fileId: string): Promise<{ fileUrl: string }> {
+    try {
+      const response = await this.request<any>(`/media?fileId=${fileId}`);
+      console.log('Media URL response:', response);
+      
+      // Handle different response formats
+      if (response.url) {
+        return { fileUrl: response.url };
+      }
+      if (response.fileUrl) {
+        return { fileUrl: response.fileUrl };
+      }
+      
+      throw new Error('Invalid media URL response');
+    } catch (error) {
+      console.error('Failed to get media URL for', fileId, error);
+      // Fallback: return direct Telegram URL
+      return { 
+        fileUrl: `https://api.telegram.org/file/bot${config.telegramBotToken}/photos/${fileId}.jpg` 
+      };
+    }
   }
 
-  async getProxiedMediaUrl(fileId: string) {
+  async getProxiedMediaUrl(fileId: string): Promise<{ fileUrl: string }> {
     const proxyUrl = `${config.apiBaseUrl}/media/proxy/${fileId}`;
+    console.log('Using proxied URL:', proxyUrl);
     return { fileUrl: proxyUrl };
   }
 }
