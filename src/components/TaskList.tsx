@@ -222,12 +222,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       {/* Filter Bar - Fixed under header */}
       <div className="card" style={{ 
         position: 'sticky',
-        top: '60px',  // Changed from 0 to match header height
-        zIndex: 50,   // Changed from 100 to be below header (which is 100)
+        top: '49px',  // Changed from '60px' (12px padding top + 12px padding bottom + ~25px content)
+        zIndex: 50,
         marginBottom: '12px',
         marginLeft: '-16px',
         marginRight: '-16px',
-        marginTop: '-16px',
+        marginTop: '0',  // Changed from '-16px'
         paddingLeft: '16px',
         paddingRight: '16px',
         background: 'var(--tg-theme-bg-color)',

@@ -158,7 +158,7 @@ function App() {
         marginLeft: '-16px',
         marginRight: '-16px',
         marginTop: '-16px',
-        marginBottom: '16px'
+        marginBottom: '0'  // Changed from '16px' to '0'
       }}>
         <div style={{ 
           display: 'flex', 
