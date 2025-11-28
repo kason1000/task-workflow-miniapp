@@ -295,16 +295,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   const handleSendToChat = async () => {
     setLoading(true);
     hapticFeedback.medium();
-
+  
     try {
       await api.sendTaskToChat(task.id);
       hapticFeedback.success();
-      showAlert('✅ Task sent to chat!');
       
       // Close Mini App and return to chat
       setTimeout(() => {
         WebApp.close();
-      }, 500);
+      }, 300);
     } catch (error: any) {
       hapticFeedback.error();
       showAlert(`Failed to send: ${error.message}`);

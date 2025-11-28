@@ -178,11 +178,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       setSending((prev: Record<string, boolean>) => ({ ...prev, [taskId]: true }));
       await api.sendTaskToChat(taskId);
       hapticFeedback.success();
-      showAlert('✅ Task sent to chat!');
       
       setTimeout(() => {
         WebApp.close();
-      }, 500);
+      }, 300);
     } catch (error: any) {
       console.error('Failed to send task:', error);
       showAlert('❌ Failed to send task: ' + error.message);
