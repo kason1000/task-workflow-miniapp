@@ -174,8 +174,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   return (
     <div>
-      {/* Filter Bar - Fixed Layout with Scrollable Status Filters */}
-      <div className="card" style={{ marginBottom: '12px', position: 'relative' }}>
+      {/* Filter Bar - Fixed under header */}
+      <div className="card" style={{ 
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        marginBottom: '12px',
+        marginLeft: '-16px',
+        marginRight: '-16px',
+        marginTop: '-16px',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        background: 'var(--tg-theme-bg-color)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {/* Scrollable Status Filters */}
           <div
