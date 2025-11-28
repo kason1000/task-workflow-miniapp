@@ -1,103 +1,83 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task } from '../types';
 import { api } from '../services/api';
-import { hapticFeedback, showAlert } from '../utils/telegram';
-import { ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Share2, Trash2, Package } from 'lucide-react';
+import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 
 interface GalleryViewProps {
-  taskId: string;
+  task: Task;
+  onBack: () => void;
+  onTaskUpdated?: () => void;
+  userRole: string;
   initialSetIndex?: number;
   initialPhotoIndex?: number;
-  onBack: () => void;
 }
 
 interface MediaItem {
-  fileId: string;
   type: 'photo' | 'video';
+  fileId: string;
   setIndex: number;
   photoIndex?: number;
 }
 
 export function GalleryView({ 
-  taskId, 
-  initialSetIndex = 0, 
-  initialPhotoIndex = 0,
-  onBack 
+  task, 
+  onBack, 
+  onTaskUpdated, 
+  userRole,
+  initialSetIndex = 0,
+  initialPhotoIndex = 0
 }: GalleryViewProps) {
-  const [task, setTask] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(true);
   const [allMedia, setAllMedia] = useState<MediaItem[]>([]);
-  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    loadTask();
-  }, [taskId]);
-
-  const loadTask = async () => {
-    try {
-      const data = await api.getTask(taskId);
-      setTask(data);
-
-      // Collect all media
-      const media: MediaItem[] = [];
-
-      // Add task creation photo
-      if (data.createdPhoto) {
+    // Collect all media from all sets
+    const media: MediaItem[] = [];
+    
+    task.sets.forEach((set, setIndex) => {
+      set.photos?.forEach((photo, photoIndex) => {
         media.push({
-          fileId: data.createdPhoto.file_id,
           type: 'photo',
-          setIndex: -1,
-          photoIndex: -1
+          fileId: photo.file_id,
+          setIndex,
+          photoIndex
+        });
+      });
+
+      if (set.video) {
+        media.push({
+          type: 'video',
+          fileId: set.video.file_id,
+          setIndex
         });
       }
+    });
 
-      // Add all photos and videos from sets
-      data.sets.forEach((set, setIndex) => {
-        set.photos?.forEach((photo, photoIndex) => {
-          media.push({
-            fileId: photo.file_id,
-            type: 'photo',
-            setIndex,
-            photoIndex
-          });
-        });
+    setAllMedia(media);
 
-        if (set.video) {
-          media.push({
-            fileId: set.video.file_id,
-            type: 'video',
-            setIndex,
-            photoIndex: -1
-          });
-        }
-      });
+    // Find initial media index
+    const initialIndex = media.findIndex(
+      m => m.setIndex === initialSetIndex && 
+           (m.photoIndex === initialPhotoIndex || (m.type === 'video' && initialPhotoIndex === -1))
+    );
+    setCurrentIndex(initialIndex >= 0 ? initialIndex : 0);
 
-      setAllMedia(media);
+    setLoading(false);
 
-      // Find initial media index
-      const initialIndex = media.findIndex(
-        m => m.setIndex === initialSetIndex && 
-             (m.photoIndex === initialPhotoIndex || (m.type === 'video' && initialPhotoIndex === -1))
-      );
-      setCurrentIndex(initialIndex >= 0 ? initialIndex : 0);
-
-      setLoading(false);
-
-      // Load all media URLs
-      media.forEach(async (item) => {
-        try {
-          const { fileUrl } = await api.getMediaUrl(item.fileId);
-          setMediaUrls(prev => ({ ...prev, [item.fileId]: fileUrl }));
-        } catch (error) {
-          console.error('Failed to load media:', item.fileId, error);
-        }
-      });
-    } catch (error: any) {
-      showAlert(`Failed to load gallery: ${error.message}`);
-      setLoading(false);
-    }
-  };
+    // Load all media URLs
+    media.forEach(async (item) => {
+      try {
+        const { fileUrl } = await api.getMediaUrl(item.fileId);
+        setMediaUrls(prev => ({ ...prev, [item.fileId]: fileUrl }));
+      } catch (error) {
+        console.error('Failed to load media:', item.fileId, error);
+      }
+    });
+  }, [task, initialSetIndex, initialPhotoIndex]);
 
   const goToPrevious = () => {
     hapticFeedback.light();
@@ -109,290 +89,461 @@ export function GalleryView({
     setCurrentIndex((prev) => (prev + 1) % allMedia.length);
   };
 
-  const handleShare = async () => {
+  const handleShareCurrent = async () => {
     const currentMedia = allMedia[currentIndex];
-    const mediaUrl = mediaUrls[currentMedia.fileId];
-
-    if (!mediaUrl) {
-      showAlert('Media not loaded yet');
-      return;
-    }
-
+    setActionLoading(true);
     hapticFeedback.medium();
 
     try {
-      const response = await fetch(mediaUrl);
+      const { fileUrl } = await api.getProxiedMediaUrl(currentMedia.fileId);
+      const response = await fetch(fileUrl);
+      
+      if (!response.ok) throw new Error(`Failed to fetch media`);
+      
       const blob = await response.blob();
-      const file = new File(
-        [blob],
-        currentMedia.type === 'video' ? 'video.mp4' : 'photo.jpg',
-        { type: currentMedia.type === 'video' ? 'video/mp4' : 'image/jpeg' }
-      );
-
-      if (navigator.share) {
-        await navigator.share({ files: [file] });
-        showAlert('Shared successfully!');
+      const contentType = response.headers.get('content-type') || 
+        (currentMedia.type === 'photo' ? 'image/jpeg' : 'video/mp4');
+      
+      const fileName = currentMedia.type === 'photo' 
+        ? `set${currentMedia.setIndex + 1}_photo${(currentMedia.photoIndex || 0) + 1}.jpg`
+        : `set${currentMedia.setIndex + 1}_video.mp4`;
+      
+      const file = new File([blob], fileName, { type: contentType });
+      
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `${task.title} - Set ${currentMedia.setIndex + 1}`,
+          files: [file]
+        });
+        
+        hapticFeedback.success();
       } else {
-        showAlert('Sharing not supported on this device');
+        throw new Error('Share not supported');
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
+        hapticFeedback.error();
         showAlert(`Failed to share: ${error.message}`);
       }
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  if (loading || !task) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh'
-      }}>
-        <p>Loading gallery...</p>
-      </div>
-    );
-  }
+  const handleShareCurrentSet = async () => {
+    const currentMedia = allMedia[currentIndex];
+    const currentSetIndex = currentMedia.setIndex;
+    const currentSet = task.sets[currentSetIndex];
+    
+    setActionLoading(true);
+    hapticFeedback.medium();
 
-  if (allMedia.length === 0) {
+    try {
+      const files: File[] = [];
+      
+      // Collect all photos from current set
+      if (currentSet.photos) {
+        for (let i = 0; i < currentSet.photos.length; i++) {
+          const { fileUrl } = await api.getProxiedMediaUrl(currentSet.photos[i].file_id);
+          const response = await fetch(fileUrl);
+          if (!response.ok) throw new Error(`Failed to fetch photo ${i + 1}`);
+          const blob = await response.blob();
+          const file = new File([blob], `set${currentSetIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+          files.push(file);
+        }
+      }
+      
+      // Collect video from current set
+      if (currentSet.video) {
+        const { fileUrl } = await api.getProxiedMediaUrl(currentSet.video.file_id);
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error(`Failed to fetch video`);
+        const blob = await response.blob();
+        const file = new File([blob], `set${currentSetIndex + 1}_video.mp4`, { type: 'video/mp4' });
+        files.push(file);
+      }
+      
+      if (navigator.share && navigator.canShare({ files })) {
+        await navigator.share({
+          title: `${task.title} - Set ${currentSetIndex + 1}`,
+          files
+        });
+        hapticFeedback.success();
+      } else {
+        throw new Error('Share not supported');
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        hapticFeedback.error();
+        showAlert(`Failed to share: ${error.message}`);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleShareAllSets = async () => {
+    setActionLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      const files: File[] = [];
+      
+      for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
+        const set = task.sets[setIndex];
+        
+        if (set.photos) {
+          for (let i = 0; i < set.photos.length; i++) {
+            const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
+            const response = await fetch(fileUrl);
+            if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
+            const blob = await response.blob();
+            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+            files.push(file);
+          }
+        }
+        
+        if (set.video) {
+          const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+          const response = await fetch(fileUrl);
+          if (!response.ok) throw new Error(`Failed to fetch video from set ${setIndex + 1}`);
+          const blob = await response.blob();
+          const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
+          files.push(file);
+        }
+      }
+      
+      if (navigator.share && navigator.canShare({ files })) {
+        await navigator.share({
+          title: task.title,
+          files
+        });
+        hapticFeedback.success();
+      } else {
+        throw new Error('Share not supported');
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        hapticFeedback.error();
+        showAlert(`Failed to share: ${error.message}`);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteCurrent = async () => {
+    const currentMedia = allMedia[currentIndex];
+    const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
+
+    if (isCreatedPhoto) {
+      showAlert('❌ Cannot delete the task creation photo');
+      return;
+    }
+
+    const mediaType = currentMedia.type === 'photo' ? 'photo' : 'video';
+    const confirmed = await showConfirm(`Delete this ${mediaType}?`);
+    
+    if (!confirmed) return;
+
+    setActionLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      await api.deleteUpload(task.id, currentMedia.fileId);
+      
+      hapticFeedback.success();
+      showAlert(`✅ Deleted`);
+      
+      if (onTaskUpdated) {
+        onTaskUpdated();
+      }
+      
+      setTimeout(() => {
+        onBack();
+      }, 500);
+      
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Failed to delete: ${error.message}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading || allMedia.length === 0) {
     return (
       <div className="card">
         <button onClick={onBack} style={{ marginBottom: '12px' }}>
-          ← Back to Task
+          ← Back
         </button>
-        <p style={{ textAlign: 'center', color: 'var(--tg-theme-hint-color)' }}>
-          No media available
-        </p>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>No media available</p>
+        </div>
       </div>
     );
   }
 
   const currentMedia = allMedia[currentIndex];
   const currentUrl = mediaUrls[currentMedia.fileId];
+  const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
+  const canDelete = !isCreatedPhoto && (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
 
-  // Group media by sets for thumbnail navigation
-  const setGroups: { setIndex: number; label: string; media: MediaItem[] }[] = [];
-  
-  // Task photo
-  const taskPhotos = allMedia.filter(m => m.setIndex === -1);
-  if (taskPhotos.length > 0) {
-    setGroups.push({
-      setIndex: -1,
-      label: 'Task Photo',
-      media: taskPhotos
-    });
-  }
+  // Group media by set for display
+  const mediaBySet = task.sets.map((set, setIndex) => {
+    const setMedia = allMedia.filter(m => m.setIndex === setIndex);
+    return {
+      setIndex,
+      media: setMedia,
+      photoCount: set.photos?.length || 0,
+      hasVideo: !!set.video
+    };
+  });
 
-  // Sets
-  if (task) {
-    task.sets.forEach((set, idx) => {
-      const setMedia = allMedia.filter(m => m.setIndex === idx);
-      if (setMedia.length > 0) {
-        setGroups.push({
-          setIndex: idx,
-          label: `Set ${idx + 1}`,
-          media: setMedia
-        });
-      }
-    });
-  }
-
+  // FIND THIS (the entire return statement):
   return (
     <div style={{ 
-      height: '100vh', 
-      display: 'flex', 
+      height: '100vh',
+      display: 'flex',
       flexDirection: 'column',
-      background: 'var(--tg-theme-bg-color)'
+      background: '#000',
+      color: '#fff',
+      overflow: 'hidden'
     }}>
-      {/* Fixed Header */}
-      <div style={{
-        padding: '12px 16px',
-        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: 'transparent',
-            padding: '4px',
-            minWidth: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <ChevronLeft size={20} />
-          <span>Back</span>
-        </button>
-
-        <span style={{ fontSize: '14px', fontWeight: '500' }}>
-          {currentIndex + 1} / {allMedia.length}
-        </span>
-
-        <button
-          onClick={handleShare}
-          style={{
-            background: 'transparent',
-            padding: '4px',
-            minWidth: 'auto'
-          }}
-        >
-          <Share2 size={20} />
-        </button>
-      </div>
-
-      {/* Main Media Display */}
+      {/* Main Image/Video Area - Scrollable */}
       <div style={{ 
         flex: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
+        overflow: 'auto',
         position: 'relative',
-        overflow: 'hidden'
+        padding: '16px',
+        paddingBottom: '0'
       }}>
-        {currentMedia.type === 'photo' ? (
-          <img
-            src={currentUrl}
-            alt="Media"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain'
-            }}
-          />
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <p>Loading gallery...</p>
+          </div>
+        ) : allMedia.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <p>No media available</p>
+          </div>
         ) : (
-          <video
-            src={currentUrl}
-            controls
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%'
-            }}
-          />
+          <div>
+            {/* Current Media Display */}
+            {currentMedia.type === 'photo' ? (
+              <img
+                src={mediaUrls[currentMedia.fileId] || ''}
+                alt={`Set ${currentMedia.setIndex + 1} - Photo ${(currentMedia.photoIndex ?? 0) + 1}`}
+                style={{
+                  width: '100%',
+                  maxHeight: '70vh',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+            ) : (
+              <video
+                src={mediaUrls[currentMedia.fileId] || ''}
+                controls
+                style={{
+                  width: '100%',
+                  maxHeight: '70vh',
+                  borderRadius: '8px'
+                }}
+              />
+            )}
+            
+            <p style={{ 
+              textAlign: 'center', 
+              marginTop: '12px',
+              fontSize: '14px',
+              color: '#aaa'
+            }}>
+              Set {currentMedia.setIndex + 1} • {currentMedia.type === 'photo' ? `Photo ${(currentMedia.photoIndex ?? 0) + 1}` : 'Video'}
+            </p>
+          </div>
         )}
-
-        {/* Navigation Arrows */}
-        <button
-          onClick={goToPrevious}
-          style={{
-            position: 'absolute',
-            left: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(0,0,0,0.5)',
-            padding: '12px',
-            borderRadius: '50%',
-            minWidth: 'auto'
-          }}
-        >
-          <ChevronLeft size={24} color="white" />
-        </button>
-
-        <button
-          onClick={goToNext}
-          style={{
-            position: 'absolute',
-            right: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(0,0,0,0.5)',
-            padding: '12px',
-            borderRadius: '50%',
-            minWidth: 'auto'
-          }}
-        >
-          <ChevronRight size={24} color="white" />
-        </button>
       </div>
-
-      {/* Fixed Bottom Thumbnail Navigation */}
+      
+      {/* Fixed Bottom Section */}
       <div style={{
-        background: 'var(--tg-theme-secondary-bg-color)',
-        padding: '12px',
-        borderTop: '1px solid var(--tg-theme-hint-color)',
-        overflowX: 'auto',
-        overflowY: 'hidden'
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(0, 0, 0, 0.95)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        paddingTop: '12px',
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom))'
       }}>
-        <div style={{ display: 'flex', gap: '12px', paddingBottom: '4px' }}>
-          {setGroups.map((setGroup, groupIdx) => (
-            <div key={groupIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {/* Set Label */}
-              <div style={{
-                fontSize: '12px',
-                fontWeight: '600',
-                color: 'var(--tg-theme-hint-color)',
-                whiteSpace: 'nowrap',
-                paddingRight: '8px'
-              }}>
-                {setGroup.label}
+        {/* Back Button */}
+        <div style={{ padding: '0 16px', marginBottom: '12px' }}>
+          <button 
+            onClick={onBack} 
+            style={{ 
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              padding: '8px 16px',
+              fontSize: '14px'
+            }}
+          >
+            ← Back to Details
+          </button>
+        </div>
+        
+        {/* Horizontal Thumbnail Strip - One Row, Swipeable */}
+        <div style={{
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          padding: '0 16px 12px',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: '12px',
+            minWidth: 'min-content'
+          }}>
+            {mediaBySet.map((setGroup, setIndex) => (
+              <div 
+                key={setIndex} 
+                style={{ 
+                  scrollSnapAlign: 'start',
+                  minWidth: 'fit-content'
+                }}
+              >
+                {/* Set Label */}
+                <div style={{ 
+                  color: 'white', 
+                  fontSize: '11px', 
+                  marginBottom: '6px',
+                  textAlign: 'center',
+                  fontWeight: '500'
+                }}>
+                  Set {setIndex + 1}
+                </div>
+                
+                {/* Thumbnails in one row */}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {setGroup.media.map((media, idx) => {
+                    const mediaIndex = allMedia.findIndex(m => 
+                      m.fileId === media.fileId && m.setIndex === setIndex
+                    );
+                    const isActive = mediaIndex === currentIndex;
+                    const thumbnailUrl = mediaUrls[media.fileId];
+                    
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => setCurrentIndex(mediaIndex)}
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          border: isActive 
+                            ? '3px solid var(--tg-theme-button-color)' 
+                            : '2px solid rgba(255,255,255,0.2)',
+                          flexShrink: 0,
+                          background: '#222',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}
+                      >
+                        {thumbnailUrl ? (
+                          <>
+                            <img
+                              src={thumbnailUrl}
+                              alt=""
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                            {media.type === 'video' && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: 'rgba(0,0,0,0.6)',
+                                borderRadius: '50%',
+                                width: '24px',
+                                height: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                ▶️
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span style={{ fontSize: '10px', color: '#666' }}>...</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-
-              {/* Thumbnails in one row */}
-              {setGroup.media.map((media, idx) => {
-                const mediaIndex = allMedia.findIndex(m => m.fileId === media.fileId);
-                const thumbnailUrl = mediaUrls[media.fileId];
-                const isActive = mediaIndex === currentIndex;
-
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      hapticFeedback.light();
-                      setCurrentIndex(mediaIndex);
-                    }}
-                    style={{
-                      minWidth: '60px',
-                      width: '60px',
-                      height: '60px',
-                      background: thumbnailUrl
-                        ? `url(${thumbnailUrl}) center/cover`
-                        : 'var(--tg-theme-bg-color)',
-                      borderRadius: '6px',
-                      border: isActive 
-                        ? '3px solid var(--tg-theme-button-color)' 
-                        : '2px solid var(--tg-theme-secondary-bg-color)',
-                      cursor: 'pointer',
-                      opacity: isActive ? 1 : 0.6,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {media.type === 'video' && (
-                      <div style={{
-                        position: 'absolute',
-                        fontSize: '20px'
-                      }}>
-                        ▶️
-                      </div>
-                    )}
-                    {media.type === 'photo' && media.photoIndex !== undefined && media.photoIndex >= 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '2px',
-                        right: '2px',
-                        background: 'rgba(0,0,0,0.7)',
-                        color: 'white',
-                        fontSize: '9px',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        fontWeight: 600
-                      }}>
-                        {media.photoIndex + 1}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        
+        {/* Navigation Arrows - Fixed */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0 16px',
+          marginTop: '8px'
+        }}>
+          <button
+            onClick={goToPrevious}
+            disabled={allMedia.length === 0}
+            style={{ 
+              padding: '12px 20px',
+              background: 'rgba(255,255,255,0.1)',
+              color: 'white',
+              minWidth: '60px'
+            }}
+          >
+            ◀
+          </button>
+          
+          <span style={{ 
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}>
+            {currentIndex + 1} / {allMedia.length}
+          </span>
+          
+          <button
+            onClick={goToNext}
+            disabled={allMedia.length === 0}
+            style={{ 
+              padding: '12px 20px',
+              background: 'rgba(255,255,255,0.1)',
+              color: 'white',
+              minWidth: '60px'
+            }}
+          >
+            ▶
+          </button>
         </div>
       </div>
+      
+      {/* Hide scrollbar CSS */}
+      <style>{`
+        div::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }

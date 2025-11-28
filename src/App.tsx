@@ -32,13 +32,41 @@ function App() {
 
       const urlParams = new URLSearchParams(window.location.search);
       const taskIdParam = urlParams.get('taskId');
-      const viewParam = urlParams.get('view') as View;
+      const viewParam = urlParams.get('view');
 
-      if (taskIdParam) {
-        loadTaskAndSetView(taskIdParam, viewParam || 'detail', urlParams);
-      } else {
-        fetchUserRole();
-      }
+      const fetchRole = async () => {
+        try {
+          console.log('Fetching role...');
+          const roleData = await api.getMyRole();
+          console.log('Role data:', roleData);
+          setRole(roleData.role);
+
+          if (taskIdParam) {
+            console.log('Loading task from URL:', taskIdParam);
+            try {
+              const { task } = await api.getTask(taskIdParam);
+              setSelectedTask(task);
+              
+              if (viewParam === 'gallery') {
+                setView('gallery');
+              } else if (viewParam === 'share') {
+                setView('share');
+              } else {
+                setView('detail');
+              }
+            } catch (err) {
+              console.error('Failed to load task from URL:', err);
+            }
+          }
+        } catch (error: any) {
+          console.error('Failed to fetch role:', error);
+          setError(error.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchRole();
     } catch (error: any) {
       console.error('Initialization error:', error);
       setError(error.message);
@@ -46,65 +74,59 @@ function App() {
     }
   }, []);
 
-  const loadTaskAndSetView = async (taskId: string, targetView: View, urlParams: URLSearchParams) => {
+  const handleTaskClick = async (task: Task) => {
     try {
-      const task = await api.getTask(taskId);
-      setSelectedTask(task);
-
-      if (targetView === 'gallery') {
-        const setIndex = parseInt(urlParams.get('set') || '0');
-        const photoIndex = parseInt(urlParams.get('photo') || '0');
-        setGalleryInitialSet(setIndex);
-        setGalleryInitialPhoto(photoIndex);
-      }
-
-      setView(targetView);
-      await fetchUserRole();
+      const { task: freshTask } = await api.getTask(task.id);
+      setSelectedTask(freshTask);
+      setView('detail');
+      window.history.pushState({}, '', `?taskId=${task.id}`);
     } catch (error: any) {
-      console.error('Failed to load task:', error);
-      setError(error.message);
-      setLoading(false);
+      console.error('Failed to fetch task:', error);
+      alert('Failed to load task: ' + error.message);
     }
-  };
-
-  const fetchUserRole = async () => {
-    try {
-      const response = await api.getMyRole();
-      console.log('User role:', response.role);
-      setRole(response.role);
-    } catch (error: any) {
-      console.error('Failed to fetch role:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-    setView('detail');
   };
 
   const handleBackToList = () => {
-    setView('list');
     setSelectedTask(null);
+    setView('list');
     setRefreshKey(prev => prev + 1);
     window.history.pushState({}, '', window.location.pathname);
   };
 
-  const handleTaskUpdate = () => {
+  const handleBackToDetail = () => {
+    if (selectedTask) {
+      setView('detail');
+      window.history.pushState({}, '', `?taskId=${selectedTask.id}`);
+    } else {
+      handleBackToList();
+    }
+  };
+
+  const handleTaskUpdated = async () => {
+    if (selectedTask) {
+      try {
+        const { task: freshTask } = await api.getTask(selectedTask.id);
+        setSelectedTask(freshTask);
+      } catch (error) {
+        console.error('Failed to refresh task:', error);
+      }
+    }
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handleOpenGallery = (setIndex: number, photoIndex: number) => {
+    setGalleryInitialSet(setIndex);
+    setGalleryInitialPhoto(photoIndex);
+    setView('gallery');
+    window.history.pushState({}, '', `?taskId=${selectedTask?.id}&view=gallery`);
   };
 
   if (loading) {
     return (
-      <div className="container" style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh'
-      }}>
-        <p>Loading...</p>
+      <div className="container">
+        <div className="card">
+          <p>Loading...</p>
+        </div>
       </div>
     );
   }
@@ -115,6 +137,7 @@ function App() {
         <div className="card">
           <h2 style={{ color: '#ef4444' }}>Error</h2>
           <p>{error}</p>
+          <button onClick={() => window.location.reload()}>Reload</button>
         </div>
       </div>
     );
@@ -122,51 +145,91 @@ function App() {
 
   return (
     <div className="container">
+      {/* Fixed Header */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'var(--tg-theme-bg-color)',
+        padding: '12px 16px',
+        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
+        marginLeft: '-16px',
+        marginRight: '-16px',
+        marginTop: '-16px',
+        marginBottom: '16px'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          maxWidth: '600px',
+          margin: '0 auto'
+        }}>
+          {/* Left: Back Button (only show when not on list view) */}
+          <div style={{ minWidth: '60px' }}>
+            {view !== 'list' && (
+              <button
+                onClick={() => {
+                  setView('list');
+                  setSelectedTask(null);
+                }}
+                style={{ 
+                  padding: '8px 12px', 
+                  fontSize: '14px',
+                  background: 'transparent',
+                  color: 'var(--tg-theme-button-color)'
+                }}
+              >
+                ← Back
+              </button>
+            )}
+          </div>
+          
+          {/* Center: Task Workflow Title (smaller) */}
+          <h1 style={{ 
+            fontSize: '18px', 
+            margin: 0,
+            fontWeight: '600'
+          }}>
+            Task Workflow
+          </h1>
+          
+          {/* Right: User Info */}
+          <div style={{ 
+            textAlign: 'right',
+            minWidth: '100px'
+          }}>
+            <p style={{ 
+              fontSize: '13px', 
+              color: 'var(--tg-theme-text-color)',
+              margin: 0,
+              fontWeight: '500'
+            }}>
+              {user?.first_name || 'User'}
+            </p>
+            <span className="badge" style={{ 
+              marginTop: '2px',
+              fontSize: '11px',
+              padding: '2px 8px'
+            }}>
+              {role}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Content */}
       {view === 'list' && (
-        <>
-          {/* Fixed Header */}
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-            background: 'var(--tg-theme-bg-color)',
-            borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-            padding: '12px 16px'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              maxWidth: '600px',
-              margin: '0 auto'
-            }}>
-              <h1 style={{ fontSize: '20px', margin: 0 }}>Task Workflow</h1>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', margin: 0 }}>
-                  {user?.first_name || 'User'}
-                </p>
-                <span className="badge" style={{ fontSize: '10px', padding: '2px 6px' }}>
-                  {role}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Content with padding */}
-          <div style={{ paddingTop: '60px' }}>
-            <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
-          </div>
-        </>
+        <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
       )}
 
       {view === 'detail' && selectedTask && (
         <TaskDetail
-          taskId={selectedTask.id}
+          task={selectedTask}
+          userRole={role}
           onBack={handleBackToList}
-          onUpdate={handleTaskUpdate}
+          onTaskUpdated={handleTaskUpdated}
+          onOpenGallery={handleOpenGallery}
         />
       )}
 
@@ -177,16 +240,18 @@ function App() {
       {view === 'share' && selectedTask && (
         <ShareScreen
           taskId={selectedTask.id}
-          onBack={handleBackToList}
+          onBack={handleBackToDetail}
         />
       )}
 
       {view === 'gallery' && selectedTask && (
         <GalleryView
-          taskId={selectedTask.id}
+          task={selectedTask}
+          onBack={handleBackToDetail}
+          onTaskUpdated={handleTaskUpdated}
+          userRole={role}
           initialSetIndex={galleryInitialSet}
           initialPhotoIndex={galleryInitialPhoto}
-          onBack={handleBackToList}
         />
       )}
     </div>

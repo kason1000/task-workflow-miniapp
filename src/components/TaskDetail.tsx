@@ -1,444 +1,708 @@
-import { useEffect, useState } from 'react';
-import { Task } from '../types';
+import { useState, useEffect } from 'react';
+import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
-import { hapticFeedback, showAlert } from '../utils/telegram';
-import { ChevronLeft } from 'lucide-react';
+import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
+import WebApp from '@twa-dev/sdk';
 
 interface TaskDetailProps {
-  taskId: string;
+  task: Task;
+  userRole: string;
   onBack: () => void;
-  onUpdate: () => void;
+  onTaskUpdated: () => void;
+  onOpenGallery: (setIndex: number, photoIndex: number) => void;
 }
 
-export function TaskDetail({ taskId, onBack, onUpdate }: TaskDetailProps) {
-  const [task, setTask] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string>('');
+const statusColors: Record<TaskStatus, string> = {
+  New: 'badge-new',
+  Received: 'badge-received',
+  Submitted: 'badge-submitted',
+  Redo: 'badge-redo',
+  Completed: 'badge-completed',
+  Archived: 'badge-archived',
+};
+
+interface MediaCache {
+  [fileId: string]: string;
+}
+
+export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGallery }: TaskDetailProps) {
+  const [loading, setLoading] = useState(false);
+  const [mediaCache, setMediaCache] = useState<MediaCache>({});
+  const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
+
+  const handleDeleteUpload = async (fileId: string, uploadType: 'photo' | 'video') => {
+    const confirmed = await showConfirm(`Delete this ${uploadType}?`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      await api.deleteUpload(task.id, fileId);
+      hapticFeedback.success();
+      showAlert(`✅ ${uploadType === 'photo' ? 'Photo' : 'Video'} deleted`);
+      onTaskUpdated();
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const shareSetDirect = async (setIndex: number) => {
+    setLoading(true);
+    hapticFeedback.medium();
+    
+    try {
+      const set = task.sets[setIndex];
+      
+      if (!set) {
+        throw new Error(`Set ${setIndex + 1} not found`);
+      }
+      
+      const files: File[] = [];
+      
+      console.log(`📤 Starting share for Set ${setIndex + 1}`);
+      console.log(`Photos: ${set.photos?.length || 0}, Video: ${!!set.video}`);
+      
+      // Collect photos
+      if (set.photos && set.photos.length > 0) {
+        for (let i = 0; i < set.photos.length; i++) {
+          const photo = set.photos[i];
+          console.log(`📷 Fetching photo ${i + 1}/${set.photos.length} (${photo.file_id})`);
+          
+          try {
+            const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+            const response = await fetch(fileUrl);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`Fetch failed:`, response.status, errorText);
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const blob = await response.blob();
+            console.log(`✅ Photo ${i + 1}: ${blob.size} bytes`);
+            
+            if (blob.size < 100) {
+              throw new Error(`Too small (${blob.size} bytes)`);
+            }
+            
+            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+            files.push(file);
+          } catch (photoError: any) {
+            console.error(`❌ Photo ${i + 1} failed:`, photoError);
+            throw new Error(`Photo ${i + 1}: ${photoError.message}`);
+          }
+        }
+      }
+      
+      // Collect video
+      if (set.video) {
+        console.log(`🎥 Fetching video (${set.video.file_id})`);
+        
+        try {
+          const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+          const response = await fetch(fileUrl);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Fetch failed:`, response.status, errorText);
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const blob = await response.blob();
+          const contentType = response.headers.get('content-type') || 'video/mp4';
+          console.log(`✅ Video: ${blob.size} bytes, type: ${contentType}`);
+          
+          if (blob.size < 100) {
+            throw new Error(`Too small (${blob.size} bytes)`);
+          }
+          
+          const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
+          files.push(file);
+        } catch (videoError: any) {
+          console.error(`❌ Video failed:`, videoError);
+          throw new Error(`Video: ${videoError.message}`);
+        }
+      }
+      
+      console.log(`✅ Prepared ${files.length} files`);
+      
+      if (files.length === 0) {
+        throw new Error('No files to share');
+      }
+      
+      if (!navigator.share) {
+        throw new Error('Share API not available');
+      }
+      
+      const canShare = navigator.canShare({ files });
+      console.log(`Can share: ${canShare}`);
+      
+      if (!canShare) {
+        throw new Error('Cannot share these file types');
+      }
+      
+      await navigator.share({
+        title: `${task.title} - Set ${setIndex + 1}`,
+        files
+      });
+      
+      hapticFeedback.success();
+      showAlert('✅ Shared successfully!');
+      
+    } catch (error: any) {
+      console.error('❌ Share failed:', error);
+      
+      if (error.name !== 'AbortError') {
+        hapticFeedback.error();
+        showAlert(`Failed to share: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMediaUrl = async (fileId: string) => {
+    if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
+
+    setLoadingMedia(prev => new Set(prev).add(fileId));
+
+    try {
+      const result = await api.getMediaUrl(fileId);
+      setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
+    } catch (error) {
+      console.error('Failed to load media:', error);
+    } finally {
+      setLoadingMedia(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+    }
+  };
 
   useEffect(() => {
-    loadTask();
-    loadUser();
-  }, [taskId]);
+    task.sets.forEach(set => {
+      set.photos?.forEach(photo => loadMediaUrl(photo.file_id));
+      if (set.video) loadMediaUrl(set.video.file_id);
+    });
+  }, [task.id]);
 
-  const loadUser = async () => {
-    try {
-      const response = await api.getMyRole();
-      setRole(response.role);
-    } catch (error) {
-      console.error('Failed to load user role:', error);
+  const canTransition = (to: TaskStatus): boolean => {
+    // Admin can do anything
+    if (userRole === 'Admin') {
+      return true;
     }
+
+    const transitions: Record<string, string[]> = {
+      'New->Received': ['Member', 'Lead', 'Admin'],
+      'Received->Submitted': ['Member', 'Lead', 'Admin'],
+      'Submitted->Redo': ['Lead', 'Admin'],
+      'Submitted->Completed': ['Lead', 'Admin'],
+      'Submitted->Archived': ['Lead', 'Admin', 'Viewer'],
+      'Completed->Archived': ['Lead', 'Admin', 'Viewer'],
+      'Redo->Submitted': ['Member', 'Lead', 'Admin'], // Added
+    };
+    
+    const key = `${task.status}->${to}`;
+    const allowedRoles = transitions[key];
+    return allowedRoles ? allowedRoles.includes(userRole) : false;
   };
 
-  const loadTask = async () => {
+  const handleTransition = async (to: TaskStatus) => {
+    const confirmed = await showConfirm(`Transition task to ${to}?`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    hapticFeedback.medium();
+
     try {
-      const data = await api.getTask(taskId);
-      setTask(data);
-
-      // Load media URLs
-      const urls: Record<string, string> = {};
-      
-      // Load task creation photo
-      if (data.createdPhoto?.file_id) {
-        try {
-          const { fileUrl } = await api.getMediaUrl(data.createdPhoto.file_id);
-          urls[data.createdPhoto.file_id] = fileUrl;
-        } catch (error) {
-          console.error('Failed to load creation photo:', error);
-        }
-      }
-
-      // Load set photos and videos
-      for (const set of data.sets) {
-        if (set.photos) {
-          for (const photo of set.photos) {
-            try {
-              const { fileUrl } = await api.getMediaUrl(photo.file_id);
-              urls[photo.file_id] = fileUrl;
-            } catch (error) {
-              console.error('Failed to load photo:', error);
-            }
-          }
-        }
-        if (set.video) {
-          try {
-            const { fileUrl } = await api.getMediaUrl(set.video.file_id);
-            urls[set.video.file_id] = fileUrl;
-          } catch (error) {
-            console.error('Failed to load video:', error);
-          }
-        }
-      }
-
-      setMediaUrls(urls);
+      await api.transitionTask(task.id, to);
+      hapticFeedback.success();
+      showAlert(`Task transitioned to ${to}`);
+      onTaskUpdated();
     } catch (error: any) {
-      showAlert(`Failed to load task: ${error.message}`);
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    if (!task) return;
+  const handleArchive = async () => {
+    const confirmed = await showConfirm('Archive this task?');
+    if (!confirmed) return;
 
-    hapticFeedback.medium();
     setLoading(true);
+    hapticFeedback.medium();
 
     try {
-      await api.updateTaskStatus(taskId, newStatus);
-      showAlert(`Status updated to ${newStatus}`);
-      onUpdate();
-      await loadTask();
+      await api.archiveTask(task.id);
+      hapticFeedback.success();
+      showAlert('Task archived');
+      onTaskUpdated();
     } catch (error: any) {
-      showAlert(`Failed to update status: ${error.message}`);
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleArchiveToggle = async () => {
-    if (!task) return;
+  const handleRestore = async () => {
+    const confirmed = await showConfirm('Restore this task?');
+    if (!confirmed) return;
 
-    hapticFeedback.medium();
     setLoading(true);
+    hapticFeedback.medium();
 
     try {
-      const newArchivedState = !task.archived;
-      await api.updateTask(taskId, { archived: newArchivedState });
-      showAlert(newArchivedState ? 'Task archived' : 'Task restored');
-      onUpdate();
-      await loadTask();
+      await api.restoreTask(task.id);
+      hapticFeedback.success();
+      showAlert('Task restored');
+      onTaskUpdated();
     } catch (error: any) {
-      showAlert(`Failed to ${task.archived ? 'restore' : 'archive'} task: ${error.message}`);
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = await showConfirm('⚠️ Permanently delete this task? This cannot be undone!');
+    if (!confirmed) return;
+
+    setLoading(true);
+    hapticFeedback.heavy();
+
+    try {
+      await api.deleteTask(task.id);
+      hapticFeedback.success();
+      showAlert('Task deleted');
+      onBack();
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSendToChat = async () => {
-    if (!task) return;
-
-    hapticFeedback.medium();
     setLoading(true);
+    hapticFeedback.medium();
 
     try {
-      await api.sendTaskToChat(taskId);
-      showAlert('Task sent to chat!');
+      await api.sendTaskToChat(task.id);
+      hapticFeedback.success();
+      showAlert('✅ Task sent to chat!');
+      
+      // Close Mini App and return to chat
+      setTimeout(() => {
+        WebApp.close();
+      }, 500);
     } catch (error: any) {
-      showAlert(`Failed to send to chat: ${error.message}`);
-    } finally {
+      hapticFeedback.error();
+      showAlert(`Failed to send: ${error.message}`);
       setLoading(false);
     }
   };
 
-  const handleShare = () => {
-    if (!task) return;
-    window.location.href = `?taskId=${taskId}&view=share`;
-  };
-
-  const handleGalleryView = (setIndex: number = 0, photoIndex: number = 0) => {
-    window.location.href = `?taskId=${taskId}&view=gallery&set=${setIndex}&photo=${photoIndex}`;
-  };
-
-  if (loading || !task) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '200px' 
-      }}>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  const isViewer = role === 'Viewer';
-  const canEdit = !isViewer && !task.archived;
-  const totalMedia = task.sets.reduce((sum, set) => 
-    sum + (set.photos?.length || 0) + (set.video ? 1 : 0), 0
-  );
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'New': '#3b82f6',
-      'Received': '#f59e0b',
-      'Submitted': '#8b5cf6',
-      'Redo': '#ef4444',
-      'Completed': '#10b981',
-      'Archived': '#6b7280'
-    };
-    return colors[status] || '#6b7280';
-  };
-
-  const getUserName = async (userId: number) => {
-    // In a real app, you'd fetch user names from an API
-    // For now, return the ID
-    return `User ${userId}`;
-  };
+  const totalPhotos = task.sets.reduce((sum, set) => sum + (set.photos?.length || 0), 0);
+  const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
+  const totalMedia = totalPhotos + totalVideos;
 
   return (
-    <div style={{ paddingBottom: '80px' }}>
-      {/* Fixed Header */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        background: 'var(--tg-theme-bg-color)',
-        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        padding: '12px 16px'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          maxWidth: '600px',
-          margin: '0 auto'
-        }}>
-          <button
-            onClick={onBack}
-            style={{
-              background: 'transparent',
-              padding: '4px',
-              minWidth: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <ChevronLeft size={20} />
-          </button>
-          
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', margin: 0 }}>
-              {user?.first_name || 'User'}
-            </p>
-            <span className="badge" style={{ fontSize: '10px', padding: '2px 6px' }}>
-              {role}
+    <div style={{ 
+      minHeight: '100vh',
+      paddingBottom: '100px' // Space for fixed buttons
+    }}>
+      <button onClick={onBack} style={{ marginBottom: '12px' }}>
+        ← Back
+      </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <h2 style={{ fontSize: '18px', margin: 0, flex: 1 }}>{task.title}</h2>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className={`badge ${statusColors[task.status]}`}>
+            {task.status}
+          </span>
+          {task.labels.video && (
+            <span className="badge" style={{ background: '#8b5cf6', color: 'white' }}>
+              🎥 Video Required
             </span>
+          )}
+        </div>
+      </div>
+      
+      {/* Meta Information - NOW FIRST, BEFORE SETS */}
+      <div className="card">
+        <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>Information</h3>
+        <div style={{ fontSize: '14px', lineHeight: '1.8' }}>
+          {/* Status */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Status:</span>
+            <span className={`badge ${statusColors[task.status]}`}>
+              {task.status}
+            </span>
+          </div>
+          
+          {/* Created By - Show name from Telegram WebApp */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Created by:</span>
+            <span>
+              {WebApp.initDataUnsafe?.user?.id === task.createdBy 
+                ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
+                : `User ${task.createdBy}`}
+            </span>
+          </div>
+          
+          {/* Created At */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Created:</span>
+            <span>{new Date(task.createdAt).toLocaleString()}</span>
+          </div>
+          
+          {/* Submitted By (if exists) */}
+          {task.doneBy && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ color: 'var(--tg-theme-hint-color)' }}>Submitted by:</span>
+              <span>
+                {WebApp.initDataUnsafe?.user?.id === task.doneBy
+                  ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
+                  : `User ${task.doneBy}`}
+              </span>
+            </div>
+          )}
+          
+          {/* Required Sets */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Required sets:</span>
+            <span>{task.requireSets}</span>
+          </div>
+          
+          {/* Video Required */}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--tg-theme-hint-color)' }}>Video required:</span>
+            <span>{task.labels.video ? '✅ Yes' : '❌ No'}</span>
           </div>
         </div>
       </div>
 
-      {/* Content with top padding */}
-      <div style={{ paddingTop: '60px' }}>
-        {/* Task Title */}
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-            <h2 style={{ fontSize: '18px', margin: 0, flex: 1 }}>{task.title}</h2>
-            {task.archived && (
-              <span className="badge" style={{ 
-                background: '#6b7280', 
-                fontSize: '11px',
-                padding: '4px 8px'
-              }}>
-                Archived
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Task Photo */}
-        {task.createdPhoto && (
-          <div className="card">
-            <div
-              onClick={() => handleGalleryView(0, -1)}
-              style={{
-                width: '100%',
-                paddingTop: '75%',
-                background: mediaUrls[task.createdPhoto.file_id]
-                  ? `url(${mediaUrls[task.createdPhoto.file_id]}) center/cover`
-                  : 'var(--tg-theme-secondary-bg-color)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                position: 'relative'
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                top: '8px',
-                left: '8px',
-                background: 'rgba(0,0,0,0.6)',
-                color: 'white',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 600
-              }}>
-                📸 Task Photo
-              </div>
+      {/* Sets Progress - Shows ALL Sets */}
+      <div className="card" style={{ position: 'relative' }}>
+        {loading && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
+            <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
+              Processing...
             </div>
           </div>
         )}
 
-        {/* Information Section */}
-        <div className="card">
-          <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Information</h3>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '8px',
-            fontSize: '14px' 
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--tg-theme-hint-color)' }}>Status:</span>
-              <span className="badge" style={{ 
-                background: getStatusColor(task.status),
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px'
+        }}>
+          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets ({task.requireSets})</h3>
+          {totalMedia > 0 && (
+            <button
+              onClick={async () => {
+                setLoading(true);
+                hapticFeedback.medium();
+                try {
+                  const files: File[] = [];
+                  
+                  for (let si = 0; si < task.requireSets; si++) {
+                    const set = task.sets[si];
+                    if (!set) continue;
+                    
+                    if (set.photos) {
+                      for (let i = 0; i < set.photos.length; i++) {
+                        const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
+                        const response = await fetch(fileUrl);
+                        if (!response.ok) throw new Error(`Failed to fetch from set ${si + 1}`);
+                        const blob = await response.blob();
+                        const file = new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+                        files.push(file);
+                      }
+                    }
+                    
+                    if (set.video) {
+                      const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+                      const response = await fetch(fileUrl);
+                      if (!response.ok) throw new Error(`Failed to fetch video from set ${si + 1}`);
+                      const blob = await response.blob();
+                      const file = new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' });
+                      files.push(file);
+                    }
+                  }
+                  
+                  if (navigator.share && navigator.canShare({ files })) {
+                    await navigator.share({
+                      title: task.title,
+                      files
+                    });
+                    hapticFeedback.success();
+                  }
+                } catch (error: any) {
+                  if (error.name !== 'AbortError') {
+                    hapticFeedback.error();
+                    showAlert(`Failed to share: ${error.message}`);
+                  }
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              style={{
+                padding: '6px 12px',
                 fontSize: '12px',
-                padding: '2px 8px'
-              }}>
-                {task.status}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--tg-theme-hint-color)' }}>Created:</span>
-              <span>{new Date(task.createdAt).toLocaleDateString()}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--tg-theme-hint-color)' }}>Created by:</span>
-              <span>User {task.createdBy}</span>
-            </div>
-            {task.labels.video && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--tg-theme-hint-color)' }}>Requires:</span>
-                <span>🎥 Video</span>
-              </div>
-            )}
-          </div>
+                background: loading ? '#6b7280' : '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              {loading ? '⏳' : `📤 Share All (${totalMedia})`}
+            </button>
+          )}
         </div>
 
-        {/* Progress */}
-        <div className="card">
-          <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Progress</h3>
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '14px',
-              marginBottom: '4px'
-            }}>
-              <span>{task.completedSets} / {task.requireSets} sets complete</span>
-              <span>{Math.round((task.completedSets / task.requireSets) * 100)}%</span>
-            </div>
-            <div style={{
-              height: '8px',
-              background: 'var(--tg-theme-secondary-bg-color)',
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${(task.completedSets / task.requireSets) * 100}%`,
-                background: 'var(--tg-theme-button-color)',
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-        </div>
+        {/* Show ALL Required Sets */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          paddingBottom: '8px'
+        }}>
+          {Array.from({ length: task.requireSets }).map((_, setIndex) => {
+            const set = task.sets[setIndex] || { photos: [], video: undefined };
+            const photoCount = set.photos?.length || 0;
+            const hasVideo = !!set.video;
+            const fileCount = photoCount + (hasVideo ? 1 : 0);
+            const videoRequired = task.labels.video;
+            const maxPhotos = videoRequired ? 3 : (hasVideo ? 3 : 4);
+            const hasEnoughPhotos = photoCount >= maxPhotos;
+            const hasRequiredVideo = videoRequired ? hasVideo : true;
+            const isComplete = hasEnoughPhotos && hasRequiredVideo;
 
-        {/* Sets - Each set in its own row */}
-        {task.sets.map((set, setIndex) => {
-          const photoCount = set.photos?.length || 0;
-          const hasVideo = !!set.video;
-          const requireVideo = task.labels?.video || false;
-          
-          // Calculate required photos based on video requirement
-          const requiredPhotos = requireVideo ? 3 : (hasVideo ? 3 : 4);
-          const isSetComplete = photoCount >= requiredPhotos && (!requireVideo || hasVideo);
+            // Build media array
+            const allSetMedia: Array<{
+              type: 'photo' | 'video';
+              fileId: string;
+              photoIndex?: number;
+            }> = [];
 
-          return (
-            <div key={setIndex} className="card">
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '12px'
-              }}>
-                <h3 style={{ fontSize: '16px', margin: 0 }}>Set {setIndex + 1}</h3>
-                {isSetComplete && (
-                  <span style={{ color: '#10b981', fontSize: '14px', fontWeight: 600 }}>✓ Complete</span>
-                )}
-              </div>
+            set.photos?.forEach((photo, idx) => {
+              allSetMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
+            });
 
-              <div style={{ fontSize: '14px', color: 'var(--tg-theme-hint-color)', marginBottom: '12px' }}>
-                📸 {photoCount}/{requiredPhotos} photos
-                {requireVideo && ` • 🎥 ${hasVideo ? '1/1' : '0/1'} video`}
-                {!requireVideo && hasVideo && ' • 🎥 1 video'}
-              </div>
+            if (set.video) {
+              allSetMedia.push({ type: 'video', fileId: set.video.file_id });
+            }
 
-              {/* Media Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                gap: '8px'
-              }}>
-                {set.photos?.map((photo, photoIndex) => (
-                  <div
-                    key={photoIndex}
-                    onClick={() => handleGalleryView(setIndex, photoIndex)}
-                    style={{
-                      paddingTop: '100%',
-                      background: mediaUrls[photo.file_id]
-                        ? `url(${mediaUrls[photo.file_id]}) center/cover`
-                        : 'var(--tg-theme-secondary-bg-color)',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      position: 'relative'
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      background: 'rgba(0,0,0,0.6)',
-                      color: 'white',
-                      fontSize: '10px',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 600
-                    }}>
-                      {photoIndex + 1}
+            const cardWidth = Math.max((allSetMedia.length * 88) + 24, 280);
+
+            return (
+              <div
+                key={setIndex}
+                style={{
+                  minWidth: `${cardWidth}px`,
+                  maxWidth: `${cardWidth}px`,
+                  flex: '0 0 auto',
+                  background: 'var(--tg-theme-bg-color)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  border: '1px solid var(--tg-theme-secondary-bg-color)',
+                  scrollSnapAlign: 'start'
+                }}
+              >
+                {/* Set Header */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                  height: '36px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', marginBottom: '4px' }}>
+                      📸 {photoCount}/{maxPhotos} photos
+                      {videoRequired && ` • 🎥 ${hasVideo ? '1/1' : '0/1'} video`}
+                      {!videoRequired && hasVideo && ' • 🎥 1 video'}
                     </div>
                   </div>
-                ))}
+                  
+                  {fileCount > 0 && (
+                    <button
+                      onClick={() => shareSetDirect(setIndex)}
+                      disabled={loading}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        background: 'var(--tg-theme-button-color)',
+                        color: 'var(--tg-theme-button-text-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📤 {fileCount}
+                    </button>
+                  )}
+                </div>
 
-                {set.video && (
-                  <div
-                    onClick={() => handleGalleryView(setIndex, -1)}
-                    style={{
-                      paddingTop: '100%',
-                      background: mediaUrls[set.video.file_id]
-                        ? `url(${mediaUrls[set.video.file_id]}) center/cover`
-                        : 'var(--tg-theme-secondary-bg-color)',
+                {/* Media Row */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
+                  {allSetMedia.length === 0 ? (
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      background: 'var(--tg-theme-secondary-bg-color)',
                       borderRadius: '8px',
-                      cursor: 'pointer',
-                      position: 'relative',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: '32px'
+                      justifyContent: 'center',
+                      fontSize: '32px',
+                      border: '2px dashed var(--tg-theme-hint-color)'
                     }}>
-                      ▶️
+                      📷
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    allSetMedia.map((media, idx) => {
+                      const imageUrl = mediaCache[media.fileId];
+                      const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
+                      const canDelete = !isCreatedPhoto;
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            width: '80px',
+                            height: '80px',
+                            minWidth: '80px',
+                            position: 'relative',
+                            flexShrink: 0
+                          }}
+                        >
+                          <div
+                            onClick={() => {
+                              hapticFeedback.light();
+                              onOpenGallery(setIndex, media.photoIndex || 0);
+                            }}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              background: imageUrl
+                                ? `url(${imageUrl}) center/cover`
+                                : 'var(--tg-theme-secondary-bg-color)',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '28px',
+                              border: '2px solid var(--tg-theme-button-color)',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
+                            
+                            {media.type === 'video' && (
+                              <div style={{
+                                position: 'absolute',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.95)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '11px'
+                              }}>
+                                ▶️
+                              </div>
+                            )}
+                            
+                            {media.type === 'photo' && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '4px',
+                                right: '4px',
+                                background: 'rgba(0,0,0,0.6)',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 600
+                              }}>
+                                {(media.photoIndex || 0) + 1}
+                              </div>
+                            )}
+                          </div>
+
+                          {canDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUpload(media.fileId, media.type);
+                              }}
+                              disabled={loading}
+                              style={{
+                                position: 'absolute',
+                                top: '4px',
+                                left: '4px',
+                                background: 'rgba(239, 68, 68, 0.9)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '22px',
+                                height: '22px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                                zIndex: 10,
+                                padding: 0
+                              }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Fixed Actions at Bottom */}
+      {/* Actions */}
       <div style={{
         position: 'fixed',
         bottom: 0,
@@ -447,21 +711,22 @@ export function TaskDetail({ taskId, onBack, onUpdate }: TaskDetailProps) {
         background: 'var(--tg-theme-bg-color)',
         borderTop: '1px solid var(--tg-theme-secondary-bg-color)',
         padding: '12px 16px',
-        zIndex: 100
+        zIndex: 50,
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)'
       }}>
         <div style={{ 
           maxWidth: '600px', 
           margin: '0 auto',
           display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
+          gap: '8px',
+          flexWrap: 'wrap'
         }}>
-          {/* Primary Action */}
+          {/* Send to Chat - Top priority */}
           <button
             onClick={handleSendToChat}
             disabled={loading}
-            style={{
-              width: '100%',
+            style={{ 
+              width: '100%', 
               background: 'var(--tg-theme-button-color)',
               color: 'var(--tg-theme-button-text-color)',
               fontWeight: '600'
@@ -470,81 +735,106 @@ export function TaskDetail({ taskId, onBack, onUpdate }: TaskDetailProps) {
             💬 Send to Chat
           </button>
 
-          {/* Secondary Actions */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {!isViewer && canEdit && (
-              <>
-                {task.status === 'New' && (
-                  <button
-                    onClick={() => handleStatusChange('Received')}
-                    disabled={loading}
-                    style={{ flex: 1, fontSize: '14px' }}
-                  >
-                    📥 Receive
-                  </button>
-                )}
-                {task.status === 'Received' && (
-                  <button
-                    onClick={() => handleStatusChange('Submitted')}
-                    disabled={loading}
-                    style={{ flex: 1, fontSize: '14px' }}
-                  >
-                    📤 Submit
-                  </button>
-                )}
-                {task.status === 'Submitted' && role !== 'Member' && (
-                  <>
-                    <button
-                      onClick={() => handleStatusChange('Completed')}
-                      disabled={loading}
-                      style={{ flex: 1, fontSize: '14px' }}
-                    >
-                      ✅ Complete
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange('Redo')}
-                      disabled={loading}
-                      style={{ flex: 1, fontSize: '14px' }}
-                    >
-                      🔄 Redo
-                    </button>
-                  </>
-                )}
-                {task.status === 'Redo' && (
-                  <button
-                    onClick={() => handleStatusChange('Submitted')}
-                    disabled={loading}
-                    style={{ flex: 1, fontSize: '14px' }}
-                  >
-                    📤 Submit
-                  </button>
-                )}
-              </>
-            )}
+          <button
+            onClick={async () => {
+              console.log('🧪 Testing media proxy...');
+              const set = task.sets[0];
+              if (set?.photos && set.photos.length > 0) {
+                const testFileId = set.photos[0].file_id;
+                console.log('Test file_id:', testFileId);
+                
+                try {
+                  const { fileUrl } = await api.getProxiedMediaUrl(testFileId);
+                  console.log('Proxy URL:', fileUrl);
+                  
+                  const response = await fetch(fileUrl);
+                  console.log('Response status:', response.status);
+                  console.log('Response headers:', [...response.headers.entries()]);
+                  
+                  const blob = await response.blob();
+                  console.log('Blob size:', blob.size, 'type:', blob.type);
+                  
+                  showAlert(`✅ Test passed! Size: ${blob.size} bytes`);
+                } catch (error: any) {
+                  console.error('Test failed:', error);
+                  showAlert(`❌ Test failed: ${error.message}`);
+                }
+              }
+            }}
+            style={{ background: '#gray', fontSize: '12px' }}
+          >
+            🧪 Test Media Proxy
+          </button>
 
-            {totalMedia > 0 && (
+          {task.status === 'New' && canTransition('Received') && (
+            <button onClick={() => handleTransition('Received')} disabled={loading}>
+              Mark as Received
+            </button>
+          )}
+          
+          {task.status === 'Received' && canTransition('Submitted') && (
+            <button onClick={() => handleTransition('Submitted')} disabled={loading}>
+              Submit Task
+            </button>
+          )}
+          
+          {task.status === 'Redo' && canTransition('Submitted') && (
+            <button onClick={() => handleTransition('Submitted')} disabled={loading}>
+              Submit Task
+            </button>
+          )}
+          
+          {task.status === 'Submitted' && canTransition('Redo') && (
+            <button
+              onClick={() => handleTransition('Redo')}
+              disabled={loading}
+              style={{ background: '#f59e0b' }}
+            >
+              Request Redo
+            </button>
+          )}
+          
+          {task.status === 'Submitted' && canTransition('Completed') && (
+            <button
+              onClick={() => handleTransition('Completed')}
+              disabled={loading}
+              style={{ background: '#10b981' }}
+            >
+              Mark as Completed
+            </button>
+          )}
+          
+          {!task.archived && (task.status === 'Submitted' || task.status === 'Completed') && (
+            ['Viewer', 'Lead', 'Admin'].includes(userRole) && (
               <button
-                onClick={() => handleGalleryView()}
-                style={{ flex: 1, fontSize: '14px' }}
-              >
-                🖼️ Gallery
-              </button>
-            )}
-
-            {!isViewer && role !== 'Member' && (
-              <button
-                onClick={handleArchiveToggle}
+                onClick={handleArchive}
                 disabled={loading}
-                style={{
-                  flex: 1,
-                  fontSize: '14px',
-                  background: task.archived ? '#10b981' : '#6b7280'
-                }}
+                style={{ background: '#6b7280' }}
               >
-                {task.archived ? '♻️ Restore' : '📦 Archive'}
+                Archive Task
               </button>
-            )}
-          </div>
+            )
+          )}
+          
+          {task.archived && userRole === 'Admin' && (
+            <button
+              onClick={handleRestore}
+              disabled={loading}
+              style={{ background: '#3b82f6' }}
+            >
+              Restore Task
+            </button>
+          )}
+          
+          {userRole === 'Admin' && (
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              style={{ background: '#ef4444' }}
+            >
+              Delete Permanently
+            </button>
+          )}
         </div>
       </div>
     </div>
