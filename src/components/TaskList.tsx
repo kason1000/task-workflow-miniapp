@@ -45,6 +45,18 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     fetchUserRole();
   }, []);
 
+  // Get role-based filter order
+  const getFilterOrder = (): TaskStatus[] => {
+    if (userRole === 'Member') {
+      return ['Redo', 'Received', 'New', 'Submitted', 'Completed'];
+    } else if (userRole === 'Admin' || userRole === 'Lead') {
+      return ['Submitted', 'Redo', 'Received', 'New', 'Completed'];
+    } else if (userRole === 'Viewer') {
+      return ['Completed']; // Viewer only sees Completed, "In Progress" will be handled separately
+    }
+    return ['New', 'Received', 'Submitted', 'Redo', 'Completed']; // Default
+  };
+
   const fetchTasks = async () => {
     setLoading(true);
     setError(null);
@@ -201,18 +213,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       </div>
     );
   }
-
-  // Get role-based filter order
-  const getFilterOrder = (): TaskStatus[] => {
-    if (userRole === 'Member') {
-      return ['Redo', 'Received', 'New', 'Submitted', 'Completed'];
-    } else if (userRole === 'Admin' || userRole === 'Lead') {
-      return ['Submitted', 'Redo', 'Received', 'New', 'Completed'];
-    } else if (userRole === 'Viewer') {
-      return ['Completed']; // Viewer only sees Completed, "In Progress" will be handled separately
-    }
-    return ['New', 'Received', 'Submitted', 'Redo', 'Completed']; // Default
-  };
 
   const statusOrder = getFilterOrder();
   const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
