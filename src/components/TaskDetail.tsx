@@ -67,7 +67,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
           const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
-          const response = await fetch(fileUrl);
+          const response = await fetch(fileUrl, {
+            headers: {
+              'X-Telegram-InitData': WebApp.initData
+            }
+          });
           
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -85,7 +89,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       
       if (set.video) {
         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-        const response = await fetch(fileUrl);
+        const response = await fetch(fileUrl, {
+          headers: {
+            'X-Telegram-InitData': WebApp.initData
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -444,7 +452,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                     if (set.photos) {
                       for (let i = 0; i < set.photos.length; i++) {
                         const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
-                        const response = await fetch(fileUrl);
+                        const response = await fetch(fileUrl, {
+                          headers: {
+                            'X-Telegram-InitData': WebApp.initData
+                          }
+                        });
                         if (!response.ok) throw new Error(`Failed to fetch from set ${si + 1}`);
                         const blob = await response.blob();
                         const file = new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
@@ -454,7 +466,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                     
                     if (set.video) {
                       const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-                      const response = await fetch(fileUrl);
+                      const response = await fetch(fileUrl, {
+                        headers: {
+                          'X-Telegram-InitData': WebApp.initData
+                        }
+                      });
                       if (!response.ok) throw new Error(`Failed to fetch video from set ${si + 1}`);
                       const blob = await response.blob();
                       const file = new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' });
@@ -493,21 +509,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
               {loading ? '⏳' : `📤 ${totalMedia}`}
             </button>
           )}
-        </div>
-
-        {/* Progress Caption - Same as task card */}
-        <div style={{
-          background: 'var(--tg-theme-bg-color)',
-          padding: '12px',
-          borderRadius: '8px',
-          fontSize: '13px',
-          lineHeight: '1.6',
-          marginBottom: '12px',
-          whiteSpace: 'pre-line',
-          fontFamily: 'monospace',
-          border: '1px solid var(--tg-theme-secondary-bg-color)'
-        }}>
-          {getProgressCaption()}
         </div>
 
         {/* Sets Display */}
