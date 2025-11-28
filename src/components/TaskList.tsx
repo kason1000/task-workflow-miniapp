@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Task, TaskStatus } from '../types';
-import { hapticFeedback, showAlert } from '../utils/telegram';
+import { hapticFeedback, showAlert, getTelegramUser } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 
 interface TaskListProps {
@@ -21,30 +21,44 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
   const [sending, setSending] = useState<Record<string, boolean>>({});
-  
   const [filter, setFilter] = useState<{
     status: 'all' | TaskStatus;
     archived: boolean;
   }>({ status: 'all', archived: false });
-  
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+  
+  // Get user role to conditionally show archive filter
+  const [userRole, setUserRole] = useState<string>('Member');
+  
+  useEffect(() => {
+    // Fetch user role on mount
+    const fetchUserRole = async () => {
+      try {
+        const roleData = await api.getMyRole();
+        setUserRole(roleData.role);
+      } catch (error) {
+        console.error('Failed to fetch role:', error);
+      }
+    };
+    fetchUserRole();
+  }, []);
 
   const fetchTasks = async () => {
     setLoading(true);
     setError(null);
     try {
+      // Important: Pass status and archived correctly
       const statusFilter = filter.status === 'all' ? undefined : filter.status;
       
-      console.log('📊 Fetching tasks:', { 
+      console.log('📊 Fetching tasks with filters:', { 
         status: statusFilter || 'all', 
         archived: filter.archived 
       });
       
       const data = await api.getTasks(statusFilter, filter.archived);
       
-      console.log('📊 Received tasks:', data.tasks.length);
+      console.log('📊 Received tasks:', data.tasks.length, 'archived:', filter.archived);
       
       setTasks(data.tasks);
       
@@ -67,6 +81,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       
       setThumbnails(thumbnailMap);
     } catch (error: any) {
+      console.error('❌ Fetch error:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -74,6 +89,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   };
 
   useEffect(() => {
+    console.log('🔄 Filter changed:', filter);
     fetchTasks();
   }, [filter.status, filter.archived]);
 
@@ -84,7 +100,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const handleArchiveToggle = () => {
     hapticFeedback.light();
-    setFilter({ ...filter, archived: !filter.archived });
+    const newArchived = !filter.archived;
+    console.log('🗃️ Toggle archive:', filter.archived, '→', newArchived);
+    setFilter({ ...filter, archived: newArchived });
   };
 
   const handleTaskClick = (task: Task) => {
@@ -106,7 +124,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       hapticFeedback.success();
       showAlert('✅ Task sent to chat!');
       
-      // Close Mini App and return to chat after short delay
       setTimeout(() => {
         WebApp.close();
       }, 500);
@@ -140,6 +157,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       </div>
     );
   }
+
+  // Check if user can see archived tasks (not Member)
+  const canViewArchived = userRole !== 'Member';
 
   return (
     <div>
@@ -185,42 +205,41 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             </button>
           ))}
           
-          {/* Separator */}
-          <div style={{
-            width: '1px',
-            background: 'var(--tg-theme-hint-color)',
-            opacity: 0.3,
-            margin: '4px 0',
-            flexShrink: 0
-          }} />
+          {/* Spacer to push archive and refresh to the right */}
+          <div style={{ flex: 1, minWidth: '8px' }} />
           
-          {/* Archive Toggle */}
-          <button
-            onClick={handleArchiveToggle}
-            style={{
-              padding: '8px 16px',
-              fontSize: '14px',
-              background: filter.archived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-              color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              fontWeight: '600'
-            }}
-          >
-            {filter.archived ? '📋 Active' : '🗄️ Archived'}
-          </button>
+          {/* Archive Toggle - Only for non-Members, emoji only */}
+          {canViewArchived && (
+            <button
+              onClick={handleArchiveToggle}
+              style={{
+                padding: '8px 12px',
+                fontSize: '18px',
+                background: filter.archived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minWidth: 'auto'
+              }}
+              title={filter.archived ? 'Show Active' : 'Show Archived'}
+            >
+              🗃️
+            </button>
+          )}
           
           {/* Refresh Button */}
           <button
             onClick={handleRefresh}
             style={{
-              padding: '8px 16px',
-              fontSize: '14px',
+              padding: '8px 12px',
+              fontSize: '18px',
               background: 'var(--tg-theme-secondary-bg-color)',
               color: 'var(--tg-theme-text-color)',
               whiteSpace: 'nowrap',
-              flexShrink: 0
+              flexShrink: 0,
+              minWidth: 'auto'
             }}
+            title="Refresh"
           >
             🔄
           </button>
@@ -228,15 +247,35 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       </div>
 
       {/* Task Count */}
-      <div style={{ padding: '8px 0', color: 'var(--tg-theme-hint-color)', fontSize: '14px' }}>
-        {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
-        {filter.archived && ' (archived)'}
+      <div style={{ 
+        padding: '8px 0', 
+        color: 'var(--tg-theme-hint-color)', 
+        fontSize: '14px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <span>
+          {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
+        </span>
+        {filter.archived && (
+          <span style={{
+            background: 'var(--tg-theme-secondary-bg-color)',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            fontSize: '12px'
+          }}>
+            🗃️ Archived
+          </span>
+        )}
       </div>
 
       {/* Task List */}
       {tasks.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <p style={{ fontSize: '48px', marginBottom: '12px' }}>📋</p>
+          <p style={{ fontSize: '48px', marginBottom: '12px' }}>
+            {filter.archived ? '🗃️' : '📋'}
+          </p>
           <p style={{ color: 'var(--tg-theme-hint-color)' }}>
             {filter.archived ? 'No archived tasks' : 'No tasks found'}
           </p>
@@ -246,7 +285,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           {tasks.map((task) => (
             <div key={task.id} className="card">
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
-                {/* Task Card - Clickable - Takes most space */}
+                {/* Task Card - Clickable */}
                 <div 
                   onClick={() => onTaskClick(task)} 
                   style={{ 
@@ -261,7 +300,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   />
                 </div>
                 
-                {/* Send to Chat Button - FIXED: Smaller, speech bubble emoji */}
+                {/* Send to Chat Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -302,6 +341,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           ))}
         </div>
       )}
+
       {/* Scrollbar styling */}
       <style>{`
         div::-webkit-scrollbar {
@@ -416,7 +456,7 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
             <span>✅ Submitted</span>
           )}
           {task.archived && (
-            <span>📦 Archived</span>
+            <span>🗃️ Archived</span>
           )}
         </div>
       </div>
