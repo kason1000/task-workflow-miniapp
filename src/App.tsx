@@ -149,7 +149,7 @@ function App() {
     <div className="container">
       {/* Fixed Header */}
       <div style={{
-        position: 'fixed',  // Changed from sticky to fixed
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
@@ -165,7 +165,6 @@ function App() {
           maxWidth: '600px',
           margin: '0 auto'
         }}>
-          {/* Left: Back Button (only show when not on list view) */}
           <div style={{ minWidth: '60px' }}>
             {view !== 'list' && (
               <button
@@ -177,7 +176,8 @@ function App() {
                   padding: '8px 12px', 
                   fontSize: '14px',
                   background: 'transparent',
-                  color: 'var(--tg-theme-button-color)'
+                  color: 'var(--tg-theme-button-color)',
+                  border: 'none'
                 }}
               >
                 ← Back
@@ -185,7 +185,6 @@ function App() {
             )}
           </div>
           
-          {/* Center: Task Workflow Title (smaller) */}
           <h1 style={{ 
             fontSize: '18px', 
             margin: 0,
@@ -194,7 +193,6 @@ function App() {
             Task Workflow
           </h1>
           
-          {/* Right: User Info */}
           <div style={{ 
             textAlign: 'right',
             minWidth: '100px'
@@ -217,13 +215,12 @@ function App() {
           </div>
         </div>
       </div>
-
-      {/* Content */}
+  
+      {/* Content - ONLY padding for header */}
       <div style={{ paddingTop: '60px' }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
         )}
-
         {view === 'detail' && selectedTask && (
           <TaskDetail
             task={selectedTask}
@@ -233,18 +230,15 @@ function App() {
             onOpenGallery={handleOpenGallery}
           />
         )}
-
         {view === 'create' && (
           <CreateTaskMessage onBack={handleBackToList} />
         )}
-
         {view === 'share' && selectedTask && (
           <ShareScreen
             taskId={selectedTask.id}
             onBack={handleBackToDetail}
           />
         )}
-
         {view === 'gallery' && selectedTask && (
           <GalleryView
             task={selectedTask}
