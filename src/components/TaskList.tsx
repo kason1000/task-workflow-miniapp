@@ -23,7 +23,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<{
-    status: 'all' | TaskStatus;
+    status: 'all' | 'InProgress' | TaskStatus;
     archived: boolean;
   }>({ status: 'all', archived: false });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -49,7 +49,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setLoading(true);
     setError(null);
     try {
-      const statusFilter = filter.status === 'all' ? undefined : filter.status;
+      let statusFilter = filter.status === 'all' ? undefined : filter.status;
+      
+      // Handle Viewer's "In Progress" - fetch all non-Completed tasks
+      if (userRole === 'Viewer' && filter.status === 'InProgress') {
+        statusFilter = undefined; // Will filter on frontend
+      }
       
       console.log('📊 Fetching tasks with filters:', { 
         status: statusFilter || 'all', 
@@ -60,9 +65,36 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       
       console.log('📊 Received tasks:', data.tasks.length, 'archived:', filter.archived);
       
-      setTasks(data.tasks);
+      // Filter for Viewer's "In Progress" - all tasks except Completed
+      let filteredTasks = data.tasks;
+      if (userRole === 'Viewer' && filter.status === 'InProgress') {
+        filteredTasks = data.tasks.filter((task: Task) => task.status !== 'Completed' && !task.archived);
+      }
       
-      const thumbnailPromises = data.tasks
+      // Sort tasks by role-based priority when showing "All"
+      if (filter.status === 'all') {
+        const statusOrder = getFilterOrder();
+        filteredTasks.sort((a: Task, b: Task) => {
+          const aIndex = statusOrder.indexOf(a.status);
+          const bIndex = statusOrder.indexOf(b.status);
+          
+          // Tasks not in the order go to the end
+          const aPos = aIndex === -1 ? 999 : aIndex;
+          const bPos = bIndex === -1 ? 999 : bIndex;
+          
+          if (aPos !== bPos) {
+            return aPos - bPos;
+          }
+          
+          // Same status: sort by creation date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+      }
+      
+      setTasks(filteredTasks);
+      
+      // Load thumbnails
+      const thumbnailPromises = filteredTasks
         .filter((task: Task) => task.createdPhoto)
         .map(async (task: Task) => {
           try {
@@ -170,7 +202,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     );
   }
 
-  const canViewArchived = userRole !== 'Member';
+  // Get role-based filter order
+  const getFilterOrder = (): TaskStatus[] => {
+    if (userRole === 'Member') {
+      return ['Redo', 'Received', 'New', 'Submitted', 'Completed'];
+    } else if (userRole === 'Admin' || userRole === 'Lead') {
+      return ['Submitted', 'Redo', 'Received', 'New', 'Completed'];
+    } else if (userRole === 'Viewer') {
+      return ['Completed']; // Viewer only sees Completed, "In Progress" will be handled separately
+    }
+    return ['New', 'Received', 'Submitted', 'Redo', 'Completed']; // Default
+  };
+
+  const statusOrder = getFilterOrder();
+  const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
 
   return (
     <div>
@@ -178,7 +223,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       <div className="card" style={{ 
         position: 'sticky',
         top: 0,
-        zIndex: 10,
+        zIndex: 100,
         marginBottom: '12px',
         marginLeft: '-16px',
         marginRight: '-16px',
@@ -216,7 +261,25 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               📋 All
             </button>
             
-            {(['New', 'Received', 'Submitted', 'Redo', 'Completed'] as TaskStatus[]).map((status) => (
+            {/* Viewer: Show "In Progress" filter */}
+            {userRole === 'Viewer' && (
+              <button
+                onClick={() => handleStatusFilter('InProgress' as TaskStatus)}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  background: filter.status === 'InProgress' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  color: filter.status === 'InProgress' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                🔄 In Progress
+              </button>
+            )}
+            
+            {/* Role-based status filters */}
+            {statusOrder.map((status) => (
               <button
                 key={status}
                 onClick={() => handleStatusFilter(status)}
