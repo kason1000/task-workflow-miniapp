@@ -36,7 +36,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setError(null);
     try {
       const statusFilter = filter.status === 'all' ? undefined : filter.status;
+      
+      console.log('📊 Fetching tasks:', { 
+        status: statusFilter || 'all', 
+        archived: filter.archived 
+      });
+      
       const data = await api.getTasks(statusFilter, filter.archived);
+      
+      console.log('📊 Received tasks:', data.tasks.length);
+      
       setTasks(data.tasks);
       
       const thumbnailPromises = data.tasks
@@ -66,7 +75,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   useEffect(() => {
     fetchTasks();
-  }, [filter]);
+  }, [filter.status, filter.archived]);
 
   const handleStatusFilter = (status?: TaskStatus) => {
     hapticFeedback.light();
@@ -134,65 +143,86 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   return (
     <div>
-      {/* Filter Bar */}
-      <div className="card">
-        {/* Status Filters */}
-        <div style={{ marginBottom: '12px' }}>
-          <h3 style={{ marginBottom: '8px', fontSize: '14px', color: 'var(--tg-theme-hint-color)' }}>
-            Filter by Status
-          </h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+      {/* Filter Bar - Single Row, Scrollable */}
+      <div className="card" style={{ marginBottom: '12px' }}>
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          overflowX: 'auto',
+          paddingBottom: '4px',
+          scrollbarWidth: 'thin',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          {/* Status Filters */}
+          <button
+            onClick={() => handleStatusFilter(undefined)}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              background: filter.status === 'all' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+              color: filter.status === 'all' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}
+          >
+            📋 All
+          </button>
+          
+          {(['New', 'Received', 'Submitted', 'Redo', 'Completed'] as TaskStatus[]).map((status) => (
             <button
-              onClick={() => handleStatusFilter(undefined)}
+              key={status}
+              onClick={() => handleStatusFilter(status)}
               style={{
-                padding: '6px 12px',
+                padding: '8px 16px',
                 fontSize: '14px',
-                background: filter.status === 'all' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                color: filter.status === 'all' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                background: filter.status === status ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                color: filter.status === status ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
-              All
+              {status}
             </button>
-            {(['New', 'Received', 'Submitted', 'Redo', 'Completed'] as TaskStatus[]).map((status) => (
-              <button
-                key={status}
-                onClick={() => handleStatusFilter(status)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '14px',
-                  background: filter.status === status ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                  color: filter.status === status ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                }}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Archive Toggle and Refresh - FIXED */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          ))}
+          
+          {/* Separator */}
+          <div style={{
+            width: '1px',
+            background: 'var(--tg-theme-hint-color)',
+            opacity: 0.3,
+            margin: '4px 0',
+            flexShrink: 0
+          }} />
+          
+          {/* Archive Toggle */}
           <button
             onClick={handleArchiveToggle}
             style={{
-              padding: '6px 12px',
+              padding: '8px 16px',
               fontSize: '14px',
               background: filter.archived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
               color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              fontWeight: '600'
             }}
           >
-            {filter.archived ? '📋 Show Active' : '🗄️ Show Archived'}
+            {filter.archived ? '📋 Active' : '🗄️ Archived'}
           </button>
+          
+          {/* Refresh Button */}
           <button
             onClick={handleRefresh}
             style={{
-              padding: '6px 12px',
+              padding: '8px 16px',
               fontSize: '14px',
               background: 'var(--tg-theme-secondary-bg-color)',
               color: 'var(--tg-theme-text-color)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            🔄 Refresh
+            🔄
           </button>
         </div>
       </div>
@@ -272,6 +302,24 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           ))}
         </div>
       )}
+      {/* Scrollbar styling */}
+      <style>{`
+        div::-webkit-scrollbar {
+          height: 6px;
+        }
+        div::-webkit-scrollbar-track {
+          background: var(--tg-theme-secondary-bg-color);
+          border-radius: 3px;
+        }
+        div::-webkit-scrollbar-thumb {
+          background: var(--tg-theme-hint-color);
+          border-radius: 3px;
+          opacity: 0.5;
+        }
+        div::-webkit-scrollbar-thumb:hover {
+          background: var(--tg-theme-button-color);
+        }
+      `}</style>
     </div>
   );
 }
