@@ -328,44 +328,47 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       minHeight: '100vh',
       paddingBottom: '100px'
     }}>
-      {/* REMOVED: Second back button and title section */}
 
       {/* Compact Information Section */}
       <div className="card">
-        <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>📋 {task.title}</h3>
-        <div style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--tg-theme-hint-color)' }}>
-          <div style={{ marginBottom: '6px' }}>
-            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '11px' }}>
-              {task.status}
-            </span>
-            {task.labels.video && (
-              <span className="badge" style={{ background: '#8b5cf6', color: 'white', fontSize: '11px', marginLeft: '6px' }}>
-                🎥 Video
-              </span>
-            )}
-          </div>
-          
-          <div style={{ marginBottom: '4px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '8px' 
+        }}>
+          <h3 style={{ fontSize: '16px', margin: 0 }}>📋 {task.title}</h3>
+          <span className={`badge ${statusColors[task.status]}`}>
+            {task.status}
+          </span>
+        </div>
+        
+        <div style={{ 
+          fontSize: '13px', 
+          lineHeight: '1.5',
+          color: 'var(--tg-theme-hint-color)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        }}>
+          <div>
+            👤 {WebApp.initDataUnsafe?.user?.id === task.createdBy 
+              ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
+              : `User ${task.createdBy}`}
+            {' • '}
             📅 {new Date(task.createdAt).toLocaleDateString()}
           </div>
           
-          <div style={{ marginBottom: '4px' }}>
-            👤 Created by {WebApp.initDataUnsafe?.user?.id === task.createdBy 
-              ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
-              : `User ${task.createdBy}`}
-          </div>
-          
           {task.doneBy && (
-            <div style={{ marginBottom: '4px' }}>
+            <div>
               ✅ Submitted by {WebApp.initDataUnsafe?.user?.id === task.doneBy
                 ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
                 : `User ${task.doneBy}`}
             </div>
           )}
           
-          {/* Show uploaders if there are any uploads */}
           {totalMedia > 0 && getUploaders().length > 0 && (
-            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid var(--tg-theme-secondary-bg-color)' }}>
+            <div>
               📤 Uploaded by: {getUploaders().join(', ')}
             </div>
           )}
@@ -401,9 +404,31 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '12px'
+          marginBottom: '8px'
         }}>
-          <h3 style={{ fontSize: '16px', margin: 0 }}>Progress</h3>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: '16px', margin: 0, marginBottom: '4px' }}>Progress</h3>
+            {/* One-line progress */}
+            <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>{task.completedSets}/{task.requireSets} sets</span>
+              <div style={{
+                flex: 1,
+                height: '4px',
+                background: 'var(--tg-theme-bg-color)',
+                borderRadius: '2px',
+                overflow: 'hidden',
+                maxWidth: '100px'
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${(task.completedSets / task.requireSets) * 100}%`,
+                  background: task.completedSets === task.requireSets ? '#10b981' : 'var(--tg-theme-button-color)',
+                  transition: 'width 0.3s'
+                }} />
+              </div>
+            </div>
+          </div>
+          
           {totalMedia > 0 && (
             <button
               onClick={async () => {
@@ -461,10 +486,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                flexShrink: 0
               }}
             >
-              {loading ? '⏳' : `📤 Share All (${totalMedia})`}
+              {loading ? '⏳' : `📤 ${totalMedia}`}
             </button>
           )}
         </div>
