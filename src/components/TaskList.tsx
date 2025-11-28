@@ -217,7 +217,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
 
   return (
-    <div style={{ paddingTop: '120px' }}> {/* Add padding for fixed elements */}
+    <div style={{ paddingTop: '0' }}>
       {/* Filter Bar - Fixed */}
       <div className="card" style={{ 
         position: 'fixed',  // Changed from sticky to fixed
