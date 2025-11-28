@@ -149,16 +149,14 @@ function App() {
     <div className="container">
       {/* Fixed Header */}
       <div style={{
-        position: 'sticky',
+        position: 'fixed',  // Changed from sticky to fixed
         top: 0,
+        left: 0,
+        right: 0,
         zIndex: 100,
         background: 'var(--tg-theme-bg-color)',
         padding: '12px 16px',
-        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        marginLeft: '-16px',
-        marginRight: '-16px',
-        marginTop: '-16px',
-        marginBottom: '0'  // Changed from '16px' to '0'
+        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)'
       }}>
         <div style={{ 
           display: 'flex', 
