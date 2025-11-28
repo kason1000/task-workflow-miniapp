@@ -218,16 +218,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
 
   return (
-    <div>
+    <div style={{ paddingTop: '16px' }}>  {/* ADD THIS WRAPPER */}
       {/* Filter Bar - Fixed under header */}
       <div className="card" style={{ 
         position: 'sticky',
-        top: '49px',  // Changed from '60px' (12px padding top + 12px padding bottom + ~25px content)
+        top: '49px',
         zIndex: 50,
         marginBottom: '12px',
         marginLeft: '-16px',
         marginRight: '-16px',
-        marginTop: '0',  // Changed from '-16px'
+        marginTop: '-16px',
         paddingLeft: '16px',
         paddingRight: '16px',
         background: 'var(--tg-theme-bg-color)',
