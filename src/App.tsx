@@ -219,41 +219,43 @@ function App() {
       </div>
 
       {/* Content */}
-      {view === 'list' && (
-        <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
-      )}
+      <div style={{ paddingTop: '60px' }}>
+        {view === 'list' && (
+          <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
+        )}
 
-      {view === 'detail' && selectedTask && (
-        <TaskDetail
-          task={selectedTask}
-          userRole={role}
-          onBack={handleBackToList}
-          onTaskUpdated={handleTaskUpdated}
-          onOpenGallery={handleOpenGallery}
-        />
-      )}
+        {view === 'detail' && selectedTask && (
+          <TaskDetail
+            task={selectedTask}
+            userRole={role}
+            onBack={handleBackToList}
+            onTaskUpdated={handleTaskUpdated}
+            onOpenGallery={handleOpenGallery}
+          />
+        )}
 
-      {view === 'create' && (
-        <CreateTaskMessage onBack={handleBackToList} />
-      )}
+        {view === 'create' && (
+          <CreateTaskMessage onBack={handleBackToList} />
+        )}
 
-      {view === 'share' && selectedTask && (
-        <ShareScreen
-          taskId={selectedTask.id}
-          onBack={handleBackToDetail}
-        />
-      )}
+        {view === 'share' && selectedTask && (
+          <ShareScreen
+            taskId={selectedTask.id}
+            onBack={handleBackToDetail}
+          />
+        )}
 
-      {view === 'gallery' && selectedTask && (
-        <GalleryView
-          task={selectedTask}
-          onBack={handleBackToDetail}
-          onTaskUpdated={handleTaskUpdated}
-          userRole={role}
-          initialSetIndex={galleryInitialSet}
-          initialPhotoIndex={galleryInitialPhoto}
-        />
-      )}
+        {view === 'gallery' && selectedTask && (
+          <GalleryView
+            task={selectedTask}
+            onBack={handleBackToDetail}
+            onTaskUpdated={handleTaskUpdated}
+            userRole={role}
+            initialSetIndex={galleryInitialSet}
+            initialPhotoIndex={galleryInitialPhoto}
+          />
+        )}
+      </div>
     </div>
   );
 }
