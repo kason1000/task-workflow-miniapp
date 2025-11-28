@@ -369,8 +369,93 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           </span>
         )}
       </div>
-  
-      {/* Rest of the component stays the same... */}
+
+      {/* Task List */}
+      {tasks.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <p style={{ fontSize: '48px', marginBottom: '12px' }}>
+            {filter.archived ? '🗃️' : '📋'}
+          </p>
+          <p style={{ color: 'var(--tg-theme-hint-color)' }}>
+            {filter.archived ? 'No archived tasks' : 'No tasks found'}
+          </p>
+        </div>
+      ) : (
+        <div>
+          {tasks.map((task) => (
+            <div key={task.id} className="card">
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                <div 
+                  onClick={() => onTaskClick(task)} 
+                  style={{ 
+                    flex: 1, 
+                    cursor: 'pointer',
+                    minWidth: 0
+                  }}
+                >
+                  <TaskCard 
+                    task={task} 
+                    thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined} 
+                  />
+                </div>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendToChat(task.id, e);
+                  }}
+                  disabled={sending[task.id]}
+                  style={{
+                    width: '60px',
+                    padding: '8px 4px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    background: sending[task.id] 
+                      ? 'var(--tg-theme-secondary-bg-color)' 
+                      : 'var(--tg-theme-button-color)',
+                    color: sending[task.id]
+                      ? 'var(--tg-theme-hint-color)'
+                      : 'var(--tg-theme-button-text-color)',
+                    flexShrink: 0,
+                    lineHeight: '1.2',
+                    whiteSpace: 'normal',
+                    textAlign: 'center',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <span style={{ fontSize: '24px' }}>
+                    {sending[task.id] ? '⏳' : '💬'}
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: '500' }}>
+                    {sending[task.id] ? 'Sending' : 'Send'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <style>{`
+        div::-webkit-scrollbar {
+          height: 6px;
+        }
+        div::-webkit-scrollbar-track {
+          background: var(--tg-theme-secondary-bg-color);
+          border-radius: 3px;
+        }
+        div::-webkit-scrollbar-thumb {
+          background: var(--tg-theme-hint-color);
+          border-radius: 3px;
+        }
+        div::-webkit-scrollbar-thumb:hover {
+          background: var(--tg-theme-button-color);
+        }
+      `}</style>
     </div>
   );
 }
