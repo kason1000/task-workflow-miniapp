@@ -51,7 +51,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   };
 
   const shareSetDirect = async (setIndex: number) => {
-    setLoading(true);
+    // Don't set loading immediately - this can interfere with share permission
     hapticFeedback.medium();
     
     try {
@@ -61,12 +61,47 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         throw new Error(`Set ${setIndex + 1} not found`);
       }
       
+      // Show preparing state AFTER user confirms they want to share
+      setLoading(true);
+      
       const files: File[] = [];
       
+      // Collect photos
       if (set.photos && set.photos.length > 0) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+          
+          try {
+            const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+            const response = await fetch(fileUrl, {
+              headers: {
+                'X-Telegram-InitData': WebApp.initData
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const blob = await response.blob();
+            
+            if (blob.size < 100) {
+              throw new Error(`Too small (${blob.size} bytes)`);
+            }
+            
+            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+            files.push(file);
+          } catch (photoError: any) {
+            console.error(`❌ Photo ${i + 1} failed:`, photoError);
+            throw new Error(`Photo ${i + 1}: ${photoError.message}`);
+          }
+        }
+      }
+      
+      // Collect video
+      if (set.video) {
+        try {
+          const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
           const response = await fetch(fileUrl, {
             headers: {
               'X-Telegram-InitData': WebApp.initData
@@ -78,36 +113,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           }
           
           const blob = await response.blob();
+          const contentType = response.headers.get('content-type') || 'video/mp4';
+          
           if (blob.size < 100) {
             throw new Error(`Too small (${blob.size} bytes)`);
           }
           
-          const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+          const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
           files.push(file);
+        } catch (videoError: any) {
+          console.error(`❌ Video failed:`, videoError);
+          throw new Error(`Video: ${videoError.message}`);
         }
-      }
-      
-      if (set.video) {
-        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-        const response = await fetch(fileUrl, {
-          headers: {
-            'X-Telegram-InitData': WebApp.initData
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const blob = await response.blob();
-        const contentType = response.headers.get('content-type') || 'video/mp4';
-        
-        if (blob.size < 100) {
-          throw new Error(`Too small (${blob.size} bytes)`);
-        }
-        
-        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
-        files.push(file);
       }
       
       if (files.length === 0) {
@@ -118,6 +135,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         throw new Error('Share not supported');
       }
       
+      // Hide loading before triggering share dialog
+      setLoading(false);
+      
+      // Trigger share - this must be synchronous from user gesture
       await navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
         files
@@ -126,6 +147,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       hapticFeedback.success();
       
     } catch (error: any) {
+      console.error('❌ Share failed:', error);
+      
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(`Failed to share: ${error.message}`);
@@ -333,7 +356,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
 
   return (
     <div style={{ 
-      minHeight: '100vh',
       paddingBottom: '100px'
     }}>
 
@@ -399,7 +421,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 10
+            zIndex: 100  // CHANGED: from 10 to 100 to be above delete buttons (which have zIndex: 10)
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
             <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
@@ -479,6 +501,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                   }
                   
                   if (navigator.share && navigator.canShare({ files })) {
+                    setLoading(false);
                     await navigator.share({
                       title: task.title,
                       files
