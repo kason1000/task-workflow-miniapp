@@ -30,3 +30,5 @@ yarn-error.log*
 
 # gh-pages
 .gh-pages
+
+src_old/
