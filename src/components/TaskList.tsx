@@ -85,10 +85,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       await api.sendTaskToChat(taskId);
       hapticFeedback.success();
       showAlert('✅ Task sent to chat!');
+      
+      // Close Mini App after short delay
+      setTimeout(() => {
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.close();
+        }
+      }, 500);
     } catch (error: any) {
       hapticFeedback.error();
       showAlert(`Failed to send: ${error.message}`);
-    } finally {
       setSendingToChat(null);
     }
   };

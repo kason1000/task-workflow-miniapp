@@ -30,7 +30,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   const [mediaCache, setMediaCache] = useState<MediaCache>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
 
-  const handleDeleteUpload = async (setIndex: number, fileId: string, uploadType: 'photo' | 'video', photoIndex?: number) => {
+  const handleDeleteUpload = async (fileId: string, uploadType: 'photo' | 'video') => {
     const confirmed = await showConfirm(`Delete this ${uploadType}?`);
     if (!confirmed) return;
 
@@ -56,42 +56,93 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
     
     try {
       const set = task.sets[setIndex];
+      
+      if (!set) {
+        throw new Error(`Set ${setIndex + 1} not found`);
+      }
+      
       const files: File[] = [];
       
+      console.log(`📤 Starting share for Set ${setIndex + 1}`);
+      console.log(`Photos: ${set.photos?.length || 0}, Video: ${!!set.video}`);
+      
       // Collect photos
-      if (set.photos) {
+      if (set.photos && set.photos.length > 0) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
-          const response = await fetch(fileUrl);
+          console.log(`📷 Fetching photo ${i + 1}/${set.photos.length} (${photo.file_id})`);
           
-          if (!response.ok) {
-            throw new Error(`Failed to fetch photo ${i + 1}`);
+          try {
+            const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+            const response = await fetch(fileUrl);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`Fetch failed:`, response.status, errorText);
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const blob = await response.blob();
+            console.log(`✅ Photo ${i + 1}: ${blob.size} bytes`);
+            
+            if (blob.size < 100) {
+              throw new Error(`Too small (${blob.size} bytes)`);
+            }
+            
+            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+            files.push(file);
+          } catch (photoError: any) {
+            console.error(`❌ Photo ${i + 1} failed:`, photoError);
+            throw new Error(`Photo ${i + 1}: ${photoError.message}`);
           }
-          
-          const blob = await response.blob();
-          const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-          files.push(file);
         }
       }
       
       // Collect video
       if (set.video) {
-        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-        const response = await fetch(fileUrl);
+        console.log(`🎥 Fetching video (${set.video.file_id})`);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch video`);
+        try {
+          const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+          const response = await fetch(fileUrl);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Fetch failed:`, response.status, errorText);
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const blob = await response.blob();
+          const contentType = response.headers.get('content-type') || 'video/mp4';
+          console.log(`✅ Video: ${blob.size} bytes, type: ${contentType}`);
+          
+          if (blob.size < 100) {
+            throw new Error(`Too small (${blob.size} bytes)`);
+          }
+          
+          const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
+          files.push(file);
+        } catch (videoError: any) {
+          console.error(`❌ Video failed:`, videoError);
+          throw new Error(`Video: ${videoError.message}`);
         }
-        
-        const blob = await response.blob();
-        const contentType = response.headers.get('content-type') || 'video/mp4';
-        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
-        files.push(file);
       }
       
-      if (!navigator.share || !navigator.canShare({ files })) {
-        throw new Error('Share not supported on this device');
+      console.log(`✅ Prepared ${files.length} files`);
+      
+      if (files.length === 0) {
+        throw new Error('No files to share');
+      }
+      
+      if (!navigator.share) {
+        throw new Error('Share API not available');
+      }
+      
+      const canShare = navigator.canShare({ files });
+      console.log(`Can share: ${canShare}`);
+      
+      if (!canShare) {
+        throw new Error('Cannot share these file types');
       }
       
       await navigator.share({
@@ -100,8 +151,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       });
       
       hapticFeedback.success();
+      showAlert('✅ Shared successfully!');
       
     } catch (error: any) {
+      console.error('❌ Share failed:', error);
+      
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(`Failed to share: ${error.message}`);
@@ -138,6 +192,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   }, [task.id]);
 
   const canTransition = (to: TaskStatus): boolean => {
+    // Admin can do anything
+    if (userRole === 'Admin') {
+      return true;
+    }
+
     const transitions: Record<string, string[]> = {
       'New->Received': ['Member', 'Lead', 'Admin'],
       'Received->Submitted': ['Member', 'Lead', 'Admin'],
@@ -145,7 +204,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       'Submitted->Completed': ['Lead', 'Admin'],
       'Submitted->Archived': ['Lead', 'Admin', 'Viewer'],
       'Completed->Archived': ['Lead', 'Admin', 'Viewer'],
+      'Redo->Submitted': ['Member', 'Lead', 'Admin'], // Added
     };
+    
     const key = `${task.status}->${to}`;
     const allowedRoles = transitions[key];
     return allowedRoles ? allowedRoles.includes(userRole) : false;
@@ -316,7 +377,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           alignItems: 'center',
           marginBottom: '12px'
         }}>
-          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets ({task.sets.length})</h3>
+          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets ({task.requireSets})</h3>
           {totalMedia > 0 && (
             <button
               onClick={async () => {
@@ -325,16 +386,17 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                 try {
                   const files: File[] = [];
                   
-                  for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
-                    const set = task.sets[setIndex];
+                  for (let si = 0; si < task.requireSets; si++) {
+                    const set = task.sets[si];
+                    if (!set) continue;
                     
                     if (set.photos) {
                       for (let i = 0; i < set.photos.length; i++) {
                         const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
                         const response = await fetch(fileUrl);
-                        if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
+                        if (!response.ok) throw new Error(`Failed to fetch from set ${si + 1}`);
                         const blob = await response.blob();
-                        const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+                        const file = new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
                         files.push(file);
                       }
                     }
@@ -342,9 +404,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                     if (set.video) {
                       const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
                       const response = await fetch(fileUrl);
-                      if (!response.ok) throw new Error(`Failed to fetch video from set ${setIndex + 1}`);
+                      if (!response.ok) throw new Error(`Failed to fetch video from set ${si + 1}`);
                       const blob = await response.blob();
-                      const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: 'video/mp4' });
+                      const file = new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' });
                       files.push(file);
                     }
                   }
@@ -381,7 +443,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           )}
         </div>
 
-        {/* Show ALL Sets - Horizontal Scroll */}
+        {/* Show ALL Required Sets */}
         <div style={{
           display: 'flex',
           gap: '12px',
@@ -390,7 +452,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           scrollbarWidth: 'thin',
           scrollSnapType: 'x mandatory'
         }}>
-          {task.sets.map((set, setIndex) => {
+          {Array.from({ length: task.requireSets }).map((_, setIndex) => {
+            const set = task.sets[setIndex] || { photos: [], video: undefined };
             const photoCount = set.photos?.length || 0;
             const hasVideo = !!set.video;
             const fileCount = photoCount + (hasVideo ? 1 : 0);
@@ -399,7 +462,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             const hasRequiredVideo = videoRequired ? hasVideo : true;
             const isComplete = hasEnoughPhotos && hasRequiredVideo;
 
-            // Build media array for this set
+            // Build media array
             const allSetMedia: Array<{
               type: 'photo' | 'video';
               fileId: string;
@@ -442,12 +505,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                     <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '2px' }}>
                       Set {setIndex + 1}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)' }}>
-                      📷 {photoCount}/3 {hasEnoughPhotos ? '✓' : ''}
+                    <div style={{
+                      fontSize: '11px',
+                      color: 'var(--tg-theme-hint-color)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      📷 {photoCount}/3 {hasEnoughPhotos && '✓'}
                       {videoRequired && ` • 🎥 ${hasVideo ? '✓' : '✗'}`}
-                      {isComplete
-                        ? <span style={{ color: '#10b981' }}> ✓</span>
-                        : <span style={{ color: '#f59e0b' }}> ⏳</span>}
+                      {isComplete && <span style={{ color: '#10b981' }}> ✓</span>}
+                      {!isComplete && <span style={{ color: '#f59e0b' }}> ⏳</span>}
                     </div>
                   </div>
                   
@@ -470,113 +536,128 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                   )}
                 </div>
 
-                {/* Media Row - Click to open gallery */}
+                {/* Media Row */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-                  {allSetMedia.map((media, mediaIndex) => {
-                    const imageUrl = mediaCache[media.fileId];
-                    const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
-                    const canDelete = !isCreatedPhoto;
+                  {allSetMedia.length === 0 ? (
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      background: 'var(--tg-theme-secondary-bg-color)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '32px',
+                      border: '2px dashed var(--tg-theme-hint-color)'
+                    }}>
+                      📷
+                    </div>
+                  ) : (
+                    allSetMedia.map((media, idx) => {
+                      const imageUrl = mediaCache[media.fileId];
+                      const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
+                      const canDelete = !isCreatedPhoto;
 
-                    return (
-                      <div
-                        key={mediaIndex}
-                        style={{
-                          width: '80px',
-                          height: '80px',
-                          minWidth: '80px',
-                          position: 'relative',
-                          flexShrink: 0
-                        }}
-                      >
+                      return (
                         <div
-                          onClick={() => {
-                            hapticFeedback.light();
-                            // Open gallery at this specific media
-                            onOpenGallery(setIndex, media.photoIndex || 0);
-                          }}
+                          key={idx}
                           style={{
-                            width: '100%',
-                            height: '100%',
-                            background: imageUrl
-                              ? `url(${imageUrl}) center/cover`
-                              : 'var(--tg-theme-secondary-bg-color)',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '28px',
-                            border: '2px solid var(--tg-theme-button-color)',
-                            overflow: 'hidden'
+                            width: '80px',
+                            height: '80px',
+                            minWidth: '80px',
+                            position: 'relative',
+                            flexShrink: 0
                           }}
                         >
-                          {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
-                          
-                          {media.type === 'video' && (
-                            <div style={{
-                              position: 'absolute',
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '50%',
-                              background: 'rgba(255,255,255,0.95)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '11px'
-                            }}>
-                              ▶️
-                            </div>
-                          )}
-                          
-                          {media.type === 'photo' && (
-                            <div style={{
-                              position: 'absolute',
-                              bottom: '4px',
-                              right: '4px',
-                              background: 'rgba(0,0,0,0.6)',
-                              color: 'white',
-                              fontSize: '10px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontWeight: 600
-                            }}>
-                              {(media.photoIndex || 0) + 1}
-                            </div>
-                          )}
-                        </div>
-
-                        {canDelete && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteUpload(setIndex, media.fileId, media.type, media.photoIndex);
+                          <div
+                            onClick={() => {
+                              hapticFeedback.light();
+                              onOpenGallery(setIndex, media.photoIndex || 0);
                             }}
-                            disabled={loading}
                             style={{
-                              position: 'absolute',
-                              top: '4px',
-                              left: '4px',
-                              background: 'rgba(239, 68, 68, 0.9)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '50%',
-                              width: '22px',
-                              height: '22px',
+                              width: '100%',
+                              height: '100%',
+                              background: imageUrl
+                                ? `url(${imageUrl}) center/cover`
+                                : 'var(--tg-theme-secondary-bg-color)',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              zIndex: 10,
-                              padding: 0
+                              fontSize: '28px',
+                              border: '2px solid var(--tg-theme-button-color)',
+                              overflow: 'hidden'
                             }}
                           >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                            {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
+                            
+                            {media.type === 'video' && (
+                              <div style={{
+                                position: 'absolute',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.95)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '11px'
+                              }}>
+                                ▶️
+                              </div>
+                            )}
+                            
+                            {media.type === 'photo' && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '4px',
+                                right: '4px',
+                                background: 'rgba(0,0,0,0.6)',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 600
+                              }}>
+                                {(media.photoIndex || 0) + 1}
+                              </div>
+                            )}
+                          </div>
+
+                          {canDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUpload(media.fileId, media.type);
+                              }}
+                              disabled={loading}
+                              style={{
+                                position: 'absolute',
+                                top: '4px',
+                                left: '4px',
+                                background: 'rgba(239, 68, 68, 0.9)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '22px',
+                                height: '22px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                                zIndex: 10,
+                                padding: 0
+                              }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             );
@@ -627,6 +708,37 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             💬 Send to Chat
           </button>
 
+          <button
+            onClick={async () => {
+              console.log('🧪 Testing media proxy...');
+              const set = task.sets[0];
+              if (set?.photos && set.photos.length > 0) {
+                const testFileId = set.photos[0].file_id;
+                console.log('Test file_id:', testFileId);
+                
+                try {
+                  const { fileUrl } = await api.getProxiedMediaUrl(testFileId);
+                  console.log('Proxy URL:', fileUrl);
+                  
+                  const response = await fetch(fileUrl);
+                  console.log('Response status:', response.status);
+                  console.log('Response headers:', [...response.headers.entries()]);
+                  
+                  const blob = await response.blob();
+                  console.log('Blob size:', blob.size, 'type:', blob.type);
+                  
+                  showAlert(`✅ Test passed! Size: ${blob.size} bytes`);
+                } catch (error: any) {
+                  console.error('Test failed:', error);
+                  showAlert(`❌ Test failed: ${error.message}`);
+                }
+              }
+            }}
+            style={{ background: '#gray', fontSize: '12px' }}
+          >
+            🧪 Test Media Proxy
+          </button>
+
           {task.status === 'New' && canTransition('Received') && (
             <button onClick={() => handleTransition('Received')} disabled={loading}>
               Mark as Received
@@ -634,6 +746,12 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           )}
           
           {task.status === 'Received' && canTransition('Submitted') && (
+            <button onClick={() => handleTransition('Submitted')} disabled={loading}>
+              Submit Task
+            </button>
+          )}
+          
+          {task.status === 'Redo' && canTransition('Submitted') && (
             <button onClick={() => handleTransition('Submitted')} disabled={loading}>
               Submit Task
             </button>
