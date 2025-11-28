@@ -189,6 +189,8 @@ function App() {
         <GalleryView
           task={selectedTask}
           onBack={handleBackToDetail}
+          onTaskUpdated={handleTaskUpdated}
+          userRole={role}
         />
       )}
     </div>

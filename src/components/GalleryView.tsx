@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Task } from '../types';
 import { api } from '../services/api';
-import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Share2, Trash2 } from 'lucide-react';
+import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 
 interface GalleryViewProps {
   task: Task;
   onBack: () => void;
+  onTaskUpdated?: () => void;
+  userRole: string;
 }
 
 interface MediaItem {
@@ -15,11 +18,12 @@ interface MediaItem {
   photoIndex?: number;
 }
 
-export function GalleryView({ task, onBack }: GalleryViewProps) {
+export function GalleryView({ task, onBack, onTaskUpdated, userRole }: GalleryViewProps) {
   const [allMedia, setAllMedia] = useState<MediaItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     // Collect all media from all sets
@@ -59,11 +63,100 @@ export function GalleryView({ task, onBack }: GalleryViewProps) {
   }, [task]);
 
   const goToPrevious = () => {
+    hapticFeedback.light();
     setCurrentIndex((prev) => (prev === 0 ? allMedia.length - 1 : prev - 1));
   };
 
   const goToNext = () => {
+    hapticFeedback.light();
     setCurrentIndex((prev) => (prev + 1) % allMedia.length);
+  };
+
+  const handleShareCurrent = async () => {
+    const currentMedia = allMedia[currentIndex];
+    setActionLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      const { fileUrl } = await api.getProxiedMediaUrl(currentMedia.fileId);
+      const response = await fetch(fileUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch media: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || 
+        (currentMedia.type === 'photo' ? 'image/jpeg' : 'video/mp4');
+      
+      const fileName = currentMedia.type === 'photo' 
+        ? `set${currentMedia.setIndex + 1}_photo${(currentMedia.photoIndex || 0) + 1}.jpg`
+        : `set${currentMedia.setIndex + 1}_video.mp4`;
+      
+      const file = new File([blob], fileName, { type: contentType });
+      
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `${task.title} - ${currentMedia.type === 'photo' ? 'Photo' : 'Video'}`,
+          files: [file]
+        });
+        
+        hapticFeedback.success();
+        showAlert('✅ Shared successfully!');
+      } else {
+        throw new Error('Share not supported on this device');
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Share failed:', error);
+        hapticFeedback.error();
+        showAlert(`Failed to share: ${error.message}`);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteCurrent = async () => {
+    const currentMedia = allMedia[currentIndex];
+    const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
+
+    if (isCreatedPhoto) {
+      showAlert('❌ Cannot delete the task creation photo');
+      return;
+    }
+
+    const mediaType = currentMedia.type === 'photo' ? 'photo' : 'video';
+    const confirmed = await showConfirm(`Delete this ${mediaType}?`);
+    
+    if (!confirmed) return;
+
+    setActionLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      await api.deleteUpload(task.id, currentMedia.fileId);
+      
+      hapticFeedback.success();
+      showAlert(`✅ ${mediaType === 'photo' ? 'Photo' : 'Video'} deleted`);
+      
+      // Refresh task data
+      if (onTaskUpdated) {
+        onTaskUpdated();
+      }
+      
+      // Go back since media was deleted
+      setTimeout(() => {
+        onBack();
+      }, 500);
+      
+    } catch (error: any) {
+      console.error('Delete failed:', error);
+      hapticFeedback.error();
+      showAlert(`Failed to delete: ${error.message}`);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (loading || allMedia.length === 0) {
@@ -81,6 +174,8 @@ export function GalleryView({ task, onBack }: GalleryViewProps) {
 
   const currentMedia = allMedia[currentIndex];
   const currentUrl = mediaUrls[currentMedia.fileId];
+  const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
+  const canDelete = !isCreatedPhoto && (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
 
   return (
     <div>
@@ -132,18 +227,72 @@ export function GalleryView({ task, onBack }: GalleryViewProps) {
           )}
         </div>
 
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <button
+            onClick={handleShareCurrent}
+            disabled={actionLoading || !currentUrl}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              background: 'var(--tg-theme-button-color)'
+            }}
+          >
+            <Share2 size={20} /> Share
+          </button>
+          
+          {canDelete && (
+            <button
+              onClick={handleDeleteCurrent}
+              disabled={actionLoading}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: '#ef4444',
+                color: 'white'
+              }}
+            >
+              <Trash2 size={20} /> Delete
+            </button>
+          )}
+        </div>
+
         {/* Navigation Controls */}
         {allMedia.length > 1 && (
-          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
             <button
               onClick={goToPrevious}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              disabled={actionLoading}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                color: 'var(--tg-theme-text-color)'
+              }}
             >
               <ArrowLeft size={20} /> Previous
             </button>
             <button
               onClick={goToNext}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              disabled={actionLoading}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                color: 'var(--tg-theme-text-color)'
+              }}
             >
               Next <ArrowRight size={20} />
             </button>
@@ -166,7 +315,10 @@ export function GalleryView({ task, onBack }: GalleryViewProps) {
             return (
               <div
                 key={index}
-                onClick={() => setCurrentIndex(index)}
+                onClick={() => {
+                  hapticFeedback.light();
+                  setCurrentIndex(index);
+                }}
                 style={{
                   minWidth: '80px',
                   width: '80px',

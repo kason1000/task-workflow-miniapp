@@ -101,6 +101,12 @@ class ApiService {
     });
   }
 
+  async sendTaskToChat(taskId: string) {
+    return this.request<any>(`/tasks/${taskId}/send-to-chat`, {
+      method: 'POST',
+    });
+  }
+
   // Media
   async getMediaUrl(fileId: string): Promise<{ fileUrl: string }> {
     try {

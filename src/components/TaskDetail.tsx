@@ -55,71 +55,89 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
+  // Find the shareSetDirect function and replace it with this fixed version:
+
   const shareSetDirect = async (setIndex: number) => {
     setLoading(true);
     hapticFeedback.medium();
+    
     try {
       const set = task.sets[setIndex];
       const files: File[] = [];
       const totalFiles = (set.photos?.length || 0) + (set.video ? 1 : 0);
+      
       console.log(`📤 Preparing ${totalFiles} files for sharing...`);
-
+      
+      // Collect photos
       if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
           console.log(`📷 Fetching photo ${i + 1}/${set.photos.length}...`);
-          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+          
+          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id); // Use proxied URL
           const response = await fetch(fileUrl);
+          
           if (!response.ok) {
             throw new Error(`Failed to fetch photo ${i + 1}: ${response.status}`);
           }
+          
           const blob = await response.blob();
           console.log(`✅ Photo ${i + 1} downloaded: ${blob.size} bytes`);
-          if (blob.size < 1000) {
+          
+          if (blob.size < 100) {
             throw new Error(`Photo ${i + 1} is too small (${blob.size} bytes)`);
           }
+          
           const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
           files.push(file);
         }
       }
-
+      
+      // Collect video
       if (set.video) {
         console.log(`🎥 Fetching video...`);
-        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+        
+        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id); // Use proxied URL
         const response = await fetch(fileUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch video: ${response.status}`);
+        }
+        
         const blob = await response.blob();
-        const actualMimeType = response.headers.get('content-type') || 'video/mp4';
-        console.log('🎥 Video MIME type from server:', actualMimeType);
-        const file = new File([blob], `set${setIndex + 1}_video.mp4`, {
-          type: actualMimeType
-        });
+        const contentType = response.headers.get('content-type') || 'video/mp4';
+        console.log(`✅ Video downloaded: ${blob.size} bytes, type: ${contentType}`);
+        
+        if (blob.size < 100) {
+          throw new Error(`Video is too small (${blob.size} bytes)`);
+        }
+        
+        const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
         files.push(file);
-        await new Promise(resolve => setTimeout(resolve, 500));
       }
-
+      
       console.log(`✅ All ${files.length} files ready`);
-
+      
+      // Check share capability
       if (!navigator.share) {
-        throw new Error('Share API not available');
+        throw new Error('Share API not available on this device');
       }
+      
       if (!navigator.canShare({ files })) {
-        throw new Error('Cannot share these file types');
+        throw new Error('Cannot share these file types on this device');
       }
-
-      console.log('📤 Files being shared:');
-      files.forEach((file, idx) => {
-        console.log(`${idx + 1}. ${file.name} - ${file.type} - ${file.size} bytes`);
-      });
-
+      
+      // Share
       await navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
         text: `Sharing ${files.length} files from Set ${setIndex + 1}`,
         files
       });
-
+      
       hapticFeedback.success();
       showAlert('✅ Shared successfully!');
-      console.log('✅ Share completed successfully');
+      console.log('✅ Share completed');
+      
     } catch (error: any) {
       console.error('❌ Share failed:', error);
       if (error.name !== 'AbortError') {
@@ -777,6 +795,26 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Delete Permanently
             </button>
           )}
+          <button
+            onClick={async () => {
+              setLoading(true);
+              hapticFeedback.medium();
+              try {
+                await api.sendTaskToChat(task.id);
+                hapticFeedback.success();
+                showAlert('✅ Task sent to chat!');
+              } catch (error: any) {
+                hapticFeedback.error();
+                showAlert(`Failed to send: ${error.message}`);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            style={{ width: '100%', background: 'var(--tg-theme-button-color)' }}
+          >
+            💬 Send to Chat
+          </button>
         </div>
       </div>
 
