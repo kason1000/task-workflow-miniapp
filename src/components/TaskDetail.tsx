@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
+import WebApp from '@twa-dev/sdk';
 
 interface TaskDetailProps {
   task: Task;
   userRole: string;
   onBack: () => void;
   onTaskUpdated: () => void;
+  onOpenGallery: (setIndex: number, photoIndex: number) => void;
 }
 
 const statusColors: Record<TaskStatus, string> = {
@@ -23,25 +25,18 @@ interface MediaCache {
   [fileId: string]: string;
 }
 
-export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
+export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGallery }: TaskDetailProps) {
   const [loading, setLoading] = useState(false);
   const [mediaCache, setMediaCache] = useState<MediaCache>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
-  const [selectedMedia, setSelectedMedia] = useState<{
-    type: 'photo' | 'video';
-    fileId: string;
-    setIndex: number;
-    photoIndex?: number;
-  } | null>(null);
-  
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const handleDeleteUpload = async (setIndex: number, fileId: string, uploadType: 'photo' | 'video', photoIndex?: number) => {
     const confirmed = await showConfirm(`Delete this ${uploadType}?`);
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.deleteUpload(task.id, fileId);
       hapticFeedback.success();
@@ -55,8 +50,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  // Find the shareSetDirect function and replace it with this fixed version:
-
   const shareSetDirect = async (setIndex: number) => {
     setLoading(true);
     hapticFeedback.medium();
@@ -64,30 +57,19 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     try {
       const set = task.sets[setIndex];
       const files: File[] = [];
-      const totalFiles = (set.photos?.length || 0) + (set.video ? 1 : 0);
-      
-      console.log(`📤 Preparing ${totalFiles} files for sharing...`);
       
       // Collect photos
       if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          console.log(`📷 Fetching photo ${i + 1}/${set.photos.length}...`);
-          
-          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id); // Use proxied URL
+          const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
           const response = await fetch(fileUrl);
           
           if (!response.ok) {
-            throw new Error(`Failed to fetch photo ${i + 1}: ${response.status}`);
+            throw new Error(`Failed to fetch photo ${i + 1}`);
           }
           
           const blob = await response.blob();
-          console.log(`✅ Photo ${i + 1} downloaded: ${blob.size} bytes`);
-          
-          if (blob.size < 100) {
-            throw new Error(`Photo ${i + 1} is too small (${blob.size} bytes)`);
-          }
-          
           const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
           files.push(file);
         }
@@ -95,56 +77,34 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       
       // Collect video
       if (set.video) {
-        console.log(`🎥 Fetching video...`);
-        
-        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id); // Use proxied URL
+        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
         const response = await fetch(fileUrl);
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch video: ${response.status}`);
+          throw new Error(`Failed to fetch video`);
         }
         
         const blob = await response.blob();
         const contentType = response.headers.get('content-type') || 'video/mp4';
-        console.log(`✅ Video downloaded: ${blob.size} bytes, type: ${contentType}`);
-        
-        if (blob.size < 100) {
-          throw new Error(`Video is too small (${blob.size} bytes)`);
-        }
-        
         const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
         files.push(file);
       }
       
-      console.log(`✅ All ${files.length} files ready`);
-      
-      // Check share capability
-      if (!navigator.share) {
-        throw new Error('Share API not available on this device');
+      if (!navigator.share || !navigator.canShare({ files })) {
+        throw new Error('Share not supported on this device');
       }
       
-      if (!navigator.canShare({ files })) {
-        throw new Error('Cannot share these file types on this device');
-      }
-      
-      // Share
       await navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
-        text: `Sharing ${files.length} files from Set ${setIndex + 1}`,
         files
       });
       
       hapticFeedback.success();
-      showAlert('✅ Shared successfully!');
-      console.log('✅ Share completed');
       
     } catch (error: any) {
-      console.error('❌ Share failed:', error);
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(`Failed to share: ${error.message}`);
-      } else {
-        console.log('ℹ️ Share cancelled by user');
       }
     } finally {
       setLoading(false);
@@ -153,7 +113,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const loadMediaUrl = async (fileId: string) => {
     if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
+
     setLoadingMedia(prev => new Set(prev).add(fileId));
+
     try {
       const result = await api.getMediaUrl(fileId);
       setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
@@ -192,8 +154,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleTransition = async (to: TaskStatus) => {
     const confirmed = await showConfirm(`Transition task to ${to}?`);
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.transitionTask(task.id, to);
       hapticFeedback.success();
@@ -210,8 +174,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleArchive = async () => {
     const confirmed = await showConfirm('Archive this task?');
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.archiveTask(task.id);
       hapticFeedback.success();
@@ -228,8 +194,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleRestore = async () => {
     const confirmed = await showConfirm('Restore this task?');
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.medium();
+
     try {
       await api.restoreTask(task.id);
       hapticFeedback.success();
@@ -246,8 +214,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleDelete = async () => {
     const confirmed = await showConfirm('⚠️ Permanently delete this task? This cannot be undone!');
     if (!confirmed) return;
+
     setLoading(true);
     hapticFeedback.heavy();
+
     try {
       await api.deleteTask(task.id);
       hapticFeedback.success();
@@ -257,6 +227,26 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       hapticFeedback.error();
       showAlert(`Error: ${error.message}`);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendToChat = async () => {
+    setLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      await api.sendTaskToChat(task.id);
+      hapticFeedback.success();
+      showAlert('✅ Task sent to chat!');
+      
+      // Close Mini App and return to chat
+      setTimeout(() => {
+        WebApp.close();
+      }, 500);
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Failed to send: ${error.message}`);
       setLoading(false);
     }
   };
@@ -295,7 +285,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Sets Progress - HORIZONTAL LAYOUT */}
+      {/* Sets Progress - Shows ALL Sets */}
       <div className="card" style={{ position: 'relative' }}>
         {loading && (
           <div style={{
@@ -315,10 +305,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
             <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
-              Preparing files...
-            </div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', marginTop: '4px' }}>
-              This may take a few seconds
+              Processing...
             </div>
           </div>
         )}
@@ -329,20 +316,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           alignItems: 'center',
           marginBottom: '12px'
         }}>
-          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets Progress</h3>
-          {task.requireSets > 1 && totalMedia > 0 && (
+          <h3 style={{ fontSize: '16px', margin: 0 }}>Sets ({task.sets.length})</h3>
+          {totalMedia > 0 && (
             <button
               onClick={async () => {
                 setLoading(true);
                 hapticFeedback.medium();
                 try {
                   const files: File[] = [];
+                  
                   for (let setIndex = 0; setIndex < task.sets.length; setIndex++) {
                     const set = task.sets[setIndex];
+                    
                     if (set.photos) {
                       for (let i = 0; i < set.photos.length; i++) {
-                        const photo = set.photos[i];
-                        const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
+                        const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
                         const response = await fetch(fileUrl);
                         if (!response.ok) throw new Error(`Failed to fetch from set ${setIndex + 1}`);
                         const blob = await response.blob();
@@ -350,6 +338,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         files.push(file);
                       }
                     }
+                    
                     if (set.video) {
                       const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
                       const response = await fetch(fileUrl);
@@ -359,15 +348,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       files.push(file);
                     }
                   }
-                  await new Promise(resolve => setTimeout(resolve, 500));
+                  
                   if (navigator.share && navigator.canShare({ files })) {
                     await navigator.share({
                       title: task.title,
-                      text: `Sharing ${files.length} files from all sets`,
                       files
                     });
                     hapticFeedback.success();
-                    showAlert('✅ Shared all sets!');
                   }
                 } catch (error: any) {
                   if (error.name !== 'AbortError') {
@@ -394,7 +381,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           )}
         </div>
 
-        {/* SINGLE ROW - Horizontal Scroll for Sets */}
+        {/* Show ALL Sets - Horizontal Scroll */}
         <div style={{
           display: 'flex',
           gap: '12px',
@@ -404,42 +391,37 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           scrollSnapType: 'x mandatory'
         }}>
           {task.sets.map((set, setIndex) => {
-            const hasPhotos = set.photos && set.photos.length > 0;
-            const hasVideo = !!set.video;
             const photoCount = set.photos?.length || 0;
+            const hasVideo = !!set.video;
+            const fileCount = photoCount + (hasVideo ? 1 : 0);
             const hasEnoughPhotos = photoCount >= 3;
             const videoRequired = task.labels.video;
             const hasRequiredVideo = videoRequired ? hasVideo : true;
             const isComplete = hasEnoughPhotos && hasRequiredVideo;
-            const fileCount = photoCount + (hasVideo ? 1 : 0);
 
-            // Build complete media array for this set
+            // Build media array for this set
             const allSetMedia: Array<{
               type: 'photo' | 'video';
               fileId: string;
               photoIndex?: number;
             }> = [];
 
-            if (hasPhotos && set.photos) {
-              set.photos.forEach((photo, idx) => {
-                allSetMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
-              });
-            }
-            if (hasVideo && set.video) {
+            set.photos?.forEach((photo, idx) => {
+              allSetMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
+            });
+
+            if (set.video) {
               allSetMedia.push({ type: 'video', fileId: set.video.file_id });
             }
 
-            // Calculate dynamic width based on number of items
-            // Each item is 80px + 8px gap = 88px per item, plus 24px padding
-            const cardWidth = (allSetMedia.length * 88) + 24;
-            const minCardWidth = Math.max(cardWidth, 280);
+            const cardWidth = Math.max((allSetMedia.length * 88) + 24, 280);
 
             return (
               <div
                 key={setIndex}
                 style={{
-                  minWidth: `${minCardWidth}px`,
-                  maxWidth: `${minCardWidth}px`,
+                  minWidth: `${cardWidth}px`,
+                  maxWidth: `${cardWidth}px`,
                   flex: '0 0 auto',
                   background: 'var(--tg-theme-bg-color)',
                   borderRadius: '8px',
@@ -448,37 +430,19 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   scrollSnapAlign: 'start'
                 }}
               >
-                {/* Set Header - SINGLE LINE */}
+                {/* Set Header */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   marginBottom: '12px',
-                  gap: '8px',
                   height: '36px'
                 }}>
-                  <div style={{
-                    flex: 1,
-                    minWidth: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center'
-                  }}>
-                    <div style={{
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      marginBottom: '2px'
-                    }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '2px' }}>
                       Set {setIndex + 1}
                     </div>
-                    <div style={{
-                      fontSize: '11px',
-                      color: 'var(--tg-theme-hint-color)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      lineHeight: 1
-                    }}>
+                    <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)' }}>
                       📷 {photoCount}/3 {hasEnoughPhotos ? '✓' : ''}
                       {videoRequired && ` • 🎥 ${hasVideo ? '✓' : '✗'}`}
                       {isComplete
@@ -486,24 +450,19 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         : <span style={{ color: '#f59e0b' }}> ⏳</span>}
                     </div>
                   </div>
+                  
                   {fileCount > 0 && (
                     <button
-                      onClick={async () => {
-                        hapticFeedback.medium();
-                        await shareSetDirect(setIndex);
-                      }}
+                      onClick={() => shareSetDirect(setIndex)}
                       disabled={loading}
                       style={{
                         padding: '6px 12px',
                         fontSize: '12px',
-                        background: loading ? '#6b7280' : 'var(--tg-theme-button-color)',
+                        background: 'var(--tg-theme-button-color)',
                         color: 'var(--tg-theme-button-text-color)',
                         border: 'none',
                         borderRadius: '6px',
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        height: '32px'
+                        cursor: 'pointer'
                       }}
                     >
                       📤 {fileCount}
@@ -511,60 +470,65 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   )}
                 </div>
 
-                {/* Media Row - ALL ITEMS IN ONE ROW WITHOUT SCROLL */}
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  flexWrap: 'nowrap'
-                }}>
+                {/* Media Row - Click to open gallery */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
                   {allSetMedia.map((media, mediaIndex) => {
-                    const isPhoto = media.type === 'photo';
-                    const fileId = media.fileId;
-                    const photoIndex = media.photoIndex;
+                    const imageUrl = mediaCache[media.fileId];
+                    const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
+                    const canDelete = !isCreatedPhoto;
 
-                    if (isPhoto) {
-                      const imageUrl = mediaCache[fileId];
-                      const isCreatedPhoto = fileId === task.createdPhoto?.file_id;
-                      const canDelete = !isCreatedPhoto;
-
-                      return (
+                    return (
+                      <div
+                        key={mediaIndex}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          minWidth: '80px',
+                          position: 'relative',
+                          flexShrink: 0
+                        }}
+                      >
                         <div
-                          key={`photo-${photoIndex}`}
+                          onClick={() => {
+                            hapticFeedback.light();
+                            // Open gallery at this specific media
+                            onOpenGallery(setIndex, media.photoIndex || 0);
+                          }}
                           style={{
-                            width: '80px',
-                            height: '80px',
-                            minWidth: '80px',
-                            position: 'relative',
-                            flexShrink: 0
+                            width: '100%',
+                            height: '100%',
+                            background: imageUrl
+                              ? `url(${imageUrl}) center/cover`
+                              : 'var(--tg-theme-secondary-bg-color)',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '28px',
+                            border: '2px solid var(--tg-theme-button-color)',
+                            overflow: 'hidden'
                           }}
                         >
-                          <div
-                            onClick={() => {
-                              hapticFeedback.light();
-                              setSelectedMedia({
-                                type: 'photo',
-                                fileId: fileId,
-                                setIndex,
-                                photoIndex
-                              });
-                            }}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              background: imageUrl
-                                ? `url(${imageUrl}) center/cover`
-                                : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
+                          {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
+                          
+                          {media.type === 'video' && (
+                            <div style={{
+                              position: 'absolute',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              background: 'rgba(255,255,255,0.95)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '28px',
-                              border: '2px solid var(--tg-theme-button-color)',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {!imageUrl && (loadingMedia.has(fileId) ? '⏳' : '📷')}
+                              fontSize: '11px'
+                            }}>
+                              ▶️
+                            </div>
+                          )}
+                          
+                          {media.type === 'photo' && (
                             <div style={{
                               position: 'absolute',
                               bottom: '4px',
@@ -576,103 +540,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               borderRadius: '4px',
                               fontWeight: 600
                             }}>
-                              {(photoIndex ?? 0) + 1}
+                              {(media.photoIndex || 0) + 1}
                             </div>
-                          </div>
-                          {canDelete && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteUpload(setIndex, fileId, 'photo', photoIndex);
-                              }}
-                              disabled={loading}
-                              style={{
-                                position: 'absolute',
-                                top: '4px',
-                                left: '4px',
-                                background: 'rgba(239, 68, 68, 0.9)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '22px',
-                                height: '22px',
-                                minWidth: '22px',
-                                minHeight: '22px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                zIndex: 10,
-                                padding: 0
-                              }}
-                            >
-                              ✕
-                            </button>
                           )}
                         </div>
-                      );
-                    } else {
-                      // Video thumbnail
-                      return (
-                        <div
-                          key={`video-${setIndex}`}
-                          style={{
-                            width: '80px',
-                            height: '80px',
-                            minWidth: '80px',
-                            position: 'relative',
-                            flexShrink: 0
-                          }}
-                        >
-                          <div
-                            onClick={() => {
-                              hapticFeedback.light();
-                              setSelectedMedia({
-                                type: 'video',
-                                fileId: fileId,
-                                setIndex
-                              });
-                            }}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              background: 'var(--tg-theme-secondary-bg-color)',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              border: '2px solid var(--tg-theme-hint-color)',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            <div style={{
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '50%',
-                              background: 'rgba(255,255,255,0.95)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '11px',
-                              marginBottom: '4px'
-                            }}>
-                              ▶️
-                            </div>
-                            <div style={{
-                              color: 'var(--tg-theme-hint-color)',
-                              fontSize: '8px',
-                              fontWeight: 600
-                            }}>
-                              Video
-                            </div>
-                          </div>
+
+                        {canDelete && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteUpload(setIndex, fileId, 'video');
+                              handleDeleteUpload(setIndex, media.fileId, media.type, media.photoIndex);
                             }}
                             disabled={loading}
                             style={{
@@ -685,8 +562,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               borderRadius: '50%',
                               width: '22px',
                               height: '22px',
-                              minWidth: '22px',
-                              minHeight: '22px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -698,9 +573,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                           >
                             ✕
                           </button>
-                        </div>
-                      );
-                    }
+                        )}
+                      </div>
+                    );
                   })}
                 </div>
               </div>
@@ -738,16 +613,32 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       <div className="card">
         <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>Actions</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Send to Chat - Top priority */}
+          <button
+            onClick={handleSendToChat}
+            disabled={loading}
+            style={{ 
+              width: '100%', 
+              background: 'var(--tg-theme-button-color)',
+              color: 'var(--tg-theme-button-text-color)',
+              fontWeight: '600'
+            }}
+          >
+            💬 Send to Chat
+          </button>
+
           {task.status === 'New' && canTransition('Received') && (
             <button onClick={() => handleTransition('Received')} disabled={loading}>
               Mark as Received
             </button>
           )}
+          
           {task.status === 'Received' && canTransition('Submitted') && (
             <button onClick={() => handleTransition('Submitted')} disabled={loading}>
               Submit Task
             </button>
           )}
+          
           {task.status === 'Submitted' && canTransition('Redo') && (
             <button
               onClick={() => handleTransition('Redo')}
@@ -757,6 +648,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Request Redo
             </button>
           )}
+          
           {task.status === 'Submitted' && canTransition('Completed') && (
             <button
               onClick={() => handleTransition('Completed')}
@@ -766,6 +658,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Mark as Completed
             </button>
           )}
+          
           {!task.archived && (task.status === 'Submitted' || task.status === 'Completed') && (
             ['Viewer', 'Lead', 'Admin'].includes(userRole) && (
               <button
@@ -777,6 +670,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               </button>
             )
           )}
+          
           {task.archived && userRole === 'Admin' && (
             <button
               onClick={handleRestore}
@@ -786,6 +680,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Restore Task
             </button>
           )}
+          
           {userRole === 'Admin' && (
             <button
               onClick={handleDelete}
@@ -795,363 +690,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               Delete Permanently
             </button>
           )}
-          <button
-            onClick={async () => {
-              setLoading(true);
-              hapticFeedback.medium();
-              try {
-                await api.sendTaskToChat(task.id);
-                hapticFeedback.success();
-                showAlert('✅ Task sent to chat!');
-              } catch (error: any) {
-                hapticFeedback.error();
-                showAlert(`Failed to send: ${error.message}`);
-              } finally {
-                setLoading(false);
-              }
-            }}
-            disabled={loading}
-            style={{ width: '100%', background: 'var(--tg-theme-button-color)' }}
-          >
-            💬 Send to Chat
-          </button>
         </div>
       </div>
-
-      {/* Media Viewer Modal */}
-      {selectedMedia && (() => {
-        const currentSet = task.sets[selectedMedia.setIndex];
-        const allMedia: Array<{
-          type: 'photo' | 'video';
-          fileId: string;
-          photoIndex?: number;
-        }> = [];
-
-        currentSet.photos?.forEach((photo, idx) => {
-          allMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
-        });
-        if (currentSet.video) {
-          allMedia.push({ type: 'video', fileId: currentSet.video.file_id });
-        }
-
-        const currentIndex = allMedia.findIndex(m => m.fileId === selectedMedia.fileId);
-
-        const goToPrevious = () => {
-          hapticFeedback.light();
-          const prevIndex = currentIndex === 0 ? allMedia.length - 1 : currentIndex - 1;
-          const prevMedia = allMedia[prevIndex];
-          setSelectedMedia({
-            type: prevMedia.type,
-            fileId: prevMedia.fileId,
-            setIndex: selectedMedia.setIndex,
-            photoIndex: prevMedia.photoIndex
-          });
-        };
-
-        const goToNext = () => {
-          hapticFeedback.light();
-          const nextIndex = (currentIndex + 1) % allMedia.length;
-          const nextMedia = allMedia[nextIndex];
-          setSelectedMedia({
-            type: nextMedia.type,
-            fileId: nextMedia.fileId,
-            setIndex: selectedMedia.setIndex,
-            photoIndex: nextMedia.photoIndex
-          });
-        };
-
-        const goToMedia = (index: number) => {
-          hapticFeedback.light();
-          const media = allMedia[index];
-          setSelectedMedia({
-            type: media.type,
-            fileId: media.fileId,
-            setIndex: selectedMedia.setIndex,
-            photoIndex: media.photoIndex
-          });
-        };
-
-        const minSwipeDistance = 50;
-
-        const onTouchStart = (e: React.TouchEvent) => {
-          setTouchEnd(null);
-          setTouchStart(e.targetTouches[0].clientX);
-        };
-
-        const onTouchMove = (e: React.TouchEvent) => {
-          setTouchEnd(e.targetTouches[0].clientX);
-        };
-
-        const onTouchEnd = () => {
-          if (!touchStart || !touchEnd) return;
-          const distance = touchStart - touchEnd;
-          const isLeftSwipe = distance > minSwipeDistance;
-          const isRightSwipe = distance < -minSwipeDistance;
-
-          if (isLeftSwipe) {
-            goToNext();
-          }
-          if (isRightSwipe) {
-            goToPrevious();
-          }
-        };
-
-        const isMediaLoading = !mediaCache[selectedMedia.fileId];
-
-        return (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.95)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              zIndex: 1000,
-              padding: '20px 20px 80px 20px',
-            }}
-          >
-            {/* Header */}
-            <div style={{ width: '100%', textAlign: 'center', color: 'white', zIndex: 20 }}>
-              <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
-                Set {selectedMedia.setIndex + 1} - {selectedMedia.type === 'photo' ? `Photo ${(selectedMedia.photoIndex || 0) + 1}` : 'Video'}
-              </div>
-              <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                {currentIndex + 1} of {allMedia.length}
-              </div>
-            </div>
-
-            {/* Main Content Area with Swipe */}
-            <div
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                position: 'relative'
-              }}
-            >
-              {/* Navigation Arrows */}
-              {allMedia.length > 1 && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      goToPrevious();
-                    }}
-                    style={{
-                      position: 'absolute',
-                      left: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'rgba(255,255,255,0.2)',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      borderRadius: '50%',
-                      width: '40px',
-                      height: '40px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      fontSize: '20px',
-                      color: 'white',
-                      zIndex: 10
-                    }}
-                  >
-                    ‹
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      goToNext();
-                    }}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'rgba(255,255,255,0.2)',
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      borderRadius: '50%',
-                      width: '40px',
-                      height: '40px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      fontSize: '20px',
-                      color: 'white',
-                      zIndex: 10
-                    }}
-                  >
-                    ›
-                  </button>
-                </>
-              )}
-
-              {/* Media Display */}
-              {isMediaLoading ? (
-                <div style={{
-                  fontSize: '64px',
-                  padding: '40px',
-                  background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '16px',
-                  color: 'white'
-                }}>
-                  ⏳
-                </div>
-              ) : (
-                selectedMedia.type === 'photo' ? (
-                  <img
-                    src={mediaCache[selectedMedia.fileId]}
-                    alt="Task photo"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      borderRadius: '8px',
-                      objectFit: 'contain'
-                    }}
-                  />
-                ) : (
-                  <video
-                    src={mediaCache[selectedMedia.fileId]}
-                    controls
-                    autoPlay
-                    playsInline
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      borderRadius: '8px',
-                      backgroundColor: '#000'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                )
-              )}
-            </div>
-
-            {/* iOS-Style Thumbnail Strip */}
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: '100%',
-                background: 'rgba(0,0,0,0.5)',
-                backdropFilter: 'blur(10px)',
-                padding: '12px',
-                borderRadius: '12px',
-                position: 'fixed',
-                bottom: '20px',
-                left: '20px',
-                right: '20px',
-                maxWidth: 'calc(100% - 40px)',
-                zIndex: 20
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                WebkitOverflowScrolling: 'touch'
-              }}>
-                {allMedia.map((media, index) => {
-                  const isActive = index === currentIndex;
-                  const thumbnailUrl = mediaCache[media.fileId];
-
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => goToMedia(index)}
-                      style={{
-                        minWidth: '60px',
-                        width: '60px',
-                        height: '60px',
-                        background: thumbnailUrl
-                          ? `url(${thumbnailUrl}) center/cover`
-                          : 'var(--tg-theme-secondary-bg-color)',
-                        borderRadius: '8px',
-                        border: isActive ? '3px solid white' : '2px solid rgba(255,255,255,0.3)',
-                        cursor: 'pointer',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                        opacity: isActive ? 1 : 0.6,
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      {media.type === 'video' && (
-                        <div style={{
-                          position: 'absolute',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          background: 'rgba(255,255,255,0.9)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '10px'
-                        }}>
-                          ▶️
-                        </div>
-                      )}
-                      {!thumbnailUrl && (
-                        <div style={{ fontSize: '24px' }}>
-                          {media.type === 'photo' ? '📷' : '🎥'}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Close button and hint */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: '8px'
-              }}>
-                {allMedia.length > 1 ? (
-                  <div style={{
-                    color: 'rgba(255,255,255,0.6)',
-                    fontSize: '11px'
-                  }}>
-                    ← Swipe →
-                  </div>
-                ) : (
-                  <div />
-                )}
-                <button
-                  onClick={() => setSelectedMedia(null)}
-                  style={{
-                    padding: '4px 12px',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  ✕ Close
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

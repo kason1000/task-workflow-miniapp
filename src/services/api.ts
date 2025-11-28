@@ -62,13 +62,11 @@ class ApiService {
     if (archived !== undefined) params.append('archived', archived.toString());
     
     const response = await this.request<any>(`/tasks?${params.toString()}`);
-    // Handle both {tasks: [...]} and direct array
     return { tasks: response.tasks || response };
   }
 
   async getTask(taskId: string) {
     const response = await this.request<any>(`/tasks/${taskId}`);
-    // Handle both {task: ...} and direct object
     return { task: response.task || response };
   }
 
@@ -85,6 +83,30 @@ class ApiService {
     });
   }
 
+  async deleteUpload(taskId: string, fileId: string) {
+    return this.request<any>(`/tasks/${taskId}/uploads/${fileId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async archiveTask(taskId: string) {
+    return this.request<any>(`/tasks/${taskId}/archive`, {
+      method: 'POST',
+    });
+  }
+
+  async restoreTask(taskId: string) {
+    return this.request<any>(`/tasks/${taskId}/restore`, {
+      method: 'POST',
+    });
+  }
+
+  async sendTaskToChat(taskId: string) {
+    return this.request<any>(`/tasks/${taskId}/send-to-chat`, {
+      method: 'POST',
+    });
+  }
+
   // Roles
   async getMyRole() {
     return this.request<{ userId: number; role: string }>('/roles/me');
@@ -98,12 +120,6 @@ class ApiService {
     return this.request<any>('/roles', {
       method: 'POST',
       body: JSON.stringify({ userId, role }),
-    });
-  }
-
-  async sendTaskToChat(taskId: string) {
-    return this.request<any>(`/tasks/${taskId}/send-to-chat`, {
-      method: 'POST',
     });
   }
 
@@ -124,10 +140,7 @@ class ApiService {
       throw new Error('Invalid media URL response');
     } catch (error) {
       console.error('Failed to get media URL for', fileId, error);
-      // Fallback: return direct Telegram URL
-      return { 
-        fileUrl: `https://api.telegram.org/file/bot${config.telegramBotToken}/photos/${fileId}.jpg` 
-      };
+      throw error;
     }
   }
 

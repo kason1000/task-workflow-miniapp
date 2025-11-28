@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Task, TaskStatus } from '../types';
-import { hapticFeedback } from '../utils/telegram';
+import { hapticFeedback, showAlert } from '../utils/telegram';
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
@@ -20,6 +20,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sendingToChat, setSendingToChat] = useState<string | null>(null);
   const [filter, setFilter] = useState<{
     status?: TaskStatus;
     archived: boolean;
@@ -34,7 +35,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       setTasks(response.tasks);
       
       // Load thumbnails for tasks with createdPhoto
-      response.tasks.forEach(async (task) => {
+      response.tasks.forEach(async (task: Task) => {
         if (task.createdPhoto && !thumbnails[task.createdPhoto.file_id]) {
           try {
             const { fileUrl } = await api.getMediaUrl(task.createdPhoto.file_id);
@@ -73,6 +74,23 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const handleRefresh = () => {
     hapticFeedback.medium();
     fetchTasks();
+  };
+
+  const handleSendToChat = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSendingToChat(taskId);
+    hapticFeedback.medium();
+    
+    try {
+      await api.sendTaskToChat(taskId);
+      hapticFeedback.success();
+      showAlert('✅ Task sent to chat!');
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Failed to send: ${error.message}`);
+    } finally {
+      setSendingToChat(null);
+    }
   };
 
   if (loading) {
@@ -176,22 +194,37 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       ) : (
         <div>
           {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="card"
-              onClick={() => handleTaskClick(task)}
-              style={{
-                cursor: 'pointer',
-                transition: 'transform 0.1s',
-              }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.transform = 'scale(0.98)';
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              <TaskCard task={task} thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined} />
+            <div key={task.id} className="card">
+              <div onClick={() => handleTaskClick(task)} style={{ cursor: 'pointer' }}>
+                <TaskCard 
+                  task={task} 
+                  thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined} 
+                />
+              </div>
+              
+              {/* Send to Chat Button - Outside clickable area */}
+              <div style={{ marginTop: '12px' }}>
+                <button
+                  onClick={(e) => handleSendToChat(task.id, e)}
+                  disabled={sendingToChat === task.id}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '14px',
+                    background: 'var(--tg-theme-button-color)',
+                    color: 'var(--tg-theme-button-text-color)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {sendingToChat === task.id ? '⏳ Sending...' : '💬 Send to Chat'}
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -4,8 +4,8 @@ import { api } from './services/api';
 import { Task } from './types';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
-import { CreateTaskMessage } from './components/CreateTaskMessage';
 import { ShareScreen } from './components/ShareScreen';
+import { CreateTaskMessage } from './components/CreateTaskForm';
 import { GalleryView } from './components/GalleryView';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery';
@@ -18,6 +18,8 @@ function App() {
   const [view, setView] = useState<View>('list');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [galleryInitialSet, setGalleryInitialSet] = useState(0);
+  const [galleryInitialPhoto, setGalleryInitialPhoto] = useState(0);
 
   useEffect(() => {
     console.log('Initializing app...');
@@ -28,7 +30,6 @@ function App() {
       console.log('Telegram user:', tgUser);
       setUser(tgUser);
 
-      // Check URL params
       const urlParams = new URLSearchParams(window.location.search);
       const taskIdParam = urlParams.get('taskId');
       const viewParam = urlParams.get('view');
@@ -40,7 +41,6 @@ function App() {
           console.log('Role data:', roleData);
           setRole(roleData.role);
 
-          // Handle URL params
           if (taskIdParam) {
             console.log('Loading task from URL:', taskIdParam);
             try {
@@ -56,7 +56,6 @@ function App() {
               }
             } catch (err) {
               console.error('Failed to load task from URL:', err);
-              setError(`Failed to load task: ${err}`);
             }
           }
         } catch (error: any) {
@@ -115,6 +114,13 @@ function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleOpenGallery = (setIndex: number, photoIndex: number) => {
+    setGalleryInitialSet(setIndex);
+    setGalleryInitialPhoto(photoIndex);
+    setView('gallery');
+    window.history.pushState({}, '', `?taskId=${selectedTask?.id}&view=gallery`);
+  };
+
   if (loading) {
     return (
       <div className="container">
@@ -171,6 +177,7 @@ function App() {
           userRole={role}
           onBack={handleBackToList}
           onTaskUpdated={handleTaskUpdated}
+          onOpenGallery={handleOpenGallery}
         />
       )}
 
@@ -191,6 +198,8 @@ function App() {
           onBack={handleBackToDetail}
           onTaskUpdated={handleTaskUpdated}
           userRole={role}
+          initialSetIndex={galleryInitialSet}
+          initialPhotoIndex={galleryInitialPhoto}
         />
       )}
     </div>
