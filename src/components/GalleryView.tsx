@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Task } from '../types';
 import { api } from '../services/api';
-import { X, Share2, Trash2 } from 'lucide-react';
+import { X, Share2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 
@@ -37,21 +37,17 @@ export function GalleryView({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [imageScale, setImageScale] = useState(1);
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   
   const mediaContainerRef = useRef<HTMLDivElement>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   
-  // Touch handling for swipe
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
-  
-  // Pinch zoom handling
   const initialDistance = useRef<number>(0);
   const initialScale = useRef<number>(1);
 
-  // Get current set's media
   const getCurrentSetMedia = (): MediaItem[] => {
     const set = task.sets[currentSetIndex];
     if (!set) return [];
@@ -88,7 +84,6 @@ export function GalleryView({
   useEffect(() => {
     setLoading(false);
 
-    // Load all media URLs
     task.sets.forEach(set => {
       set.photos?.forEach(async (photo) => {
         try {
@@ -112,23 +107,27 @@ export function GalleryView({
     });
   }, [task.id]);
 
-  // Reset zoom when media changes
   useEffect(() => {
     setImageScale(1);
-    setImagePosition({ x: 0, y: 0 });
   }, [currentMediaIndex, currentSetIndex]);
 
-  // Reset to first media when set changes
   useEffect(() => {
     setCurrentMediaIndex(0);
+    
+    // Animate thumbnail strip to current set
+    if (thumbnailContainerRef.current && task.sets.length > 1) {
+      const setWidth = 280;
+      thumbnailContainerRef.current.scrollTo({
+        left: currentSetIndex * setWidth,
+        behavior: 'smooth'
+      });
+    }
   }, [currentSetIndex]);
 
-  // Swipe handlers for media navigation
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       touchStartX.current = e.touches[0].clientX;
-    } else if (e.touches.length === 2) {
-      // Pinch zoom start
+    } else if (e.touches.length === 2 && currentMedia?.type === 'photo') {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       initialDistance.current = Math.sqrt(dx * dx + dy * dy);
@@ -140,27 +139,34 @@ export function GalleryView({
     if (e.touches.length === 1) {
       touchEndX.current = e.touches[0].clientX;
     } else if (e.touches.length === 2 && currentMedia?.type === 'photo') {
-      // Pinch zoom
       e.preventDefault();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const distance = Math.sqrt(dx * dx + dy * dy);
       const scale = (distance / initialDistance.current) * initialScale.current;
-      setImageScale(Math.min(Math.max(scale, 0.5), 3)); // Limit between 0.5x and 3x
+      setImageScale(Math.min(Math.max(scale, 0.5), 3));
     }
   };
 
   const handleTouchEnd = () => {
-    if (imageScale > 1) return; // Don't swipe when zoomed
+    if (imageScale > 1) return;
     
     const swipeThreshold = 50;
     const diff = touchStartX.current - touchEndX.current;
 
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0) {
-        handleNextMedia();
+        setSwipeDirection('left');
+        setTimeout(() => {
+          handleNextMedia();
+          setSwipeDirection(null);
+        }, 150);
       } else {
-        handlePreviousMedia();
+        setSwipeDirection('right');
+        setTimeout(() => {
+          handlePreviousMedia();
+          setSwipeDirection(null);
+        }, 150);
       }
     }
   };
@@ -185,23 +191,15 @@ export function GalleryView({
     }
   };
 
-  // Thumbnail swipe for set switching
-  const handleThumbnailTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleThumbnailTouchEnd = () => {
-    const swipeThreshold = 100;
-    const diff = touchStartX.current - touchEndX.current;
-
-    if (Math.abs(diff) > swipeThreshold) {
-      if (diff > 0 && currentSetIndex < task.sets.length - 1) {
-        setCurrentSetIndex(prev => prev + 1);
-        hapticFeedback.medium();
-      } else if (diff < 0 && currentSetIndex > 0) {
-        setCurrentSetIndex(prev => prev - 1);
-        hapticFeedback.medium();
-      }
+  const handleDoubleTap = () => {
+    if (currentMedia?.type !== 'photo') return;
+    
+    if (imageScale === 1) {
+      setImageScale(2);
+      hapticFeedback.light();
+    } else {
+      setImageScale(1);
+      hapticFeedback.light();
     }
   };
 
@@ -340,19 +338,6 @@ export function GalleryView({
     }
   };
 
-  // Double tap to reset zoom
-  const handleDoubleTap = () => {
-    if (imageScale === 1) {
-      setImageScale(2);
-      hapticFeedback.light();
-    } else {
-      setImageScale(1);
-      setImagePosition({ x: 0, y: 0 });
-      hapticFeedback.light();
-    }
-  };
-
-  // Get uploader name
   const getUploaderName = (userId: number): string => {
     if (WebApp.initDataUnsafe?.user?.id === userId) {
       return WebApp.initDataUnsafe.user.first_name || `User ${userId}`;
@@ -391,8 +376,7 @@ export function GalleryView({
       <div 
         ref={mediaContainerRef}
         onClick={(e) => {
-          // Tap empty space to close
-          if (e.target === e.currentTarget) {
+          if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG') {
             onBack();
           }
         }}
@@ -410,70 +394,148 @@ export function GalleryView({
           touchAction: imageScale > 1 ? 'pan-x pan-y' : 'none'
         }}
       >
-        {/* Close Button - Top Right with higher z-index */}
+        {/* Close Button - Top Right - Better visibility */}
         <button
           onClick={onBack}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
-            width: '44px',
-            height: '44px',
-            background: 'rgba(0,0,0,0.8)',
+            top: '20px',
+            right: '20px',
+            width: '48px',
+            height: '48px',
+            background: 'rgba(0,0,0,0.85)',
             color: '#fff',
-            border: '2px solid rgba(255,255,255,0.3)',
+            border: '2px solid rgba(255,255,255,0.5)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             zIndex: 1000,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(4px)'
           }}
         >
-          <X size={24} strokeWidth={3} />
+          <X size={28} strokeWidth={2.5} />
         </button>
 
-        {/* Current Media */}
-        {currentMedia.type === 'photo' ? (
-          <img
-            ref={imageRef}
-            src={currentUrl || ''}
-            alt=""
-            style={{
-              maxWidth: imageScale === 1 ? '100%' : 'none',
-              maxHeight: imageScale === 1 ? '100%' : 'none',
-              objectFit: imageScale === 1 ? 'contain' : 'none',
-              transform: `scale(${imageScale}) translate(${imagePosition.x}px, ${imagePosition.y}px)`,
-              transition: imageScale === 1 ? 'transform 0.3s' : 'none',
-              cursor: imageScale > 1 ? 'move' : 'zoom-in'
-            }}
-          />
-        ) : (
-          <video
-            src={currentUrl || ''}
-            controls
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain'
-            }}
-          />
+        {/* Transparent Navigation Arrows - Overlay on display area */}
+        {currentSetMedia.length > 1 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePreviousMedia();
+              }}
+              style={{
+                position: 'absolute',
+                left: '20px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '60px',
+                height: '60px',
+                background: 'rgba(0,0,0,0.5)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 100,
+                opacity: 0.7,
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+            >
+              <ChevronLeft size={32} strokeWidth={2} />
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextMedia();
+              }}
+              style={{
+                position: 'absolute',
+                right: '20px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '60px',
+                height: '60px',
+                background: 'rgba(0,0,0,0.5)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 100,
+                opacity: 0.7,
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+            >
+              <ChevronRight size={32} strokeWidth={2} />
+            </button>
+          </>
         )}
 
+        {/* Current Media with swipe animation */}
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: swipeDirection === 'left' ? 'translateX(-100%)' : swipeDirection === 'right' ? 'translateX(100%)' : 'translateX(0)',
+            transition: swipeDirection ? 'transform 0.15s ease-out' : 'transform 0.3s ease-out',
+            opacity: swipeDirection ? 0.5 : 1
+          }}
+        >
+          {currentMedia.type === 'photo' ? (
+            <img
+              ref={imageRef}
+              src={currentUrl || ''}
+              alt=""
+              style={{
+                maxWidth: imageScale === 1 ? '95%' : 'none',
+                maxHeight: imageScale === 1 ? '95%' : 'none',
+                objectFit: 'contain',
+                transform: `scale(${imageScale})`,
+                transition: imageScale === 1 ? 'transform 0.3s' : 'none',
+                cursor: imageScale > 1 ? 'move' : 'pointer'
+              }}
+            />
+          ) : (
+            <video
+              src={currentUrl || ''}
+              controls
+              style={{
+                width: '95%',
+                height: '95%',
+                objectFit: 'contain'
+              }}
+            />
+          )}
+        </div>
+
         {!currentUrl && (
-          <div style={{ color: '#fff', fontSize: '24px' }}>⏳</div>
+          <div style={{ color: '#fff', fontSize: '32px', zIndex: 10 }}>⏳</div>
         )}
         
-        {/* Zoom hint for photos */}
         {currentMedia.type === 'photo' && imageScale === 1 && (
           <div style={{
             position: 'absolute',
-            bottom: '200px',
+            bottom: '240px',
             left: '50%',
             transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.6)',
-            fontSize: '12px',
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: '11px',
             textAlign: 'center',
             pointerEvents: 'none'
           }}>
@@ -482,54 +544,57 @@ export function GalleryView({
         )}
       </div>
 
-      {/* Fixed Bottom Section */}
+      {/* Fixed Bottom Section - Position locked */}
       <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
         background: 'rgba(0, 0, 0, 0.95)',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-        paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+        zIndex: 200
       }}>
-        {/* Compact Info Text - One Line */}
+        {/* Compact Info Text - One Line, Fixed Position */}
         <div style={{
-          padding: '8px 16px',
+          padding: '10px 16px',
           color: '#fff',
           fontSize: '11px',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           alignItems: 'center',
+          gap: '8px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          gap: '8px'
+          whiteSpace: 'nowrap',
+          overflow: 'hidden'
         }}>
-          <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            <span style={{ fontWeight: '600' }}>Set {currentSetIndex + 1}/{task.sets.length}</span>
-            {' • '}
-            <span>{currentMedia.type === 'photo' ? `Photo ${(currentMedia.photoIndex ?? 0) + 1}` : 'Video'}</span>
-          </div>
-          <div style={{ color: '#aaa', flexShrink: 0 }}>
-            {getUploaderName(currentMedia.uploadedBy)}
-            {' • '}
-            {new Date(currentMedia.uploadedAt).toLocaleDateString()}
-          </div>
+          <span style={{ fontWeight: '600' }}>Set {currentSetIndex + 1}/{task.sets.length}</span>
+          <span style={{ color: '#888' }}>•</span>
+          <span>{currentMedia.type === 'photo' ? `Photo ${(currentMedia.photoIndex ?? 0) + 1}` : 'Video'}</span>
+          <span style={{ color: '#888' }}>•</span>
+          <span style={{ color: '#aaa' }}>{getUploaderName(currentMedia.uploadedBy)}</span>
+          <span style={{ color: '#888' }}>•</span>
+          <span style={{ color: '#aaa' }}>{new Date(currentMedia.uploadedAt).toLocaleDateString()}</span>
         </div>
 
-        {/* Horizontal Thumbnail Strip - Current Set Only, Swipeable */}
+        {/* Horizontal Thumbnail Strip - Current Set Only, Swipeable with animation */}
         <div 
           ref={thumbnailContainerRef}
-          onTouchStart={(e) => touchStartX.current = e.touches[0].clientX}
-          onTouchMove={(e) => touchEndX.current = e.touches[0].clientX}
-          onTouchEnd={handleThumbnailTouchEnd}
           style={{
             overflowX: 'auto',
             scrollSnapType: 'x mandatory',
             padding: '12px 16px',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
+            WebkitOverflowScrolling: 'touch',
+            scrollBehavior: 'smooth'
           }}
         >
           <div style={{ 
             display: 'flex', 
             gap: '8px',
-            justifyContent: currentSetMedia.length <= 5 ? 'center' : 'flex-start'
+            justifyContent: currentSetMedia.length <= 5 ? 'center' : 'flex-start',
+            transition: 'transform 0.3s ease-out'
           }}>
             {currentSetMedia.map((media, idx) => {
               const isActive = idx === currentMediaIndex;
@@ -557,7 +622,9 @@ export function GalleryView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     position: 'relative',
-                    scrollSnapAlign: 'center'
+                    scrollSnapAlign: 'center',
+                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                    transition: 'all 0.2s ease-out'
                   }}
                 >
                   {thumbnailUrl ? (
@@ -596,7 +663,7 @@ export function GalleryView({
           </div>
         </div>
 
-        {/* Set Navigation Dots */}
+        {/* Set Navigation Dots with swipe animation */}
         {task.sets.length > 1 && (
           <div style={{
             display: 'flex',
@@ -613,21 +680,21 @@ export function GalleryView({
                   hapticFeedback.light();
                 }}
                 style={{
-                  width: currentSetIndex === idx ? '24px' : '8px',
+                  width: currentSetIndex === idx ? '28px' : '8px',
                   height: '8px',
                   borderRadius: '4px',
                   background: currentSetIndex === idx 
                     ? 'var(--tg-theme-button-color)' 
                     : 'rgba(255,255,255,0.3)',
                   cursor: 'pointer',
-                  transition: 'all 0.3s'
+                  transition: 'all 0.3s ease-out'
                 }}
               />
             ))}
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Fixed Position */}
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -639,7 +706,7 @@ export function GalleryView({
             style={{
               flex: 1,
               padding: '12px',
-              background: 'rgba(59, 130, 246, 0.9)',
+              background: actionLoading ? 'rgba(107, 114, 128, 0.9)' : 'rgba(59, 130, 246, 0.9)',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -648,11 +715,12 @@ export function GalleryView({
               justifyContent: 'center',
               gap: '6px',
               fontSize: '14px',
-              fontWeight: '500'
+              fontWeight: '500',
+              cursor: actionLoading ? 'not-allowed' : 'pointer'
             }}
           >
-            <Share2 size={18} />
-            Set {currentSetIndex + 1}
+            {actionLoading ? '⏳' : <Share2 size={18} />}
+            {actionLoading ? 'Loading...' : `Set ${currentSetIndex + 1}`}
           </button>
 
           {canDelete && (
@@ -662,14 +730,15 @@ export function GalleryView({
                 disabled={actionLoading}
                 style={{
                   padding: '12px',
-                  background: 'rgba(239, 68, 68, 0.8)',
+                  background: 'rgba(239, 68, 68, 0.85)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: '48px'
+                  minWidth: '48px',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer'
                 }}
                 title="Delete current media"
               >
@@ -680,8 +749,8 @@ export function GalleryView({
                 onClick={handleDeleteCurrentSet}
                 disabled={actionLoading}
                 style={{
-                  padding: '12px 16px',
-                  background: 'rgba(239, 68, 68, 0.9)',
+                  padding: '12px 14px',
+                  background: 'rgba(239, 68, 68, 0.95)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '8px',
@@ -690,7 +759,8 @@ export function GalleryView({
                   justifyContent: 'center',
                   gap: '4px',
                   fontSize: '12px',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer'
                 }}
                 title="Delete entire set"
               >
@@ -702,10 +772,32 @@ export function GalleryView({
         </div>
       </div>
 
-      {/* Hide scrollbar */}
+      {/* CSS for animations and scrollbar hiding */}
       <style>{`
         div::-webkit-scrollbar {
           display: none;
+        }
+        
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideInLeft {
+          from {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
       `}</style>
     </div>
