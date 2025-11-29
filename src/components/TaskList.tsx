@@ -481,69 +481,99 @@ function TaskCard({
   }).length;
 
   const progress = (completedSets / task.requireSets) * 100;
-  const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
+  const doneName = task.doneByName || (task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null);
+
+  // Helper for relative time
+  const getRelativeTime = (date: string) => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
-      <div style={{
-        width: '80px',
-        height: '80px',
-        minWidth: '80px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        background: thumbnailUrl 
-          ? `url(${thumbnailUrl}) center/cover`
-          : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '32px',
-        border: '2px solid var(--tg-theme-secondary-bg-color)'
-      }}>
-        {!thumbnailUrl && '📷'}
+      {/* Thumbnail with badge overlay */}
+      <div style={{ position: 'relative' }}>
+        <div style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          background: thumbnailUrl 
+            ? `url(${thumbnailUrl}) center/cover`
+            : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '32px',
+          border: '2px solid var(--tg-theme-secondary-bg-color)'
+        }}>
+          {!thumbnailUrl && '📷'}
+        </div>
+        
+        {/* Video badge on thumbnail */}
+        {task.labels.video && (
+          <div style={{
+            position: 'absolute',
+            bottom: '4px',
+            right: '4px',
+            background: 'rgba(0,0,0,0.75)',
+            borderRadius: '4px',
+            padding: '2px 6px',
+            fontSize: '12px'
+          }}>
+            🎥
+          </div>
+        )}
       </div>
+
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        {/* Title + Status */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start', 
+          marginBottom: '8px',
+          gap: '8px'
+        }}>
           <h3 style={{ 
             fontSize: '16px', 
             fontWeight: '600', 
-            flex: 1, 
-            marginRight: '12px',
+            flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            lineHeight: '1.3'
           }}>
             {task.title}
           </h3>
-          <span className={`badge ${statusColors[task.status]}`}>
+          <span className={`badge ${statusColors[task.status]}`} style={{
+            fontSize: '11px',
+            padding: '3px 8px',
+            flexShrink: 0
+          }}>
             {task.status}
           </span>
         </div>
+
+        {/* Progress Bar */}
         <div style={{ marginBottom: '8px' }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '12px',
+            fontSize: '11px',
             color: 'var(--tg-theme-hint-color)',
-            marginBottom: '4px',
-            gap: '8px'
+            marginBottom: '4px'
           }}>
-            <span>Progress</span>
-            {doneName && task.status !== 'New' && task.status !== 'Received' && (
-              <span style={{ 
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
-                textAlign: 'center'
-              }}>
-                👤 {doneName}
-              </span>
-            )}
-            <span style={{ whiteSpace: 'nowrap' }}>
-              {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
-            </span>
+            <span>{completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}</span>
+            <span>{Math.round(progress)}%</span>
           </div>
           <div style={{
             height: '6px',
@@ -559,19 +589,27 @@ function TaskCard({
             }} />
           </div>
         </div>
+
+        {/* Meta info */}
         <div style={{
           display: 'flex',
-          gap: '12px',
-          fontSize: '12px',
+          gap: '8px',
+          fontSize: '11px',
           color: 'var(--tg-theme-hint-color)',
-          flexWrap: 'wrap',
           alignItems: 'center'
         }}>
-          {task.labels.video && (
-            <span>🎥</span>
-          )}
-          {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-            <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+          {doneName && task.status !== 'New' && task.status !== 'Received' ? (
+            <>
+              <span>👤 {doneName}</span>
+              {task.lastModifiedAt && (
+                <>
+                  <span style={{ color: 'var(--tg-theme-hint-color)', opacity: 0.5 }}>•</span>
+                  <span>{getRelativeTime(task.lastModifiedAt)}</span>
+                </>
+              )}
+            </>
+          ) : (
+            <span>{getRelativeTime(task.createdAt)}</span>
           )}
         </div>
       </div>

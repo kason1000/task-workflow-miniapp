@@ -31,6 +31,7 @@ export interface Task {
   
   createdBy: number;
   doneBy: number | null;
+  doneByName?: string;
   createdAt: string;
   archived: boolean;
   version: number;
