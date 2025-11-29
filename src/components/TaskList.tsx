@@ -1,29 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { api } from '../services/api';
 import { Task, TaskStatus } from '../types';
-import { hapticFeedback, showAlert } from '../utils/telegram';
-import WebApp from '@twa-dev/sdk';
+import { api } from '../services/api';
+import { hapticFeedback } from '../utils/telegram';
+import { Archive, RefreshCw } from 'lucide-react';
+
+const statuses: TaskStatus[] = ['New', 'Received', 'Submitted', 'Completed'];
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
 }
 
-const statusColors: Record<TaskStatus, string> = {
-  New: 'badge-new',
-  Received: 'badge-received',
-  Submitted: 'badge-submitted',
-  Redo: 'badge-redo',
-  Completed: 'badge-completed',
-  Archived: 'badge-archived',
-};
-
 export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<{
-    status: 'all' | 'InProgress' | TaskStatus;
+    status: 'all' | TaskStatus;
     archived: boolean;
   }>({ status: 'all', archived: false });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -32,116 +24,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
-
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const roleData = await api.getMyRole();
-        setUserRole(roleData.role);
-      } catch (error) {
-        console.error('Failed to fetch role:', error);
-      }
-    };
-    fetchUserRole();
-  }, []);
-
-  const getFilterOrder = (): TaskStatus[] => {
-    if (userRole === 'Member') {
-      return ['Redo', 'Received', 'New', 'Submitted', 'Completed'];
-    } else if (userRole === 'Admin' || userRole === 'Lead') {
-      return ['Submitted', 'Redo', 'Received', 'New', 'Completed'];
-    } else if (userRole === 'Viewer') {
-      return ['Completed'];
-    }
-    return ['New', 'Received', 'Submitted', 'Redo', 'Completed'];
-  };
-
-  const fetchTasks = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let statusFilter = filter.status === 'all' ? undefined : filter.status;
-      
-      if (userRole === 'Viewer' && filter.status === 'InProgress') {
-        statusFilter = undefined;
-      }
-      
-      const data = await api.getTasks(statusFilter, filter.archived);
-      
-      let filteredTasks = data.tasks;
-      if (userRole === 'Viewer' && filter.status === 'InProgress') {
-        filteredTasks = data.tasks.filter((task: Task) => task.status !== 'Completed' && !task.archived);
-      }
-      
-      if (filter.status === 'all') {
-        const statusOrder = getFilterOrder();
-        filteredTasks.sort((a: Task, b: Task) => {
-          const aIndex = statusOrder.indexOf(a.status);
-          const bIndex = statusOrder.indexOf(b.status);
-          
-          const aPos = aIndex === -1 ? 999 : aIndex;
-          const bPos = bIndex === -1 ? 999 : bIndex;
-          
-          if (aPos !== bPos) {
-            return aPos - bPos;
-          }
-          
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
-      }
-      
-      setTasks(filteredTasks);
-      
-      // Load thumbnails
-      const thumbnailPromises = filteredTasks
-        .filter((task: Task) => task.createdPhoto)
-        .map(async (task: Task) => {
-          try {
-            const { fileUrl } = await api.getMediaUrl(task.createdPhoto.file_id);
-            return { fileId: task.createdPhoto.file_id, url: fileUrl };
-          } catch {
-            return null;
-          }
-        });
-      
-      const thumbnailResults = await Promise.all(thumbnailPromises);
-      const thumbnailMap: Record<string, string> = {};
-      thumbnailResults.forEach((result) => {
-        if (result) thumbnailMap[result.fileId] = result.url;
-      });
-      
-      setThumbnails(thumbnailMap);
-
-      // Load user names for doneBy
-      const userIds = new Set<number>();
-      filteredTasks.forEach((task: Task) => {
-        if (task.doneBy) userIds.add(task.doneBy);
-      });
-
-      const currentUserId = WebApp.initDataUnsafe?.user?.id;
-      const currentUserName = WebApp.initDataUnsafe?.user?.first_name;
-
-      const nameMap: Record<number, string> = {};
-      
-      if (currentUserId && currentUserName) {
-        nameMap[currentUserId] = currentUserName;
-      }
-
-      Array.from(userIds).forEach(userId => {
-        if (!nameMap[userId]) {
-          nameMap[userId] = `User ${userId}`;
-        }
-      });
-
-      setUserNames(nameMap);
-      
-    } catch (error: any) {
-      console.error('❌ Fetch error:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     fetchTasks();
@@ -153,13 +35,50 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
   });
 
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch role
+      const roleData = await api.getMyRole();
+      setUserRole(roleData.role);
+
+      // Fetch tasks with proper archived filter
+      const status = filter.status === 'all' ? undefined : filter.status;
+      const { tasks: fetchedTasks } = await api.getTasks(status, filter.archived);
+      
+      setTasks(fetchedTasks);
+
+      // Load thumbnails
+      const newThumbnails: Record<string, string> = {};
+      for (const task of fetchedTasks) {
+        if (task.createdPhoto?.file_id && !thumbnails[task.createdPhoto.file_id]) {
+          try {
+            const { url } = await api.getMediaUrl(task.createdPhoto.file_id);
+            newThumbnails[task.createdPhoto.file_id] = url;
+          } catch (err) {
+            console.error('Failed to load thumbnail:', err);
+          }
+        }
+      }
+      setThumbnails(prev => ({ ...prev, ...newThumbnails }));
+
+    } catch (error: any) {
+      console.error('Failed to fetch tasks:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStatusFilter = (status?: TaskStatus) => {
     if (scrollContainerRef.current) {
       scrollPositionRef.current = scrollContainerRef.current.scrollLeft;
     }
     
     hapticFeedback.light();
-    setFilter({ ...filter, status: status || 'all' });
+    setFilter({ status: status || 'all', archived: false });
   };
 
   const handleArchiveToggle = () => {
@@ -167,7 +86,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setFilter({ ...filter, archived: !filter.archived });
   };
 
-  const handleTaskClickWithHaptic = (task: Task) => {
+  const handleTaskClick = (task: Task) => {
     hapticFeedback.medium();
     onTaskClick(task);
   };
@@ -177,182 +96,149 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     fetchTasks();
   };
 
-  const handleSendToChat = async (taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    try {
-      setSending((prev: Record<string, boolean>) => ({ ...prev, [taskId]: true }));
-      await api.sendTaskToChat(taskId);
-      hapticFeedback.success();
-      
-      setTimeout(() => {
-        WebApp.close();
-      }, 300);
-    } catch (error: any) {
-      console.error('Failed to send task:', error);
-      showAlert('❌ Failed to send task: ' + error.message);
-      hapticFeedback.error();
-      setSending((prev: Record<string, boolean>) => ({ ...prev, [taskId]: false }));
-    }
-  };
-
   if (loading) {
     return (
-      <div className="card">
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-          <p>Loading tasks...</p>
-        </div>
+      <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <p>Loading tasks...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="card">
-        <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
-          <p>❌ {error}</p>
-          <button onClick={handleRefresh} style={{ marginTop: '12px' }}>
-            Retry
-          </button>
-        </div>
+      <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <p style={{ color: '#ef4444', marginBottom: '12px' }}>Error: {error}</p>
+        <button onClick={handleRefresh}>Retry</button>
       </div>
     );
   }
 
-  const statusOrder = getFilterOrder();
-  const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
+  const canSeeArchived = userRole === 'Admin' || userRole === 'Lead' || userRole === 'Viewer';
 
   return (
     <div>
-      {/* Filter Bar */}
-      <div className="card" style={{ 
+      {/* Fixed Filter Bar */}
+      <div style={{
         position: 'sticky',
-        top: '60px',
+        top: '60px', // Below the main header
         zIndex: 50,
-        marginTop: '0',
-        marginBottom: '12px',
+        background: 'var(--tg-theme-bg-color)',
+        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
+        padding: '12px 16px',
         marginLeft: '-16px',
         marginRight: '-16px',
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        paddingTop: '12px',
-        paddingBottom: '12px',
-        background: 'var(--tg-theme-bg-color)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        marginBottom: '12px'
       }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{
+          maxWidth: '600px',
+          margin: '0 auto'
+        }}>
+          {/* Status Filters */}
           <div
             ref={scrollContainerRef}
             style={{
               display: 'flex',
-              gap: '8px',
+              gap: '6px',
               overflowX: 'auto',
-              flex: 1,
-              scrollbarWidth: 'thin',
-              WebkitOverflowScrolling: 'touch',
-              paddingBottom: '4px'
+              paddingBottom: '4px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
             }}
           >
             <button
-              onClick={() => handleStatusFilter(undefined)}
+              onClick={() => handleStatusFilter()}
               style={{
-                padding: '8px 16px',
-                fontSize: '14px',
-                background: filter.status === 'all' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                color: filter.status === 'all' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                minWidth: 'auto',
+                padding: '6px 12px',
+                fontSize: '13px',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                border: 'none'
+                background: filter.status === 'all' && !filter.archived
+                  ? 'var(--tg-theme-button-color)'
+                  : 'var(--tg-theme-secondary-bg-color)',
+                color: filter.status === 'all' && !filter.archived
+                  ? 'var(--tg-theme-button-text-color)'
+                  : 'var(--tg-theme-text-color)'
               }}
             >
-              📋 All
+              All
             </button>
-            
-            {userRole === 'Viewer' && (
-              <button
-                onClick={() => handleStatusFilter('InProgress' as TaskStatus)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  background: filter.status === 'InProgress' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                  color: filter.status === 'InProgress' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  border: 'none'
-                }}
-              >
-                🔄 In Progress
-              </button>
-            )}
-            
-            {statusOrder.map((status) => (
+
+            {statuses.map((status) => (
               <button
                 key={status}
                 onClick={() => handleStatusFilter(status)}
                 style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  background: filter.status === status ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                  color: filter.status === status ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                  minWidth: 'auto',
+                  padding: '6px 12px',
+                  fontSize: '13px',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
-                  border: 'none'
+                  background: filter.status === status && !filter.archived
+                    ? 'var(--tg-theme-button-color)'
+                    : 'var(--tg-theme-secondary-bg-color)',
+                  color: filter.status === status && !filter.archived
+                    ? 'var(--tg-theme-button-text-color)'
+                    : 'var(--tg-theme-text-color)'
                 }}
               >
                 {status}
               </button>
             ))}
-          </div>
-          
-          <div style={{ 
-            display: 'flex', 
-            gap: '8px',
-            flexShrink: 0,
-            paddingLeft: '8px',
-            borderLeft: '1px solid var(--tg-theme-hint-color)'
-          }}>
-            {canViewArchived && (
+
+            {/* Archive Toggle - Icon Button */}
+            {canSeeArchived && (
               <button
                 onClick={handleArchiveToggle}
                 style={{
-                  padding: '8px 12px',
-                  fontSize: '18px',
-                  background: filter.archived ? 'var(--tg-theme-button-color)' : 'transparent',
-                  color: filter.archived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                  minWidth: 'auto',
+                  padding: '6px 10px',
+                  fontSize: '13px',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
-                  minWidth: 'auto',
-                  border: 'none'
+                  background: filter.archived
+                    ? 'var(--tg-theme-button-color)'
+                    : 'var(--tg-theme-secondary-bg-color)',
+                  color: filter.archived
+                    ? 'var(--tg-theme-button-text-color)'
+                    : 'var(--tg-theme-text-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
                 title={filter.archived ? 'Show Active' : 'Show Archived'}
               >
-                🗃️
+                <Archive size={16} />
+                {filter.archived && <span>✓</span>}
               </button>
             )}
-            
+
+            {/* Refresh Button - Icon */}
             <button
               onClick={handleRefresh}
               style={{
-                padding: '8px 12px',
-                fontSize: '18px',
-                background: 'transparent',
-                color: 'var(--tg-theme-text-color)',
+                minWidth: 'auto',
+                padding: '6px 10px',
+                fontSize: '13px',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                minWidth: 'auto',
-                border: 'none'
+                background: 'transparent',
+                color: 'var(--tg-theme-text-color)',
+                border: '1px solid var(--tg-theme-secondary-bg-color)',
+                display: 'flex',
+                alignItems: 'center'
               }}
               title="Refresh"
             >
-              🔄
+              <RefreshCw size={16} />
             </button>
           </div>
         </div>
       </div>
-  
+
       {/* Task Count */}
       <div style={{ 
-        padding: '8px 0', 
+        padding: '0 0 12px 0', 
         color: 'var(--tg-theme-hint-color)', 
         fontSize: '14px',
         display: 'flex',
@@ -360,22 +246,17 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         alignItems: 'center'
       }}>
         <span>
-          {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
+          {filter.archived ? '🗃️ Archived' : '📋 Active'}: {tasks.length} task{tasks.length !== 1 ? 's' : ''}
         </span>
-        {filter.archived && (
-          <span style={{
-            background: 'var(--tg-theme-secondary-bg-color)',
-            padding: '2px 8px',
-            borderRadius: '4px',
-            fontSize: '12px'
-          }}>
-            🗃️ Archived
+        {filter.status !== 'all' && (
+          <span style={{ fontSize: '12px' }}>
+            ({filter.status})
           </span>
         )}
       </div>
 
       {/* Task List */}
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p style={{ fontSize: '48px', marginBottom: '12px' }}>
             {filter.archived ? '🗃️' : '📋'}
@@ -384,195 +265,104 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             {filter.archived ? 'No archived tasks' : 'No tasks found'}
           </p>
         </div>
-      ) : (
+      )}
+
+      {tasks.length > 0 && (
         <div>
           {tasks.map((task) => (
-            <div key={task.id} className="card">
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
-                <div 
-                  onClick={() => handleTaskClickWithHaptic(task)} 
-                  style={{ 
-                    flex: 1, 
-                    cursor: 'pointer',
-                    minWidth: 0
-                  }}
-                >
-                  <TaskCard 
-                    task={task} 
-                    thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
-                    userNames={userNames}
-                  />
-                </div>
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSendToChat(task.id, e);
-                  }}
-                  disabled={sending[task.id]}
-                  style={{
-                    width: '60px',
-                    padding: '8px 4px',
-                    fontSize: '11px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    background: sending[task.id] 
-                      ? 'var(--tg-theme-secondary-bg-color)' 
-                      : 'var(--tg-theme-button-color)',
-                    color: sending[task.id]
-                      ? 'var(--tg-theme-hint-color)'
-                      : 'var(--tg-theme-button-text-color)',
-                    flexShrink: 0,
-                    lineHeight: '1.2',
-                    whiteSpace: 'normal',
-                    textAlign: 'center',
-                    borderRadius: '8px'
-                  }}
-                >
-                  <span style={{ fontSize: '24px' }}>
-                    {sending[task.id] ? '⏳' : '💬'}
-                  </span>
-                  <span style={{ fontSize: '10px', fontWeight: '500' }}>
-                    {sending[task.id] ? 'Sending' : 'Send'}
-                  </span>
-                </button>
-              </div>
+            <div 
+              key={task.id} 
+              className="card"
+              onClick={() => handleTaskClick(task)}
+              style={{ cursor: 'pointer' }}
+            >
+              <TaskCard
+                task={task}
+                thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
+              />
             </div>
           ))}
         </div>
       )}
-
-      <style>{`
-        div::-webkit-scrollbar {
-          height: 6px;
-        }
-        div::-webkit-scrollbar-track {
-          background: var(--tg-theme-secondary-bg-color);
-          border-radius: 3px;
-        }
-        div::-webkit-scrollbar-thumb {
-          background: var(--tg-theme-hint-color);
-          border-radius: 3px;
-        }
-        div::-webkit-scrollbar-thumb:hover {
-          background: var(--tg-theme-button-color);
-        }
-      `}</style>
     </div>
   );
 }
 
-function TaskCard({ 
-  task, 
-  thumbnailUrl,
-  userNames 
-}: { 
-  task: Task; 
-  thumbnailUrl?: string;
-  userNames: Record<number, string>;
-}) {
-  const completedSets = task.sets.filter((set) => {
-    const hasPhotos = set.photos.length >= 3;
-    const hasVideo = task.labels.video ? !!set.video : true;
-    return hasPhotos && hasVideo;
-  }).length;
-
-  const progress = (completedSets / task.requireSets) * 100;
-  const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
+// TaskCard component (add this to the same file or import it)
+function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string }) {
+  const statusColors: Record<TaskStatus, string> = {
+    New: '#3b82f6',
+    Received: '#f59e0b',
+    Submitted: '#8b5cf6',
+    Completed: '#10b981',
+    Archived: '#6b7280',
+    Redo: '#ef4444'
+  };
 
   return (
-    <div style={{ display: 'flex', gap: '12px' }}>
-      <div style={{
-        width: '80px',
-        height: '80px',
-        minWidth: '80px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        background: thumbnailUrl 
-          ? `url(${thumbnailUrl}) center/cover`
-          : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '32px',
-        border: '2px solid var(--tg-theme-secondary-bg-color)'
-      }}>
-        {!thumbnailUrl && '📷'}
-      </div>
+    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+      {/* Thumbnail */}
+      {thumbnailUrl && (
+        <div style={{
+          width: '60px',
+          height: '60px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          flexShrink: 0,
+          background: 'var(--tg-theme-secondary-bg-color)'
+        }}>
+          <img 
+            src={thumbnailUrl} 
+            alt="Task" 
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-          <h3 style={{ 
-            fontSize: '16px', 
-            fontWeight: '600', 
-            flex: 1, 
-            marginRight: '12px',
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '4px'
+        }}>
+          <h3 style={{
+            fontSize: '15px',
+            fontWeight: '600',
+            margin: 0,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap'
           }}>
             {task.title}
           </h3>
-          <span className={`badge ${statusColors[task.status]}`}>
+
+          <span style={{
+            padding: '2px 8px',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontWeight: '500',
+            background: statusColors[task.status],
+            color: 'white',
+            whiteSpace: 'nowrap',
+            marginLeft: '8px'
+          }}>
             {task.status}
           </span>
         </div>
-        <div style={{ marginBottom: '8px' }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '12px',
-            color: 'var(--tg-theme-hint-color)',
-            marginBottom: '4px',
-            gap: '8px'
-          }}>
-            <span>Progress</span>
-            {doneName && task.status !== 'New' && task.status !== 'Received' && (
-              <span style={{ 
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
-                textAlign: 'center'
-              }}>
-                👤 {doneName}
-              </span>
-            )}
-            <span style={{ whiteSpace: 'nowrap' }}>
-              {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
-            </span>
-          </div>
-          <div style={{
-            height: '6px',
-            background: 'var(--tg-theme-bg-color)',
-            borderRadius: '3px',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${progress}%`,
-              background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
-              transition: 'width 0.3s',
-            }} />
-          </div>
-        </div>
+
         <div style={{
-          display: 'flex',
-          gap: '12px',
-          fontSize: '12px',
+          fontSize: '13px',
           color: 'var(--tg-theme-hint-color)',
-          flexWrap: 'wrap',
-          alignItems: 'center'
+          display: 'flex',
+          gap: '8px',
+          flexWrap: 'wrap'
         }}>
-          {task.labels.video && (
-            <span>🎥</span>
-          )}
-          {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-            <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
-          )}
+          <span>📦 {task.completedSets}/{task.requireSets}</span>
+          {task.labels?.video && <span>🎥</span>}
+          {task.lockedTo && <span>🔒</span>}
+          {task.archived && <span>🗃️</span>}
         </div>
       </div>
     </div>
