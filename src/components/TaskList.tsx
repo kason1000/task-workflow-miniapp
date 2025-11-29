@@ -17,6 +17,22 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
+// Helper to get user display name
+const getUserDisplayName = async (userId: number): Promise<string> => {
+  try {
+    // If it's the current user, use their name from WebApp
+    if (WebApp.initDataUnsafe?.user?.id === userId) {
+      return WebApp.initDataUnsafe.user.first_name || `User ${userId}`;
+    }
+    
+    // Otherwise, try to fetch from API (you'll need to add this endpoint)
+    // For now, just return formatted ID
+    return `User ${userId}`;
+  } catch {
+    return `User ${userId}`;
+  }
+};
+
 export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +44,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   }>({ status: 'all', archived: false });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [userRole, setUserRole] = useState<string>('Member');
+  const [userNames, setUserNames] = useState<Record<number, string>>({});
   
   // Ref to store and restore scroll position
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -52,9 +69,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     } else if (userRole === 'Admin' || userRole === 'Lead') {
       return ['Submitted', 'Redo', 'Received', 'New', 'Completed'];
     } else if (userRole === 'Viewer') {
-      return ['Completed']; // Viewer only sees Completed, "In Progress" will be handled separately
+      return ['Completed'];
     }
-    return ['New', 'Received', 'Submitted', 'Redo', 'Completed']; // Default
+    return ['New', 'Received', 'Submitted', 'Redo', 'Completed'];
   };
 
   const fetchTasks = async () => {
@@ -63,9 +80,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     try {
       let statusFilter = filter.status === 'all' ? undefined : filter.status;
       
-      // Handle Viewer's "In Progress" - fetch all non-Completed tasks
       if (userRole === 'Viewer' && filter.status === 'InProgress') {
-        statusFilter = undefined; // Will filter on frontend
+        statusFilter = undefined;
       }
       
       console.log('📊 Fetching tasks with filters:', { 
@@ -77,20 +93,17 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       
       console.log('📊 Received tasks:', data.tasks.length, 'archived:', filter.archived);
       
-      // Filter for Viewer's "In Progress" - all tasks except Completed
       let filteredTasks = data.tasks;
       if (userRole === 'Viewer' && filter.status === 'InProgress') {
         filteredTasks = data.tasks.filter((task: Task) => task.status !== 'Completed' && !task.archived);
       }
       
-      // Sort tasks by role-based priority when showing "All"
       if (filter.status === 'all') {
         const statusOrder = getFilterOrder();
         filteredTasks.sort((a: Task, b: Task) => {
           const aIndex = statusOrder.indexOf(a.status);
           const bIndex = statusOrder.indexOf(b.status);
           
-          // Tasks not in the order go to the end
           const aPos = aIndex === -1 ? 999 : aIndex;
           const bPos = bIndex === -1 ? 999 : bIndex;
           
@@ -98,7 +111,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             return aPos - bPos;
           }
           
-          // Same status: sort by creation date (newest first)
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
       }
@@ -124,6 +136,34 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       });
       
       setThumbnails(thumbnailMap);
+
+      // Load user names for createdBy and doneBy
+      const userIds = new Set<number>();
+      filteredTasks.forEach((task: Task) => {
+        userIds.add(task.createdBy);
+        if (task.doneBy) userIds.add(task.doneBy);
+      });
+
+      const currentUserId = WebApp.initDataUnsafe?.user?.id;
+      const currentUserName = WebApp.initDataUnsafe?.user?.first_name;
+
+      const nameMap: Record<number, string> = {};
+      
+      // Set current user's name first
+      if (currentUserId && currentUserName) {
+        nameMap[currentUserId] = currentUserName;
+      }
+
+      // For other users, use "User {id}" format
+      // In a full implementation, you'd fetch these from an API
+      Array.from(userIds).forEach(userId => {
+        if (!nameMap[userId]) {
+          nameMap[userId] = `User ${userId}`;
+        }
+      });
+
+      setUserNames(nameMap);
+      
     } catch (error: any) {
       console.error('❌ Fetch error:', error);
       setError(error.message);
@@ -137,7 +177,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     fetchTasks();
   }, [filter.status, filter.archived]);
 
-  // Restore scroll position after render
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
       scrollContainerRef.current.scrollLeft = scrollPositionRef.current;
@@ -145,7 +184,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   });
 
   const handleStatusFilter = (status?: TaskStatus) => {
-    // Save current scroll position
     if (scrollContainerRef.current) {
       scrollPositionRef.current = scrollContainerRef.current.scrollLeft;
     }
@@ -217,11 +255,11 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const canViewArchived = userRole !== 'Member' && userRole !== 'Viewer';
 
   return (
-    <div> {/* NO padding here - it's handled by App.tsx */}
-      {/* Filter Bar - STICKY (not fixed) */}
+    <div>
+      {/* Filter Bar */}
       <div className="card" style={{ 
-        position: 'sticky',  // CHANGED back to sticky
-        top: '60px',  // Stick below the fixed header
+        position: 'sticky',
+        top: '60px',
         zIndex: 50,
         marginTop: '0',
         marginBottom: '12px',
@@ -235,7 +273,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* Scrollable Status Filters */}
           <div
             ref={scrollContainerRef}
             style={{
@@ -299,7 +336,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             ))}
           </div>
           
-          {/* Fixed Right Side: Archive + Refresh */}
           <div style={{ 
             display: 'flex', 
             gap: '8px',
@@ -395,7 +431,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 >
                   <TaskCard 
                     task={task} 
-                    thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined} 
+                    thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
+                    userNames={userNames}
                   />
                 </div>
                 
@@ -439,7 +476,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           ))}
         </div>
       )}
-
       <style>{`
         div::-webkit-scrollbar {
           height: 6px;
@@ -460,14 +496,26 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
-// TaskCard component remains the same
-function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string }) {
+// Updated TaskCard component with user names
+function TaskCard({ 
+  task, 
+  thumbnailUrl,
+  userNames 
+}: { 
+  task: Task; 
+  thumbnailUrl?: string;
+  userNames: Record<number, string>;
+}) {
   const completedSets = task.sets.filter((set) => {
     const hasPhotos = set.photos.length >= 3;
     const hasVideo = task.labels.video ? !!set.video : true;
     return hasPhotos && hasVideo;
   }).length;
+
   const progress = (completedSets / task.requireSets) * 100;
+  
+  const creatorName = userNames[task.createdBy] || `User ${task.createdBy}`;
+  const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
 
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
@@ -488,7 +536,6 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
       }}>
         {!thumbnailUrl && '📷'}
       </div>
-
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
           <h3 style={{ 
@@ -506,7 +553,6 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
             {task.status}
           </span>
         </div>
-
         <div style={{ marginBottom: '8px' }}>
           <div style={{
             display: 'flex',
@@ -532,7 +578,6 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
             }} />
           </div>
         </div>
-
         <div style={{
           display: 'flex',
           gap: '12px',
@@ -543,13 +588,11 @@ function TaskCard({ task, thumbnailUrl }: { task: Task; thumbnailUrl?: string })
           {task.labels.video && (
             <span>🎥 Video required</span>
           )}
+          <span>👤 {creatorName}</span>
+          {doneName && task.status !== 'New' && task.status !== 'Received' && (
+            <span>✅ {doneName}</span>
+          )}
           <span>📅 {new Date(task.createdAt).toLocaleDateString()}</span>
-          {task.doneBy && (
-            <span>✅ Submitted</span>
-          )}
-          {task.archived && (
-            <span>🗃️ Archived</span>
-          )}
         </div>
       </div>
     </div>
