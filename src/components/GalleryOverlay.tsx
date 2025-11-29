@@ -11,7 +11,7 @@ interface GalleryOverlayProps {
   task: Task;
   mediaCache: Record<string, string>;
   initialSetIndex: number;
-  initialPhotoIndex: number;
+  initialMediaIndex: number; // Changed from initialPhotoIndex
   onClose: () => void;
   onTaskUpdated: () => void;
   userRole: string;
@@ -31,13 +31,13 @@ export function GalleryOverlay({
   task,
   mediaCache,
   initialSetIndex,
-  initialPhotoIndex,
+  initialMediaIndex,
   onClose,
   onTaskUpdated,
   userRole
 }: GalleryOverlayProps) {
   const [currentSetIndex, setCurrentSetIndex] = useState(initialSetIndex);
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(initialPhotoIndex);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(initialMediaIndex);
   const [imageScale, setImageScale] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -169,7 +169,7 @@ export function GalleryOverlay({
         isSwiping.current = true;
       }
       
-      // Swipe down to close (only if not zoomed and not a video)
+      // Swipe down to close (only if not zoomed and photo)
       if (imageScale === 1 && currentMedia?.type === 'photo' && moveY > 50 && moveY > moveX * 2) {
         const deltaY = e.touches[0].clientY - touchStartY.current;
         if (deltaY > 100) {
@@ -195,7 +195,7 @@ export function GalleryOverlay({
     const diff = touchStartX.current - touchEndX;
     const verticalDiff = Math.abs(touchStartY.current - touchEndY);
     
-    // ✅ FIX: Don't close on tap for videos, only for photos
+    // Don't close on tap for videos
     if (!isSwiping.current && Math.abs(diff) < 10 && verticalDiff < 10) {
       if (currentMedia?.type === 'photo') {
         handleClose();
@@ -213,7 +213,7 @@ export function GalleryOverlay({
     }
   };
 
-  // ✅ FIX: Thumbnail touch handlers for swipe navigation
+  // Thumbnail touch handlers
   const handleThumbTouchStart = (e: React.TouchEvent) => {
     thumbTouchStartX.current = e.touches[0].clientX;
     isThumbSwiping.current = false;
@@ -232,19 +232,29 @@ export function GalleryOverlay({
     const swipeThreshold = 80;
     
     if (isThumbSwiping.current && Math.abs(diff) > swipeThreshold) {
-      if (diff > 0 && currentSetIndex < task.sets.length - 1) {
+      if (diff > 0) {
         // Swipe left - next set
-        setCurrentSetIndex(prev => prev + 1);
+        if (currentSetIndex < task.sets.length - 1) {
+          setCurrentSetIndex(prev => prev + 1);
+        } else {
+          // Loop to first set
+          setCurrentSetIndex(0);
+        }
         hapticFeedback.light();
-      } else if (diff < 0 && currentSetIndex > 0) {
+      } else {
         // Swipe right - previous set
-        setCurrentSetIndex(prev => prev - 1);
+        if (currentSetIndex > 0) {
+          setCurrentSetIndex(prev => prev - 1);
+        } else {
+          // Loop to last set
+          setCurrentSetIndex(task.sets.length - 1);
+        }
         hapticFeedback.light();
       }
     }
   };
 
-  // ✅ FIX: Loop through media and sets
+  // Navigate media with looping
   const handlePreviousMedia = () => {
     if (isNavigating) return;
     setIsNavigating(true);
@@ -256,14 +266,13 @@ export function GalleryOverlay({
       setCurrentSetIndex(prev => prev - 1);
       hapticFeedback.light();
     } else {
-      // ✅ Loop to last set, last media
+      // Loop to last set, last media
       const lastSetIndex = task.sets.length - 1;
       setCurrentSetIndex(lastSetIndex);
-      // Will reset to 0 by useEffect, then we set it to last
       setTimeout(() => {
         const lastSet = task.sets[lastSetIndex];
-        const lastSetMedia = (lastSet.photos?.length || 0) + (lastSet.video ? 1 : 0) - 1;
-        setCurrentMediaIndex(lastSetMedia);
+        const lastMediaCount = (lastSet.photos?.length || 0) + (lastSet.video ? 1 : 0);
+        setCurrentMediaIndex(lastMediaCount - 1);
       }, 50);
       hapticFeedback.light();
     }
@@ -279,11 +288,10 @@ export function GalleryOverlay({
       setCurrentMediaIndex(prev => prev + 1);
       hapticFeedback.light();
     } else if (currentSetIndex < task.sets.length - 1) {
-      // ✅ FIX: Changed from prev - 1 to prev + 1
       setCurrentSetIndex(prev => prev + 1);
       hapticFeedback.light();
     } else {
-      // ✅ Loop back to first set, first media
+      // Loop back to first set, first media
       setCurrentSetIndex(0);
       hapticFeedback.light();
     }
@@ -512,10 +520,14 @@ export function GalleryOverlay({
           background: '#000'
         }}
       >
-        {/* Navigation Arrows - Always show */}
+        {/* Navigation Arrows - FIX: Remove stopPropagation, add onTouchStart */}
         {imageScale === 1 && (
           <>
             <button
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                handlePreviousMedia();
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 handlePreviousMedia();
@@ -539,13 +551,18 @@ export function GalleryOverlay({
                 cursor: 'pointer',
                 zIndex: 100,
                 opacity: isNavigating ? 0.5 : 0.9,
-                padding: 0
+                padding: 0,
+                pointerEvents: 'auto'
               }}
             >
               <ChevronLeft size={36} strokeWidth={2} />
             </button>
             
             <button
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                handleNextMedia();
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleNextMedia();
@@ -569,7 +586,8 @@ export function GalleryOverlay({
                 cursor: 'pointer',
                 zIndex: 100,
                 opacity: isNavigating ? 0.5 : 0.9,
-                padding: 0
+                padding: 0,
+                pointerEvents: 'auto'
               }}
             >
               <ChevronRight size={36} strokeWidth={2} />
@@ -579,10 +597,7 @@ export function GalleryOverlay({
 
         {/* Media Display */}
         <div 
-          onClick={(e) => {
-            // ✅ FIX: Stop propagation on video/image click
-            e.stopPropagation();
-          }}
+          onClick={(e) => e.stopPropagation()}
           style={{
             width: '100%',
             height: '100%',
@@ -614,6 +629,7 @@ export function GalleryOverlay({
                 src={currentUrl}
                 controls
                 onClick={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -690,18 +706,27 @@ export function GalleryOverlay({
         flexShrink: 0,
         position: 'relative'
       }}>
+        {/* Set navigation arrows */}
         {task.sets.length > 1 && (
           <>
             <button
-              onClick={() => {
+              onTouchStart={(e) => {
+                e.stopPropagation();
                 if (currentSetIndex > 0) {
                   setCurrentSetIndex(prev => prev - 1);
-                  hapticFeedback.light();
                 } else {
-                  // Loop to last set
                   setCurrentSetIndex(task.sets.length - 1);
-                  hapticFeedback.light();
                 }
+                hapticFeedback.light();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentSetIndex > 0) {
+                  setCurrentSetIndex(prev => prev - 1);
+                } else {
+                  setCurrentSetIndex(task.sets.length - 1);
+                }
+                hapticFeedback.light();
               }}
               style={{
                 position: 'absolute',
@@ -721,21 +746,30 @@ export function GalleryOverlay({
                 zIndex: 10,
                 fontSize: '20px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                padding: 0
+                padding: 0,
+                pointerEvents: 'auto'
               }}
             >
               ‹
             </button>
             <button
-              onClick={() => {
+              onTouchStart={(e) => {
+                e.stopPropagation();
                 if (currentSetIndex < task.sets.length - 1) {
                   setCurrentSetIndex(prev => prev + 1);
-                  hapticFeedback.light();
                 } else {
-                  // Loop to first set
                   setCurrentSetIndex(0);
-                  hapticFeedback.light();
                 }
+                hapticFeedback.light();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentSetIndex < task.sets.length - 1) {
+                  setCurrentSetIndex(prev => prev + 1);
+                } else {
+                  setCurrentSetIndex(0);
+                }
+                hapticFeedback.light();
               }}
               style={{
                 position: 'absolute',
@@ -755,7 +789,8 @@ export function GalleryOverlay({
                 zIndex: 10,
                 fontSize: '20px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                padding: 0
+                padding: 0,
+                pointerEvents: 'auto'
               }}
             >
               ›
@@ -763,6 +798,7 @@ export function GalleryOverlay({
           </>
         )}
 
+        {/* Thumbnail container */}
         <div
           ref={thumbnailContainerRef}
           onTouchStart={handleThumbTouchStart}

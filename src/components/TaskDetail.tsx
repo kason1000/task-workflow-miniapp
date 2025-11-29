@@ -29,41 +29,28 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryInitialSet, setGalleryInitialSet] = useState(0);
-  const [galleryInitialPhoto, setGalleryInitialPhoto] = useState(0);
+  const [galleryInitialMedia, setGalleryInitialMedia] = useState(0);
 
-  // ✅ Selection mode state
+  // Selection mode state
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
 
-  // ✅ Open gallery handler - finds the correct media across ALL sets
-  const handleOpenGallery = (setIndex: number, mediaIndex: number) => {
+  // FIX: Calculate correct media index (photos are indexed 0,1,2..., video comes after)
+  const handleOpenGallery = (setIndex: number, photoIndex: number) => {
+    const set = task.sets[setIndex];
+    if (!set) return;
+
+    // If photoIndex is provided, use it directly
+    // Photos come first in order, then video
+    let mediaIndex = photoIndex;
+    
     setGalleryInitialSet(setIndex);
-    setGalleryInitialPhoto(mediaIndex);
+    setGalleryInitialMedia(mediaIndex);
     setGalleryOpen(true);
     hapticFeedback.medium();
   };
 
-  const handleDeleteUpload = async (fileId: string, uploadType: 'photo' | 'video') => {
-    const confirmed = await showConfirm(`Delete this ${uploadType}?`);
-    if (!confirmed) return;
-
-    setLoading(true);
-    hapticFeedback.medium();
-
-    try {
-      await api.deleteUpload(task.id, fileId);
-      hapticFeedback.success();
-      showAlert(`✅ ${uploadType === 'photo' ? 'Photo' : 'Video'} deleted`);
-      onTaskUpdated();
-    } catch (error: any) {
-      hapticFeedback.error();
-      showAlert(`Error: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ Handle batch delete of selected media
+  // Handle batch delete
   const handleDeleteSelected = async () => {
     if (selectedMedia.size === 0) return;
 
@@ -470,7 +457,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           </div>
           
           <div style={{ display: 'flex', gap: '8px' }}>
-            {/* ✅ Selection Mode Toggle */}
+            {/* Selection Mode Toggle */}
             {canDeleteMedia && totalMedia > 0 && (
               <button
                 onClick={() => {
@@ -565,7 +552,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           </div>
         </div>
 
-        {/* ✅ Selection Mode Delete Button */}
+        {/* Selection Mode Delete Button */}
         {selectionMode && selectedMedia.size > 0 && (
           <div style={{
             marginBottom: '12px',
@@ -615,14 +602,26 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               type: 'photo' | 'video';
               fileId: string;
               photoIndex?: number;
+              mediaIndex: number;
             }> = [];
             
+            // Photos come first
             set.photos?.forEach((photo, idx) => {
-              allSetMedia.push({ type: 'photo', fileId: photo.file_id, photoIndex: idx });
+              allSetMedia.push({ 
+                type: 'photo', 
+                fileId: photo.file_id, 
+                photoIndex: idx,
+                mediaIndex: idx
+              });
             });
             
+            // Video comes after photos
             if (set.video) {
-              allSetMedia.push({ type: 'video', fileId: set.video.file_id });
+              allSetMedia.push({ 
+                type: 'video', 
+                fileId: set.video.file_id,
+                mediaIndex: photoCount
+              });
             }
 
             return (
@@ -682,7 +681,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       📷
                     </div>
                   ) : (
-                    allSetMedia.map((media, idx) => {
+                    allSetMedia.map((media) => {
                       const imageUrl = mediaCache[media.fileId];
                       const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
                       const canDelete = !isCreatedPhoto && canDeleteMedia;
@@ -690,7 +689,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
                       return (
                         <div
-                          key={idx}
+                          key={media.fileId}
                           style={{
                             width: '80px',
                             height: '80px',
@@ -707,7 +706,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                   toggleMediaSelection(media.fileId);
                                 }
                               } else {
-                                handleOpenGallery(setIndex, media.photoIndex || 0);
+                                // FIX: Use mediaIndex instead of photoIndex
+                                handleOpenGallery(setIndex, media.mediaIndex);
                               }
                             }}
                             style={{
@@ -759,11 +759,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                 borderRadius: '4px',
                                 fontWeight: 600
                               }}>
-                                {(media.photoIndex || 0) + 1}
+                                {(media.photoIndex ?? 0) + 1}
                               </div>
                             )}
 
-                            {/* ✅ Selection checkbox */}
+                            {/* FIX: Remove delete button, only show selection checkbox */}
                             {selectionMode && canDelete && (
                               <div style={{
                                 position: 'absolute',
@@ -781,37 +781,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               }}>
                                 {isSelected && '✓'}
                               </div>
-                            )}
-
-                            {/* Quick delete button (only when NOT in selection mode) */}
-                            {!selectionMode && canDelete && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteUpload(media.fileId, media.type);
-                                }}
-                                disabled={loading}
-                                style={{
-                                  position: 'absolute',
-                                  top: '4px',
-                                  left: '4px',
-                                  background: 'rgba(239, 68, 68, 0.9)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '50%',
-                                  width: '22px',
-                                  height: '22px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '11px',
-                                  cursor: 'pointer',
-                                  zIndex: 10,
-                                  padding: 0
-                                }}
-                              >
-                                ✕
-                              </button>
                             )}
                           </div>
                         </div>
@@ -943,7 +912,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         task={task}
         mediaCache={mediaCache}
         initialSetIndex={galleryInitialSet}
-        initialPhotoIndex={galleryInitialPhoto}
+        initialMediaIndex={galleryInitialMedia}
         onClose={() => setGalleryOpen(false)}
         onTaskUpdated={onTaskUpdated}
         userRole={userRole}
