@@ -167,7 +167,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setFilter({ ...filter, archived: !filter.archived });
   };
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClickWithHaptic = (task: Task) => {
     hapticFeedback.medium();
     onTaskClick(task);
   };
@@ -390,7 +390,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             <div key={task.id} className="card">
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                 <div 
-                  onClick={() => onTaskClick(task)} 
+                  onClick={() => handleTaskClickWithHaptic(task)} 
                   style={{ 
                     flex: 1, 
                     cursor: 'pointer',
@@ -523,12 +523,27 @@ function TaskCard({
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
+            alignItems: 'center',
             fontSize: '12px',
             color: 'var(--tg-theme-hint-color)',
-            marginBottom: '4px'
+            marginBottom: '4px',
+            gap: '8px'
           }}>
             <span>Progress</span>
-            <span>{completedSets}/{task.requireSets} sets</span>
+            {doneName && task.status !== 'New' && task.status !== 'Received' && (
+              <span style={{ 
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1,
+                textAlign: 'center'
+              }}>
+                👤 {doneName}
+              </span>
+            )}
+            <span style={{ whiteSpace: 'nowrap' }}>
+              {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
+            </span>
           </div>
           <div style={{
             height: '6px',
@@ -555,13 +570,8 @@ function TaskCard({
           {task.labels.video && (
             <span>🎥</span>
           )}
-          {doneName && task.status !== 'New' && task.status !== 'Received' && (
-            <>
-              <span>✅ {doneName}</span>
-              {task.lastModifiedAt && (
-                <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
-              )}
-            </>
+          {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
+            <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
           )}
         </div>
       </div>
