@@ -5,12 +5,12 @@ export interface TaskSet {
   photos: Array<{ 
     file_id: string; 
     by: number;
-    uploadedAt: string;
+    uploadedAt?: string;
   }>;
   video?: { 
     file_id: string; 
     by: number;
-    uploadedAt: string;
+    uploadedAt?: string;
   };
 }
 
@@ -33,7 +33,6 @@ export interface Task {
   doneBy: number | null;
   doneByName?: string;
   createdAt: string;
-  archived: boolean;
   version: number;
   
   // Optional fields

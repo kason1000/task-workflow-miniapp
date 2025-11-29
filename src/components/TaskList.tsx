@@ -26,8 +26,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<{
     status: 'all' | 'InProgress' | TaskStatus;
-    archived: boolean;
-  }>({ status: 'all', archived: false });
+    showArchived: boolean;
+  }>({ status: 'all', showArchived: false });
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [userRole, setUserRole] = useState<string>('Member');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
@@ -48,7 +48,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   useEffect(() => {
     fetchTasks();
-  }, [filter.status, filter.archived]);
+  }, [filter.status, filter.showArchived]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -65,25 +65,39 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       const roleData = await api.getMyRole();
       setUserRole(roleData.role);
 
-      // Fetch tasks with proper filters
-      let statusFilter = filter.status === 'all' ? undefined : filter.status;
-      
-      if (roleData.role === 'Viewer' && filter.status === 'InProgress') {
+      // Determine what to fetch
+      let statusFilter: TaskStatus | undefined;
+      let fetchArchived = false;
+
+      if (filter.showArchived) {
+        // Show only archived tasks
+        fetchArchived = true;
+      } else if (filter.status === 'all') {
+        // Show all active tasks (no specific status)
         statusFilter = undefined;
+        fetchArchived = false;
+      } else if (filter.status === 'InProgress') {
+        // Viewer-specific: show non-completed active tasks
+        statusFilter = undefined;
+        fetchArchived = false;
+      } else {
+        // Show specific status
+        statusFilter = filter.status as TaskStatus;
+        fetchArchived = false;
       }
 
-      const { tasks: fetchedTasks } = await api.getTasks(statusFilter, filter.archived);
+      const { tasks: fetchedTasks } = await api.getTasks(statusFilter, fetchArchived);
       
-      // Filter for Viewer "In Progress"
+      // Additional client-side filter for "InProgress" (Viewer only)
       let filteredTasks = fetchedTasks;
       if (roleData.role === 'Viewer' && filter.status === 'InProgress') {
         filteredTasks = fetchedTasks.filter((task: Task) => 
-          task.status !== 'Completed' && !task.archived
+          task.status !== 'Completed' && task.status !== 'Archived'
         );
       }
 
       // Sort by status order if "All" selected
-      if (filter.status === 'all') {
+      if (filter.status === 'all' && !filter.showArchived) {
         const statusOrder = getFilterOrder();
         filteredTasks.sort((a: Task, b: Task) => {
           const aIndex = statusOrder.indexOf(a.status);
@@ -146,18 +160,18 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
   };
 
-  const handleStatusFilter = (status?: TaskStatus) => {
+  const handleStatusFilter = (status?: TaskStatus | 'InProgress') => {
     if (scrollContainerRef.current) {
       scrollPositionRef.current = scrollContainerRef.current.scrollLeft;
     }
     
     hapticFeedback.light();
-    setFilter({ ...filter, status: status || 'all' });
+    setFilter({ status: (status || 'all') as any, showArchived: false });
   };
 
   const handleArchiveToggle = () => {
     hapticFeedback.light();
-    setFilter({ ...filter, archived: !filter.archived });
+    setFilter({ status: 'all', showArchived: !filter.showArchived });
   };
 
   const handleTaskClick = (task: Task) => {
@@ -227,6 +241,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           {/* Status Filters Row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Scrollable Status Filters */}
             <div
               ref={scrollContainerRef}
               style={{
@@ -247,10 +262,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   fontSize: '14px',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
-                  background: filter.status === 'all' && !filter.archived
+                  background: filter.status === 'all' && !filter.showArchived
                     ? 'var(--tg-theme-button-color)'
                     : 'var(--tg-theme-secondary-bg-color)',
-                  color: filter.status === 'all' && !filter.archived
+                  color: filter.status === 'all' && !filter.showArchived
                     ? 'var(--tg-theme-button-text-color)'
                     : 'var(--tg-theme-text-color)',
                   border: 'none',
@@ -262,7 +277,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
               {userRole === 'Viewer' && (
                 <button
-                  onClick={() => handleStatusFilter('InProgress' as TaskStatus)}
+                  onClick={() => handleStatusFilter('InProgress')}
                   style={{
                     minWidth: 'auto',
                     padding: '8px 16px',
@@ -293,10 +308,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     fontSize: '14px',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
-                    background: filter.status === status && !filter.archived
+                    background: filter.status === status && !filter.showArchived
                       ? 'var(--tg-theme-button-color)'
                       : 'var(--tg-theme-secondary-bg-color)',
-                    color: filter.status === status && !filter.archived
+                    color: filter.status === status && !filter.showArchived
                       ? 'var(--tg-theme-button-text-color)'
                       : 'var(--tg-theme-text-color)',
                     border: 'none',
@@ -308,7 +323,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               ))}
             </div>
 
-            {/* Action Buttons */}
+            {/* Fixed Right Action Buttons */}
             <div style={{ 
               display: 'flex', 
               gap: '8px',
@@ -323,16 +338,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     minWidth: 'auto',
                     padding: '8px 12px',
                     fontSize: '18px',
-                    background: filter.archived
+                    background: filter.showArchived
                       ? 'var(--tg-theme-button-color)'
                       : 'transparent',
-                    color: filter.archived
+                    color: filter.showArchived
                       ? 'var(--tg-theme-button-text-color)'
                       : 'var(--tg-theme-text-color)',
                     border: 'none',
                     borderRadius: '8px'
                   }}
-                  title={filter.archived ? 'Show Active' : 'Show Archived'}
+                  title={filter.showArchived ? 'Show Active' : 'Show Archived'}
                 >
                   🗃️
                 </button>
@@ -370,7 +385,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         <span>
           {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
         </span>
-        {filter.archived && (
+        {filter.showArchived && (
           <span style={{
             background: 'var(--tg-theme-secondary-bg-color)',
             padding: '2px 8px',
@@ -386,10 +401,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       {tasks.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p style={{ fontSize: '48px', marginBottom: '12px' }}>
-            {filter.archived ? '🗃️' : '📋'}
+            {filter.showArchived ? '🗃️' : '📋'}
           </p>
           <p style={{ color: 'var(--tg-theme-hint-color)' }}>
-            {filter.archived ? 'No archived tasks' : 'No tasks found'}
+            {filter.showArchived ? 'No archived tasks' : 'No tasks found'}
           </p>
         </div>
       )}
