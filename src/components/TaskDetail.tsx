@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
+import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
 
 interface TaskDetailProps {
@@ -9,7 +10,6 @@ interface TaskDetailProps {
   userRole: string;
   onBack: () => void;
   onTaskUpdated: () => void;
-  onOpenGallery: (setIndex: number, photoIndex: number) => void;
 }
 
 const statusColors: Record<TaskStatus, string> = {
@@ -21,14 +21,23 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
-interface MediaCache {
-  [fileId: string]: string;
-}
-
-export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGallery }: TaskDetailProps) {
+export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
   const [loading, setLoading] = useState(false);
-  const [mediaCache, setMediaCache] = useState<MediaCache>({});
+  const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
+  
+  // ✅ Gallery state
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryInitialSet, setGalleryInitialSet] = useState(0);
+  const [galleryInitialPhoto, setGalleryInitialPhoto] = useState(0);
+
+  // ✅ Open gallery handler
+  const handleOpenGallery = (setIndex: number, photoIndex: number) => {
+    setGalleryInitialSet(setIndex);
+    setGalleryInitialPhoto(photoIndex);
+    setGalleryOpen(true);
+    hapticFeedback.medium();
+  };
 
   const handleDeleteUpload = async (fileId: string, uploadType: 'photo' | 'video') => {
     const confirmed = await showConfirm(`Delete this ${uploadType}?`);
@@ -51,7 +60,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   };
 
   const shareSetDirect = async (setIndex: number) => {
-    // Don't set loading immediately - this can interfere with share permission
     hapticFeedback.medium();
     
     try {
@@ -61,7 +69,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         throw new Error(`Set ${setIndex + 1} not found`);
       }
       
-      // Show preparing state AFTER user confirms they want to share
       setLoading(true);
       
       const files: File[] = [];
@@ -135,10 +142,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         throw new Error('Share not supported');
       }
       
-      // Hide loading before triggering share dialog
       setLoading(false);
       
-      // Trigger share - this must be synchronous from user gesture
       await navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
         files
@@ -192,8 +197,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
       'Received->Submitted': ['Member', 'Lead', 'Admin'],
       'Submitted->Redo': ['Lead', 'Admin'],
       'Submitted->Completed': ['Lead', 'Admin'],
-      'Submitted->Archived': ['Lead', 'Admin', 'Viewer'],
-      'Completed->Archived': ['Lead', 'Admin', 'Viewer'],
+      'Archived->Completed': ['Admin'],
       'Redo->Submitted': ['Member', 'Lead', 'Admin'],
     };
     
@@ -304,7 +308,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
   const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
   const totalMedia = totalPhotos + totalVideos;
 
-  // Get unique uploaders
   const getUploaders = (): string[] => {
     const uploaderIds = new Set<number>();
     
@@ -321,44 +324,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
     });
   };
 
-  // Generate progress caption like task card in chat
-  const getProgressCaption = (): string => {
-    let completedSets = 0;
-    const setCaptions: string[] = [];
-
-    for (let i = 0; i < task.requireSets; i++) {
-      const set = task.sets[i] || { photos: [], video: undefined };
-      const photoCount = set.photos?.length || 0;
-      const hasVideo = !!set.video;
-      const videoRequired = task.labels.video;
-      
-      const maxPhotos = videoRequired ? 3 : (hasVideo ? 3 : 4);
-      const hasEnoughPhotos = photoCount >= maxPhotos;
-      const hasRequiredVideo = videoRequired ? hasVideo : true;
-      const isComplete = hasEnoughPhotos && hasRequiredVideo;
-
-      if (isComplete) {
-        completedSets++;
-        setCaptions.push(`✅ Set ${i + 1}`);
-      } else {
-        if (videoRequired) {
-          setCaptions.push(`Set ${i + 1}: 📸 ${photoCount}/3 🎥 ${hasVideo ? '1/1' : '0/1'}`);
-        } else {
-          setCaptions.push(`Set ${i + 1}: 📸 ${photoCount}/${maxPhotos}${hasVideo ? ' 🎥 1/1' : ''}`);
-        }
-      }
-    }
-
-    return `${completedSets}/${task.requireSets} sets complete\n\n${setCaptions.join('\n')}`;
-  };
-
-  const isViewer = userRole === 'Viewer';
+  const isArchived = task.status === 'Archived';
 
   return (
-    <div style={{ 
-      paddingBottom: '100px'
-    }}>
-
+    <div style={{ paddingBottom: '100px' }}>
       {/* Compact Information Section */}
       <div className="card">
         <div style={{ 
@@ -405,7 +374,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         </div>
       </div>
 
-      {/* Sets Section with Chat-Style Caption */}
+      {/* Sets Section */}
       <div className="card" style={{ position: 'relative' }}>
         {loading && (
           <div style={{
@@ -421,7 +390,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 100  // CHANGED: from 10 to 100 to be above delete buttons (which have zIndex: 10)
+            zIndex: 100
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
             <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
@@ -438,7 +407,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
         }}>
           <div style={{ flex: 1 }}>
             <h3 style={{ fontSize: '16px', margin: 0, marginBottom: '4px' }}>Progress</h3>
-            {/* One-line progress */}
             <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>{task.completedSets}/{task.requireSets} sets</span>
               <div style={{
@@ -637,7 +605,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
                           <div
                             onClick={() => {
                               hapticFeedback.light();
-                              onOpenGallery(setIndex, media.photoIndex || 0);
+                              handleOpenGallery(setIndex, media.photoIndex || 0);
                             }}
                             style={{
                               width: '100%',
@@ -806,9 +774,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             </button>
           )}
           
-          {/* Archive/Restore */}
-          {!task.archived && (task.status === 'Submitted' || task.status === 'Completed') && 
-            ['Viewer', 'Lead', 'Admin'].includes(userRole) && (
+          {/* Archive/Restore - Fixed to check status */}
+          {!isArchived && (task.status === 'Submitted' || task.status === 'Completed') && 
+            ['Lead', 'Admin'].includes(userRole) && (
               <button
                 onClick={handleArchive}
                 disabled={loading}
@@ -819,7 +787,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
             )
           }
           
-          {task.archived && userRole === 'Admin' && (
+          {isArchived && userRole === 'Admin' && (
             <button
               onClick={handleRestore}
               disabled={loading}
@@ -841,6 +809,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated, onOpenGaller
           )}
         </div>
       </div>
+
+      {/* ✅ Gallery Overlay Modal */}
+      <GalleryOverlay
+        isOpen={galleryOpen}
+        task={task}
+        mediaCache={mediaCache}
+        initialSetIndex={galleryInitialSet}
+        initialPhotoIndex={galleryInitialPhoto}
+        onClose={() => setGalleryOpen(false)}
+        onTaskUpdated={onTaskUpdated}
+        userRole={userRole}
+      />
     </div>
   );
 }

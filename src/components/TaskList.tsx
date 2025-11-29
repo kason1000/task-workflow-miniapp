@@ -4,8 +4,6 @@ import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 
-const statuses: TaskStatus[] = ['New', 'Received', 'Submitted', 'Completed'];
-
 const statusColors: Record<TaskStatus, string> = {
   New: 'badge-new',
   Received: 'badge-received',

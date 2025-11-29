@@ -6,9 +6,8 @@ import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
 import { ShareScreen } from './components/ShareScreen';
 import { CreateTaskMessage } from './components/CreateTaskForm';
-import { GalleryView } from './components/GalleryView';
 
-type View = 'list' | 'detail' | 'create' | 'share' | 'gallery';
+type View = 'list' | 'detail' | 'create' | 'share';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -18,8 +17,6 @@ function App() {
   const [view, setView] = useState<View>('list');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [galleryInitialSet, setGalleryInitialSet] = useState(0);
-  const [galleryInitialPhoto, setGalleryInitialPhoto] = useState(0);
 
   useEffect(() => {
     console.log('Initializing app...');
@@ -29,12 +26,11 @@ function App() {
       const tgUser = getTelegramUser();
       console.log('Telegram user:', tgUser);
       setUser(tgUser);
-  
-      // Declare URL params at the top level of useEffect
+
       const urlParams = new URLSearchParams(window.location.search);
       const taskIdParam = urlParams.get('taskId');
       const viewParam = urlParams.get('view');
-  
+
       const fetchRole = async () => {
         try {
           console.log('Fetching role...');
@@ -42,16 +38,13 @@ function App() {
           console.log('Role data:', roleData);
           setRole(roleData.role);
           
-          // Now taskIdParam and viewParam are accessible here
           if (taskIdParam) {
             console.log('Loading task from URL:', taskIdParam);
             try {
               const { task } = await api.getTask(taskIdParam);
               setSelectedTask(task);
               
-              if (viewParam === 'gallery') {
-                setView('gallery');
-              } else if (viewParam === 'share') {
+              if (viewParam === 'share') {
                 setView('share');
               } else {
                 setView('detail');
@@ -116,13 +109,6 @@ function App() {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleOpenGallery = (setIndex: number, photoIndex: number) => {
-    setGalleryInitialSet(setIndex);
-    setGalleryInitialPhoto(photoIndex);
-    setView('gallery');
-    window.history.pushState({}, '', `?taskId=${selectedTask?.id}&view=gallery`);
-  };
-
   if (loading) {
     return (
       <div className="container">
@@ -169,8 +155,12 @@ function App() {
             {view !== 'list' && (
               <button
                 onClick={() => {
-                  setView('list');
-                  setSelectedTask(null);
+                  if (view === 'detail') {
+                    handleBackToList();
+                  } else {
+                    setView('list');
+                    setSelectedTask(null);
+                  }
                 }}
                 style={{ 
                   padding: '8px 12px', 
@@ -215,38 +205,30 @@ function App() {
           </div>
         </div>
       </div>
-  
-      {/* Content - ONLY padding for header */}
+
+      {/* Content */}
       <div style={{ paddingTop: '60px' }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
         )}
+
         {view === 'detail' && selectedTask && (
           <TaskDetail
             task={selectedTask}
             userRole={role}
             onBack={handleBackToList}
             onTaskUpdated={handleTaskUpdated}
-            onOpenGallery={handleOpenGallery}
           />
         )}
+
         {view === 'create' && (
           <CreateTaskMessage onBack={handleBackToList} />
         )}
+
         {view === 'share' && selectedTask && (
           <ShareScreen
             taskId={selectedTask.id}
             onBack={handleBackToDetail}
-          />
-        )}
-        {view === 'gallery' && selectedTask && (
-          <GalleryView
-            task={selectedTask}
-            onBack={handleBackToDetail}
-            onTaskUpdated={handleTaskUpdated}
-            userRole={role}
-            initialSetIndex={galleryInitialSet}
-            initialPhotoIndex={galleryInitialPhoto}
           />
         )}
       </div>
