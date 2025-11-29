@@ -9,7 +9,7 @@ import WebApp from '@twa-dev/sdk';
 interface GalleryOverlayProps {
   isOpen: boolean;
   task: Task;
-  mediaCache: Record<string, string>; // Receive from parent!
+  mediaCache: Record<string, string>;
   initialSetIndex: number;
   initialPhotoIndex: number;
   onClose: () => void;
@@ -49,9 +49,11 @@ export function GalleryOverlay({
   
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
+  const thumbTouchStartX = useRef<number>(0);
   const initialDistance = useRef<number>(0);
   const initialScale = useRef<number>(1);
   const isSwiping = useRef<boolean>(false);
+  const isThumbSwiping = useRef<boolean>(false);
 
   // Get current set media
   const getCurrentSetMedia = (): MediaItem[] => {
@@ -101,7 +103,6 @@ export function GalleryOverlay({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      // Add history entry for back button
       window.history.pushState({ galleryOpen: true }, '');
       
       const handlePopState = () => {
@@ -135,7 +136,6 @@ export function GalleryOverlay({
     setIsExiting(true);
     hapticFeedback.light();
     
-    // Remove history entry
     if (window.history.state?.galleryOpen) {
       window.history.back();
     }
@@ -146,7 +146,7 @@ export function GalleryOverlay({
     }, 150);
   };
 
-  // Touch handlers
+  // Main media touch handlers
   const handleMediaTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       touchStartX.current = e.touches[0].clientX;
@@ -169,8 +169,8 @@ export function GalleryOverlay({
         isSwiping.current = true;
       }
       
-      // Swipe down to close (only if not zoomed)
-      if (imageScale === 1 && moveY > 50 && moveY > moveX * 2) {
+      // Swipe down to close (only if not zoomed and not a video)
+      if (imageScale === 1 && currentMedia?.type === 'photo' && moveY > 50 && moveY > moveX * 2) {
         const deltaY = e.touches[0].clientY - touchStartY.current;
         if (deltaY > 100) {
           handleClose();
@@ -195,9 +195,11 @@ export function GalleryOverlay({
     const diff = touchStartX.current - touchEndX;
     const verticalDiff = Math.abs(touchStartY.current - touchEndY);
     
-    // Tap to close backdrop
+    // ✅ FIX: Don't close on tap for videos, only for photos
     if (!isSwiping.current && Math.abs(diff) < 10 && verticalDiff < 10) {
-      handleClose();
+      if (currentMedia?.type === 'photo') {
+        handleClose();
+      }
       return;
     }
     
@@ -211,6 +213,38 @@ export function GalleryOverlay({
     }
   };
 
+  // ✅ FIX: Thumbnail touch handlers for swipe navigation
+  const handleThumbTouchStart = (e: React.TouchEvent) => {
+    thumbTouchStartX.current = e.touches[0].clientX;
+    isThumbSwiping.current = false;
+  };
+
+  const handleThumbTouchMove = (e: React.TouchEvent) => {
+    const moveX = Math.abs(e.touches[0].clientX - thumbTouchStartX.current);
+    if (moveX > 10) {
+      isThumbSwiping.current = true;
+    }
+  };
+
+  const handleThumbTouchEnd = (e: React.TouchEvent) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = thumbTouchStartX.current - touchEndX;
+    const swipeThreshold = 80;
+    
+    if (isThumbSwiping.current && Math.abs(diff) > swipeThreshold) {
+      if (diff > 0 && currentSetIndex < task.sets.length - 1) {
+        // Swipe left - next set
+        setCurrentSetIndex(prev => prev + 1);
+        hapticFeedback.light();
+      } else if (diff < 0 && currentSetIndex > 0) {
+        // Swipe right - previous set
+        setCurrentSetIndex(prev => prev - 1);
+        hapticFeedback.light();
+      }
+    }
+  };
+
+  // ✅ FIX: Loop through media and sets
   const handlePreviousMedia = () => {
     if (isNavigating) return;
     setIsNavigating(true);
@@ -220,6 +254,17 @@ export function GalleryOverlay({
       hapticFeedback.light();
     } else if (currentSetIndex > 0) {
       setCurrentSetIndex(prev => prev - 1);
+      hapticFeedback.light();
+    } else {
+      // ✅ Loop to last set, last media
+      const lastSetIndex = task.sets.length - 1;
+      setCurrentSetIndex(lastSetIndex);
+      // Will reset to 0 by useEffect, then we set it to last
+      setTimeout(() => {
+        const lastSet = task.sets[lastSetIndex];
+        const lastSetMedia = (lastSet.photos?.length || 0) + (lastSet.video ? 1 : 0) - 1;
+        setCurrentMediaIndex(lastSetMedia);
+      }, 50);
       hapticFeedback.light();
     }
     
@@ -234,7 +279,12 @@ export function GalleryOverlay({
       setCurrentMediaIndex(prev => prev + 1);
       hapticFeedback.light();
     } else if (currentSetIndex < task.sets.length - 1) {
-      setCurrentSetIndex(prev => prev - 1);
+      // ✅ FIX: Changed from prev - 1 to prev + 1
+      setCurrentSetIndex(prev => prev + 1);
+      hapticFeedback.light();
+    } else {
+      // ✅ Loop back to first set, first media
+      setCurrentSetIndex(0);
       hapticFeedback.light();
     }
     
@@ -396,10 +446,7 @@ export function GalleryOverlay({
   const currentUrl = mediaCache[currentMedia.fileId];
   const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
   const canDelete = !isCreatedPhoto && (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
-  const canGoPrevious = currentMediaIndex > 0 || currentSetIndex > 0;
-  const canGoNext = currentMediaIndex < currentSetMedia.length - 1 || currentSetIndex < task.sets.length - 1;
 
-  // Render portal
   return createPortal(
     <div
       className={`gallery-overlay ${isExiting ? 'gallery-overlay-exit-active' : 'gallery-overlay-enter-active'}`}
@@ -465,84 +512,85 @@ export function GalleryOverlay({
           background: '#000'
         }}
       >
-        {/* Navigation Arrows */}
-        {(canGoPrevious || canGoNext) && imageScale === 1 && (
+        {/* Navigation Arrows - Always show */}
+        {imageScale === 1 && (
           <>
-            {canGoPrevious && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePreviousMedia();
-                }}
-                disabled={isNavigating}
-                style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '56px',
-                  height: '56px',
-                  background: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  zIndex: 100,
-                  opacity: isNavigating ? 0.5 : 0.9,
-                  padding: 0
-                }}
-              >
-                <ChevronLeft size={36} strokeWidth={2} />
-              </button>
-            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePreviousMedia();
+              }}
+              disabled={isNavigating}
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '56px',
+                height: '56px',
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 100,
+                opacity: isNavigating ? 0.5 : 0.9,
+                padding: 0
+              }}
+            >
+              <ChevronLeft size={36} strokeWidth={2} />
+            </button>
             
-            {canGoNext && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNextMedia();
-                }}
-                disabled={isNavigating}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '56px',
-                  height: '56px',
-                  background: 'rgba(0,0,0,0.6)',
-                  backdropFilter: 'blur(8px)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  zIndex: 100,
-                  opacity: isNavigating ? 0.5 : 0.9,
-                  padding: 0
-                }}
-              >
-                <ChevronRight size={36} strokeWidth={2} />
-              </button>
-            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextMedia();
+              }}
+              disabled={isNavigating}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '56px',
+                height: '56px',
+                background: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(8px)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 100,
+                opacity: isNavigating ? 0.5 : 0.9,
+                padding: 0
+              }}
+            >
+              <ChevronRight size={36} strokeWidth={2} />
+            </button>
           </>
         )}
 
         {/* Media Display */}
-        <div style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none'
-        }}>
+        <div 
+          onClick={(e) => {
+            // ✅ FIX: Stop propagation on video/image click
+            e.stopPropagation();
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
           {currentUrl ? (
             currentMedia.type === 'photo' ? (
               <img
@@ -558,19 +606,18 @@ export function GalleryOverlay({
                   transform: imageScale > 1 ? `scale(${imageScale})` : 'none',
                   transformOrigin: 'center',
                   transition: imageScale === 1 ? 'transform 0.3s ease' : 'none',
-                  cursor: 'pointer',
-                  pointerEvents: 'auto'
+                  cursor: 'pointer'
                 }}
               />
             ) : (
               <video
                 src={currentUrl}
                 controls
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'contain',
-                  pointerEvents: 'auto'
+                  objectFit: 'contain'
                 }}
               />
             )
@@ -640,14 +687,91 @@ export function GalleryOverlay({
       <div style={{
         background: 'rgba(0, 0, 0, 0.95)',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-        flexShrink: 0
+        flexShrink: 0,
+        position: 'relative'
       }}>
+        {task.sets.length > 1 && (
+          <>
+            <button
+              onClick={() => {
+                if (currentSetIndex > 0) {
+                  setCurrentSetIndex(prev => prev - 1);
+                  hapticFeedback.light();
+                } else {
+                  // Loop to last set
+                  setCurrentSetIndex(task.sets.length - 1);
+                  hapticFeedback.light();
+                }
+              }}
+              style={{
+                position: 'absolute',
+                left: '8px',
+                top: '24px',
+                width: '36px',
+                height: '36px',
+                background: 'rgba(0,0,0,0.9)',
+                backdropFilter: 'blur(8px)',
+                color: '#fff',
+                border: '1.5px solid rgba(255,255,255,0.3)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+                fontSize: '20px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                padding: 0
+              }}
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => {
+                if (currentSetIndex < task.sets.length - 1) {
+                  setCurrentSetIndex(prev => prev + 1);
+                  hapticFeedback.light();
+                } else {
+                  // Loop to first set
+                  setCurrentSetIndex(0);
+                  hapticFeedback.light();
+                }
+              }}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                top: '24px',
+                width: '36px',
+                height: '36px',
+                background: 'rgba(0,0,0,0.9)',
+                backdropFilter: 'blur(8px)',
+                color: '#fff',
+                border: '1.5px solid rgba(255,255,255,0.3)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+                fontSize: '20px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                padding: 0
+              }}
+            >
+              ›
+            </button>
+          </>
+        )}
+
         <div
           ref={thumbnailContainerRef}
+          onTouchStart={handleThumbTouchStart}
+          onTouchMove={handleThumbTouchMove}
+          onTouchEnd={handleThumbTouchEnd}
           style={{
             overflowX: 'scroll',
             overflowY: 'hidden',
-            padding: '12px 16px',
+            padding: '12px 52px',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             WebkitOverflowScrolling: 'touch'

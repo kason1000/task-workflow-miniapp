@@ -26,15 +26,19 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
   
-  // ✅ Gallery state
+  // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryInitialSet, setGalleryInitialSet] = useState(0);
   const [galleryInitialPhoto, setGalleryInitialPhoto] = useState(0);
 
-  // ✅ Open gallery handler
-  const handleOpenGallery = (setIndex: number, photoIndex: number) => {
+  // ✅ Selection mode state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
+
+  // ✅ Open gallery handler - finds the correct media across ALL sets
+  const handleOpenGallery = (setIndex: number, mediaIndex: number) => {
     setGalleryInitialSet(setIndex);
-    setGalleryInitialPhoto(photoIndex);
+    setGalleryInitialPhoto(mediaIndex);
     setGalleryOpen(true);
     hapticFeedback.medium();
   };
@@ -59,6 +63,49 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
+  // ✅ Handle batch delete of selected media
+  const handleDeleteSelected = async () => {
+    if (selectedMedia.size === 0) return;
+
+    const confirmed = await showConfirm(`Delete ${selectedMedia.size} selected media?`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    hapticFeedback.medium();
+
+    try {
+      const deletePromises = Array.from(selectedMedia).map(fileId => 
+        api.deleteUpload(task.id, fileId)
+      );
+
+      await Promise.all(deletePromises);
+      hapticFeedback.success();
+      showAlert(`✅ ${selectedMedia.size} media deleted`);
+      setSelectedMedia(new Set());
+      setSelectionMode(false);
+      onTaskUpdated();
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle media selection
+  const toggleMediaSelection = (fileId: string) => {
+    setSelectedMedia(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId);
+      } else {
+        newSet.add(fileId);
+      }
+      return newSet;
+    });
+    hapticFeedback.light();
+  };
+
   const shareSetDirect = async (setIndex: number) => {
     hapticFeedback.medium();
     
@@ -73,7 +120,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       
       const files: File[] = [];
       
-      // Collect photos
       if (set.photos && set.photos.length > 0) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
@@ -81,9 +127,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           try {
             const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
             const response = await fetch(fileUrl, {
-              headers: {
-                'X-Telegram-InitData': WebApp.initData
-              }
+              headers: { 'X-Telegram-InitData': WebApp.initData }
             });
             
             if (!response.ok) {
@@ -105,14 +149,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         }
       }
       
-      // Collect video
       if (set.video) {
         try {
           const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
           const response = await fetch(fileUrl, {
-            headers: {
-              'X-Telegram-InitData': WebApp.initData
-            }
+            headers: { 'X-Telegram-InitData': WebApp.initData }
           });
           
           if (!response.ok) {
@@ -325,6 +366,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   };
 
   const isArchived = task.status === 'Archived';
+  const canDeleteMedia = userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member';
 
   return (
     <div style={{ paddingBottom: '100px' }}>
@@ -427,80 +469,134 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             </div>
           </div>
           
-          {totalMedia > 0 && (
-            <button
-              onClick={async () => {
-                setLoading(true);
-                hapticFeedback.medium();
-                try {
-                  const files: File[] = [];
-                  
-                  for (let si = 0; si < task.requireSets; si++) {
-                    const set = task.sets[si];
-                    if (!set) continue;
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* ✅ Selection Mode Toggle */}
+            {canDeleteMedia && totalMedia > 0 && (
+              <button
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  setSelectedMedia(new Set());
+                  hapticFeedback.light();
+                }}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  background: selectionMode ? '#ef4444' : '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                {selectionMode ? '✕ Cancel' : '☑️ Select'}
+              </button>
+            )}
+
+            {totalMedia > 0 && !selectionMode && (
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  hapticFeedback.medium();
+                  try {
+                    const files: File[] = [];
                     
-                    if (set.photos) {
-                      for (let i = 0; i < set.photos.length; i++) {
-                        const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
+                    for (let si = 0; si < task.requireSets; si++) {
+                      const set = task.sets[si];
+                      if (!set) continue;
+                      
+                      if (set.photos) {
+                        for (let i = 0; i < set.photos.length; i++) {
+                          const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
+                          const response = await fetch(fileUrl, {
+                            headers: { 'X-Telegram-InitData': WebApp.initData }
+                          });
+                          if (!response.ok) throw new Error(`Failed to fetch from set ${si + 1}`);
+                          const blob = await response.blob();
+                          const file = new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+                          files.push(file);
+                        }
+                      }
+                      
+                      if (set.video) {
+                        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
                         const response = await fetch(fileUrl, {
-                          headers: {
-                            'X-Telegram-InitData': WebApp.initData
-                          }
+                          headers: { 'X-Telegram-InitData': WebApp.initData }
                         });
-                        if (!response.ok) throw new Error(`Failed to fetch from set ${si + 1}`);
+                        if (!response.ok) throw new Error(`Failed to fetch video from set ${si + 1}`);
                         const blob = await response.blob();
-                        const file = new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
+                        const file = new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' });
                         files.push(file);
                       }
                     }
                     
-                    if (set.video) {
-                      const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-                      const response = await fetch(fileUrl, {
-                        headers: {
-                          'X-Telegram-InitData': WebApp.initData
-                        }
+                    if (navigator.share && navigator.canShare({ files })) {
+                      setLoading(false);
+                      await navigator.share({
+                        title: task.title,
+                        files
                       });
-                      if (!response.ok) throw new Error(`Failed to fetch video from set ${si + 1}`);
-                      const blob = await response.blob();
-                      const file = new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' });
-                      files.push(file);
+                      hapticFeedback.success();
                     }
-                  }
-                  
-                  if (navigator.share && navigator.canShare({ files })) {
+                  } catch (error: any) {
+                    if (error.name !== 'AbortError') {
+                      hapticFeedback.error();
+                      showAlert(`Failed to share: ${error.message}`);
+                    }
+                  } finally {
                     setLoading(false);
-                    await navigator.share({
-                      title: task.title,
-                      files
-                    });
-                    hapticFeedback.success();
                   }
-                } catch (error: any) {
-                  if (error.name !== 'AbortError') {
-                    hapticFeedback.error();
-                    showAlert(`Failed to share: ${error.message}`);
-                  }
-                } finally {
-                  setLoading(false);
-                }
-              }}
+                }}
+                disabled={loading}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  background: loading ? '#6b7280' : '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                {loading ? '⏳' : `📤 ${totalMedia}`}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ✅ Selection Mode Delete Button */}
+        {selectionMode && selectedMedia.size > 0 && (
+          <div style={{
+            marginBottom: '12px',
+            padding: '12px',
+            background: '#ef4444',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>
+              {selectedMedia.size} selected
+            </span>
+            <button
+              onClick={handleDeleteSelected}
               disabled={loading}
               style={{
-                padding: '6px 12px',
-                fontSize: '12px',
-                background: loading ? '#6b7280' : '#10b981',
-                color: 'white',
+                padding: '8px 16px',
+                fontSize: '14px',
+                background: 'white',
+                color: '#ef4444',
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',
-                flexShrink: 0
+                fontWeight: '600'
               }}
             >
-              {loading ? '⏳' : `📤 ${totalMedia}`}
+              🗑️ Delete Selected
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Sets Display */}
         <div style={{
@@ -550,7 +646,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     Set {setIndex + 1}
                   </div>
                   
-                  {fileCount > 0 && (
+                  {fileCount > 0 && !selectionMode && (
                     <button
                       onClick={() => shareSetDirect(setIndex)}
                       disabled={loading}
@@ -589,7 +685,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     allSetMedia.map((media, idx) => {
                       const imageUrl = mediaCache[media.fileId];
                       const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
-                      const canDelete = !isCreatedPhoto;
+                      const canDelete = !isCreatedPhoto && canDeleteMedia;
+                      const isSelected = selectedMedia.has(media.fileId);
 
                       return (
                         <div
@@ -605,7 +702,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                           <div
                             onClick={() => {
                               hapticFeedback.light();
-                              handleOpenGallery(setIndex, media.photoIndex || 0);
+                              if (selectionMode) {
+                                if (canDelete) {
+                                  toggleMediaSelection(media.fileId);
+                                }
+                              } else {
+                                handleOpenGallery(setIndex, media.photoIndex || 0);
+                              }
                             }}
                             style={{
                               width: '100%',
@@ -619,8 +722,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontSize: '28px',
-                              border: '2px solid var(--tg-theme-button-color)',
-                              overflow: 'hidden'
+                              border: selectionMode && isSelected 
+                                ? '3px solid #ef4444' 
+                                : '2px solid var(--tg-theme-button-color)',
+                              overflow: 'hidden',
+                              opacity: selectionMode && !canDelete ? 0.5 : 1
                             }}
                           >
                             {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
@@ -641,7 +747,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               </div>
                             )}
                             
-                            {media.type === 'photo' && imageUrl && (
+                            {media.type === 'photo' && imageUrl && !selectionMode && (
                               <div style={{
                                 position: 'absolute',
                                 bottom: '4px',
@@ -656,37 +762,58 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                 {(media.photoIndex || 0) + 1}
                               </div>
                             )}
-                          </div>
 
-                          {canDelete && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteUpload(media.fileId, media.type);
-                              }}
-                              disabled={loading}
-                              style={{
+                            {/* ✅ Selection checkbox */}
+                            {selectionMode && canDelete && (
+                              <div style={{
                                 position: 'absolute',
                                 top: '4px',
-                                left: '4px',
-                                background: 'rgba(239, 68, 68, 0.9)',
-                                color: 'white',
-                                border: 'none',
+                                right: '4px',
+                                width: '24px',
+                                height: '24px',
                                 borderRadius: '50%',
-                                width: '22px',
-                                height: '22px',
+                                background: isSelected ? '#ef4444' : 'rgba(0,0,0,0.6)',
+                                border: '2px solid white',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                zIndex: 10,
-                                padding: 0
-                              }}
-                            >
-                              ✕
-                            </button>
-                          )}
+                                fontSize: '14px'
+                              }}>
+                                {isSelected && '✓'}
+                              </div>
+                            )}
+
+                            {/* Quick delete button (only when NOT in selection mode) */}
+                            {!selectionMode && canDelete && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteUpload(media.fileId, media.type);
+                                }}
+                                disabled={loading}
+                                style={{
+                                  position: 'absolute',
+                                  top: '4px',
+                                  left: '4px',
+                                  background: 'rgba(239, 68, 68, 0.9)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '22px',
+                                  height: '22px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                  zIndex: 10,
+                                  padding: 0
+                                }}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -774,7 +901,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             </button>
           )}
           
-          {/* Archive/Restore - Fixed to check status */}
+          {/* Archive/Restore */}
           {!isArchived && (task.status === 'Submitted' || task.status === 'Completed') && 
             ['Lead', 'Admin'].includes(userRole) && (
               <button
@@ -810,7 +937,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* ✅ Gallery Overlay Modal */}
+      {/* Gallery Overlay Modal */}
       <GalleryOverlay
         isOpen={galleryOpen}
         task={task}
