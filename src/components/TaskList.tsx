@@ -17,22 +17,6 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
-// Helper to get user display name
-const getUserDisplayName = async (userId: number): Promise<string> => {
-  try {
-    // If it's the current user, use their name from WebApp
-    if (WebApp.initDataUnsafe?.user?.id === userId) {
-      return WebApp.initDataUnsafe.user.first_name || `User ${userId}`;
-    }
-    
-    // Otherwise, try to fetch from API (you'll need to add this endpoint)
-    // For now, just return formatted ID
-    return `User ${userId}`;
-  } catch {
-    return `User ${userId}`;
-  }
-};
-
 export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +30,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [userRole, setUserRole] = useState<string>('Member');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   
-  // Ref to store and restore scroll position
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
 
@@ -62,7 +45,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     fetchUserRole();
   }, []);
 
-  // Get role-based filter order
   const getFilterOrder = (): TaskStatus[] => {
     if (userRole === 'Member') {
       return ['Redo', 'Received', 'New', 'Submitted', 'Completed'];
@@ -84,14 +66,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         statusFilter = undefined;
       }
       
-      console.log('📊 Fetching tasks with filters:', { 
-        status: statusFilter || 'all', 
-        archived: filter.archived 
-      });
-      
       const data = await api.getTasks(statusFilter, filter.archived);
-      
-      console.log('📊 Received tasks:', data.tasks.length, 'archived:', filter.archived);
       
       let filteredTasks = data.tasks;
       if (userRole === 'Viewer' && filter.status === 'InProgress') {
@@ -137,10 +112,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       
       setThumbnails(thumbnailMap);
 
-      // Load user names for createdBy and doneBy
+      // Load user names for doneBy
       const userIds = new Set<number>();
       filteredTasks.forEach((task: Task) => {
-        userIds.add(task.createdBy);
         if (task.doneBy) userIds.add(task.doneBy);
       });
 
@@ -149,13 +123,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
       const nameMap: Record<number, string> = {};
       
-      // Set current user's name first
       if (currentUserId && currentUserName) {
         nameMap[currentUserId] = currentUserName;
       }
 
-      // For other users, use "User {id}" format
-      // In a full implementation, you'd fetch these from an API
       Array.from(userIds).forEach(userId => {
         if (!nameMap[userId]) {
           nameMap[userId] = `User ${userId}`;
@@ -173,7 +144,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   };
 
   useEffect(() => {
-    console.log('🔄 Filter changed:', filter);
     fetchTasks();
   }, [filter.status, filter.archived]);
 
@@ -194,9 +164,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const handleArchiveToggle = () => {
     hapticFeedback.light();
-    const newArchived = !filter.archived;
-    console.log('🗃️ Toggle archive:', filter.archived, '→', newArchived);
-    setFilter({ ...filter, archived: newArchived });
+    setFilter({ ...filter, archived: !filter.archived });
   };
 
   const handleTaskClick = (task: Task) => {
@@ -476,6 +444,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           ))}
         </div>
       )}
+
       <style>{`
         div::-webkit-scrollbar {
           height: 6px;
@@ -496,7 +465,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
-// Updated TaskCard component with user names
 function TaskCard({ 
   task, 
   thumbnailUrl,
@@ -513,8 +481,6 @@ function TaskCard({
   }).length;
 
   const progress = (completedSets / task.requireSets) * 100;
-  
-  const creatorName = userNames[task.createdBy] || `User ${task.createdBy}`;
   const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
 
   return (
@@ -583,16 +549,20 @@ function TaskCard({
           gap: '12px',
           fontSize: '12px',
           color: 'var(--tg-theme-hint-color)',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          alignItems: 'center'
         }}>
           {task.labels.video && (
-            <span>🎥 Video required</span>
+            <span>🎥</span>
           )}
-          <span>👤 {creatorName}</span>
           {doneName && task.status !== 'New' && task.status !== 'Received' && (
-            <span>✅ {doneName}</span>
+            <>
+              <span>✅ {doneName}</span>
+              {task.lastModifiedAt && (
+                <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+              )}
+            </>
           )}
-          <span>📅 {new Date(task.createdAt).toLocaleDateString()}</span>
         </div>
       </div>
     </div>
