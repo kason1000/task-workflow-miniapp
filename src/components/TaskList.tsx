@@ -481,140 +481,98 @@ function TaskCard({
   }).length;
 
   const progress = (completedSets / task.requireSets) * 100;
-  const isComplete = progress === 100;
-  const doneName = task.doneByName || (task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null);
+  const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
 
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
-      {/* Thumbnail with overlays */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          background: thumbnailUrl 
-            ? `url(${thumbnailUrl}) center/cover`
-            : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '32px',
-          border: `2px solid ${isComplete ? '#10b981' : 'var(--tg-theme-secondary-bg-color)'}`
-        }}>
-          {!thumbnailUrl && '📷'}
-        </div>
-        
-        {/* Video indicator */}
-        {task.labels.video && (
-          <div style={{
-            position: 'absolute',
-            top: '4px',
-            right: '4px',
-            fontSize: '16px',
-            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))'
-          }}>
-            🎥
-          </div>
-        )}
-        
-        {/* Completion checkmark */}
-        {isComplete && (
-          <div style={{
-            position: 'absolute',
-            bottom: '4px',
-            right: '4px',
-            background: '#10b981',
-            borderRadius: '50%',
-            width: '20px',
-            height: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '12px',
-            border: '2px solid white'
-          }}>
-            ✓
-          </div>
-        )}
+      <div style={{
+        width: '80px',
+        height: '80px',
+        minWidth: '80px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        background: thumbnailUrl 
+          ? `url(${thumbnailUrl}) center/cover`
+          : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '32px',
+        border: '2px solid var(--tg-theme-secondary-bg-color)'
+      }}>
+        {!thumbnailUrl && '📷'}
       </div>
-
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {/* Title row */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          gap: '8px'
-        }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
           <h3 style={{ 
-            fontSize: '15px', 
-            fontWeight: '600',
-            flex: 1,
+            fontSize: '16px', 
+            fontWeight: '600', 
+            flex: 1, 
+            marginRight: '12px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            margin: 0
+            whiteSpace: 'nowrap'
           }}>
             {task.title}
           </h3>
-          <span className={`badge ${statusColors[task.status]}`} style={{
-            fontSize: '10px',
-            padding: '2px 6px',
-            flexShrink: 0
-          }}>
+          <span className={`badge ${statusColors[task.status]}`}>
             {task.status}
           </span>
         </div>
-
-        {/* Progress */}
-        <div style={{
-          height: '4px',
-          background: 'var(--tg-theme-bg-color)',
-          borderRadius: '2px',
-          overflow: 'hidden',
-        }}>
+        <div style={{ marginBottom: '8px' }}>
           <div style={{
-            height: '100%',
-            width: `${progress}%`,
-            background: isComplete ? '#10b981' : 'var(--tg-theme-button-color)',
-            transition: 'width 0.3s',
-          }} />
-        </div>
-
-        {/* Meta row */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '11px',
-          color: 'var(--tg-theme-hint-color)',
-          gap: '8px'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            gap: '6px', 
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            overflow: 'hidden'
+            fontSize: '12px',
+            color: 'var(--tg-theme-hint-color)',
+            marginBottom: '4px',
+            gap: '8px'
           }}>
-            {doneName && task.status !== 'New' && task.status !== 'Received' ? (
-              <span style={{
+            <span>Progress</span>
+            {doneName && task.status !== 'New' && task.status !== 'Received' && (
+              <span style={{ 
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                flex: 1,
+                textAlign: 'center'
               }}>
                 👤 {doneName}
               </span>
-            ) : (
-              <span>📅 {new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             )}
+            <span style={{ whiteSpace: 'nowrap' }}>
+              {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
+            </span>
           </div>
-          <span style={{ 
-            flexShrink: 0,
-            fontWeight: '500'
+          <div style={{
+            height: '6px',
+            background: 'var(--tg-theme-bg-color)',
+            borderRadius: '3px',
+            overflow: 'hidden',
           }}>
-            {completedSets}/{task.requireSets}
-          </span>
+            <div style={{
+              height: '100%',
+              width: `${progress}%`,
+              background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
+              transition: 'width 0.3s',
+            }} />
+          </div>
+        </div>
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          fontSize: '12px',
+          color: 'var(--tg-theme-hint-color)',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          {task.labels.video && (
+            <span>🎥</span>
+          )}
+          {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
+            <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+          )}
         </div>
       </div>
     </div>
