@@ -30,6 +30,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [userRole, setUserRole] = useState<string>('Member');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   
+  // Fullscreen image viewer state
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
 
@@ -149,7 +152,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       });
       
       setUserNames(nameMap);
-
     } catch (error: any) {
       console.error('Failed to fetch tasks:', error);
       setError(error.message);
@@ -199,6 +201,17 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       hapticFeedback.error();
       setSending(prev => ({ ...prev, [taskId]: false }));
     }
+  };
+
+  const handleThumbnailClick = (thumbnailUrl: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    hapticFeedback.medium();
+    setFullscreenImage(thumbnailUrl);
+  };
+
+  const closeFullscreen = () => {
+    hapticFeedback.light();
+    setFullscreenImage(null);
   };
 
   if (loading) {
@@ -425,6 +438,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     task={task}
                     thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
                     userNames={userNames}
+                    onThumbnailClick={handleThumbnailClick}
                   />
                 </div>
 
@@ -469,6 +483,62 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         </div>
       )}
 
+      {/* Fullscreen Image Viewer */}
+      {fullscreenImage && (
+        <div
+          onClick={closeFullscreen}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            cursor: 'pointer'
+          }}
+        >
+          {/* Close button */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              color: 'white',
+              cursor: 'pointer',
+              zIndex: 10000
+            }}
+          >
+            ✕
+          </div>
+
+          {/* Image */}
+          <img
+            src={fullscreenImage}
+            alt="Fullscreen view"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              borderRadius: '8px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       <style>{`
         div::-webkit-scrollbar {
           height: 6px;
@@ -493,11 +563,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 function TaskCard({ 
   task, 
   thumbnailUrl,
-  userNames 
+  userNames,
+  onThumbnailClick
 }: { 
   task: Task; 
   thumbnailUrl?: string;
   userNames: Record<number, string>;
+  onThumbnailClick: (url: string, e: React.MouseEvent) => void;
 }) {
   const completedSets = task.sets.filter((set) => {
     const hasPhotos = set.photos.length >= 3;
@@ -511,22 +583,58 @@ function TaskCard({
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
       {/* Thumbnail */}
-      <div style={{
-        width: '80px',
-        height: '80px',
-        minWidth: '80px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        background: thumbnailUrl 
-          ? `url(${thumbnailUrl}) center/cover`
-          : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '32px',
-        border: '2px solid var(--tg-theme-secondary-bg-color)'
-      }}>
+      <div
+        onClick={thumbnailUrl ? (e) => onThumbnailClick(thumbnailUrl, e) : undefined}
+        style={{
+          width: '80px',
+          height: '80px',
+          minWidth: '80px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          background: thumbnailUrl 
+            ? `url(${thumbnailUrl}) center/cover`
+            : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '32px',
+          border: '2px solid var(--tg-theme-secondary-bg-color)',
+          cursor: thumbnailUrl ? 'pointer' : 'default',
+          position: 'relative',
+          transition: 'transform 0.2s, border-color 0.2s'
+        }}
+        onMouseEnter={(e) => {
+          if (thumbnailUrl) {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.borderColor = 'var(--tg-theme-button-color)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (thumbnailUrl) {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.borderColor = 'var(--tg-theme-secondary-bg-color)';
+          }
+        }}
+      >
         {!thumbnailUrl && '📷'}
+        {thumbnailUrl && (
+          <div style={{
+            position: 'absolute',
+            bottom: '4px',
+            right: '4px',
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white'
+          }}>
+            🔍
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -580,7 +688,6 @@ function TaskCard({
               {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
             </span>
           </div>
-
           <div style={{
             height: '6px',
             background: 'var(--tg-theme-bg-color)',

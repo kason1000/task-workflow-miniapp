@@ -35,6 +35,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
 
+  // Fullscreen image viewer state
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+
   // FIX: Calculate correct media index (photos are indexed 0,1,2..., video comes after)
   const handleOpenGallery = (setIndex: number, photoIndex: number) => {
     const set = task.sets[setIndex];
@@ -48,6 +51,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     setGalleryInitialMedia(mediaIndex);
     setGalleryOpen(true);
     hapticFeedback.medium();
+  };
+
+  const handleCreatedPhotoClick = () => {
+    if (task.createdPhoto) {
+      const thumbnailUrl = mediaCache[task.createdPhoto.file_id];
+      if (thumbnailUrl) {
+        hapticFeedback.medium();
+        setFullscreenImage(thumbnailUrl);
+      }
+    }
+  };
+
+  const closeFullscreen = () => {
+    hapticFeedback.light();
+    setFullscreenImage(null);
   };
 
   // Handle batch delete
@@ -210,6 +228,12 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   };
 
   useEffect(() => {
+    // Load created photo
+    if (task.createdPhoto?.file_id) {
+      loadMediaUrl(task.createdPhoto.file_id);
+    }
+
+    // Load set media
     task.sets.forEach(set => {
       set.photos?.forEach(photo => loadMediaUrl(photo.file_id));
       if (set.video) loadMediaUrl(set.video.file_id);
@@ -355,51 +379,116 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const isArchived = task.status === 'Archived';
   const canDeleteMedia = userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member';
 
+  const createdPhotoUrl = task.createdPhoto ? mediaCache[task.createdPhoto.file_id] : undefined;
+
   return (
     <div style={{ paddingBottom: '100px' }}>
       {/* Compact Information Section */}
       <div className="card">
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '8px' 
-        }}>
-          <h3 style={{ fontSize: '16px', margin: 0 }}>📋 {task.title}</h3>
-          <span className={`badge ${statusColors[task.status]}`}>
-            {task.status}
-          </span>
-        </div>
-        
-        <div style={{ 
-          fontSize: '13px', 
-          lineHeight: '1.5',
-          color: 'var(--tg-theme-hint-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px'
-        }}>
-          <div>
-            👤 {WebApp.initDataUnsafe?.user?.id === task.createdBy 
-              ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
-              : `User ${task.createdBy}`}
-            {' • '}
-            📅 {new Date(task.createdAt).toLocaleDateString()}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {/* Created Photo Thumbnail */}
+          <div
+            onClick={handleCreatedPhotoClick}
+            style={{
+              width: '80px',
+              height: '80px',
+              minWidth: '80px',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              background: createdPhotoUrl 
+                ? `url(${createdPhotoUrl}) center/cover`
+                : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '32px',
+              border: '2px solid var(--tg-theme-secondary-bg-color)',
+              cursor: createdPhotoUrl ? 'pointer' : 'default',
+              position: 'relative',
+              transition: 'transform 0.2s, border-color 0.2s',
+              flexShrink: 0
+            }}
+            onMouseEnter={(e) => {
+              if (createdPhotoUrl) {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = 'var(--tg-theme-button-color)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (createdPhotoUrl) {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = 'var(--tg-theme-secondary-bg-color)';
+              }
+            }}
+          >
+            {!createdPhotoUrl && (loadingMedia.has(task.createdPhoto?.file_id || '') ? '⏳' : '📷')}
+            {createdPhotoUrl && (
+              <div style={{
+                position: 'absolute',
+                bottom: '4px',
+                right: '4px',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                color: 'white'
+              }}>
+                🔍
+              </div>
+            )}
           </div>
-          
-          {task.doneBy && (
-            <div>
-              ✅ Submitted by {WebApp.initDataUnsafe?.user?.id === task.doneBy
-                ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
-                : `User ${task.doneBy}`}
+
+          {/* Task Info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start',
+              marginBottom: '8px' 
+            }}>
+              <h3 style={{ fontSize: '16px', margin: 0, flex: 1, marginRight: '8px' }}>
+                📋 {task.title}
+              </h3>
+              <span className={`badge ${statusColors[task.status]}`}>
+                {task.status}
+              </span>
             </div>
-          )}
-          
-          {totalMedia > 0 && getUploaders().length > 0 && (
-            <div>
-              📤 Uploaded by: {getUploaders().join(', ')}
+            
+            <div style={{ 
+              fontSize: '13px', 
+              lineHeight: '1.5',
+              color: 'var(--tg-theme-hint-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }}>
+              <div>
+                👤 {WebApp.initDataUnsafe?.user?.id === task.createdBy 
+                  ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
+                  : `User ${task.createdBy}`}
+                {' • '}
+                📅 {new Date(task.createdAt).toLocaleDateString()}
+              </div>
+              
+              {task.doneBy && (
+                <div>
+                  ✅ Submitted by {WebApp.initDataUnsafe?.user?.id === task.doneBy
+                    ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
+                    : `User ${task.doneBy}`}
+                </div>
+              )}
+              
+              {totalMedia > 0 && getUploaders().length > 0 && (
+                <div>
+                  📤 Uploaded by: {getUploaders().join(', ')}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -916,6 +1005,62 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           )}
         </div>
       </div>
+
+      {/* Fullscreen Image Viewer */}
+      {fullscreenImage && (
+        <div
+          onClick={closeFullscreen}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            cursor: 'pointer'
+          }}
+        >
+          {/* Close button */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              color: 'white',
+              cursor: 'pointer',
+              zIndex: 10000
+            }}
+          >
+            ✕
+          </div>
+
+          {/* Image */}
+          <img
+            src={fullscreenImage}
+            alt="Fullscreen view"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              borderRadius: '8px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* Gallery Overlay Modal */}
       <GalleryOverlay
