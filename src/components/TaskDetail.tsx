@@ -64,7 +64,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       const deletePromises = Array.from(selectedMedia).map(fileId => 
         api.deleteUpload(task.id, fileId)
       );
-
       await Promise.all(deletePromises);
       hapticFeedback.success();
       showAlert(`✅ ${selectedMedia.size} media deleted`);
@@ -222,6 +221,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
     const transitions: Record<string, string[]> = {
       'New->Received': ['Member', 'Lead', 'Admin'],
+      'Received->New': ['Lead', 'Admin'],
       'Received->Submitted': ['Member', 'Lead', 'Admin'],
       'Submitted->Redo': ['Lead', 'Admin'],
       'Submitted->Completed': ['Lead', 'Admin'],
@@ -837,6 +837,17 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               style={{ flex: '1 1 calc(50% - 4px)' }}
             >
               📦 Receive
+            </button>
+          )}
+          
+          {/* Move back to New (Admin/Lead only on Received status) */}
+          {task.status === 'Received' && canTransition('New') && (
+            <button 
+              onClick={() => handleTransition('New')} 
+              disabled={loading}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
+            >
+              ↩️ Move to New
             </button>
           )}
           
