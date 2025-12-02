@@ -32,9 +32,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Zoom state
+  const [scale, setScale] = useState(1);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastDistanceRef = useRef<number>(0);
+  const lastScaleRef = useRef<number>(1);
 
   const getFilterOrder = (): TaskStatus[] => {
     if (userRole === 'Member') {
@@ -206,12 +217,131 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const handleThumbnailClick = (thumbnailUrl: string, e: React.MouseEvent) => {
     e.stopPropagation();
     hapticFeedback.medium();
+    
+    // Get thumbnail position for animation
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
+    setIsAnimating(true);
+    
+    // Reset zoom
+    setScale(1);
+    setTranslateX(0);
+    setTranslateY(0);
+    lastScaleRef.current = 1;
+    
+    // End animation after transition
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 300);
   };
 
   const closeFullscreen = () => {
+    if (scale !== 1) {
+      // If zoomed, reset zoom first
+      setScale(1);
+      setTranslateX(0);
+      setTranslateY(0);
+      lastScaleRef.current = 1;
+      return;
+    }
+    
     hapticFeedback.light();
-    setFullscreenImage(null);
+    setIsAnimating(true);
+    
+    setTimeout(() => {
+      setFullscreenImage(null);
+      setThumbnailRect(null);
+      setIsAnimating(false);
+    }, 300);
+  };
+
+  // Touch event handlers for pinch-to-zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    } else if (e.touches.length === 2) {
+      const distance = getDistance(e.touches[0], e.touches[1]);
+      lastDistanceRef.current = distance;
+      lastScaleRef.current = scale;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      
+      const distance = getDistance(e.touches[0], e.touches[1]);
+      const scaleChange = distance / lastDistanceRef.current;
+      let newScale = lastScaleRef.current * scaleChange;
+      
+      // Limit scale between 1 and 4
+      newScale = Math.max(1, Math.min(4, newScale));
+      
+      setScale(newScale);
+      
+      if (newScale === 1) {
+        setTranslateX(0);
+        setTranslateY(0);
+      }
+    } else if (e.touches.length === 1 && scale > 1 && touchStartRef.current) {
+      e.preventDefault();
+      
+      const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+      const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+      
+      setTranslateX(prev => prev + deltaX);
+      setTranslateY(prev => prev + deltaY);
+      
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      lastDistanceRef.current = 0;
+    }
+    if (e.touches.length === 0) {
+      touchStartRef.current = null;
+    }
+  };
+
+  const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Double-tap to zoom
+  const lastTapRef = useRef<number>(0);
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapRef.current;
+    
+    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+      // Double tap detected
+      hapticFeedback.medium();
+      
+      if (scale === 1) {
+        setScale(2);
+        lastScaleRef.current = 2;
+      } else {
+        setScale(1);
+        setTranslateX(0);
+        setTranslateY(0);
+        lastScaleRef.current = 1;
+      }
+    }
+    
+    lastTapRef.current = now;
   };
 
   if (loading) {
@@ -499,11 +629,19 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '20px',
-            cursor: 'pointer'
+            cursor: scale === 1 ? 'pointer' : 'default',
+            opacity: isAnimating && !fullscreenImage ? 0 : 1,
+            transition: isAnimating ? 'opacity 0.3s ease' : 'none',
+            overflow: 'hidden',
+            touchAction: 'none'
           }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Close button */}
           <div
+            onClick={closeFullscreen}
             style={{
               position: 'absolute',
               top: '20px',
@@ -518,24 +656,88 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               fontSize: '24px',
               color: 'white',
               cursor: 'pointer',
-              zIndex: 10000
+              zIndex: 10001,
+              transition: 'background 0.2s',
+              backdropFilter: 'blur(10px)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
             }}
           >
             ✕
           </div>
 
+          {/* Zoom indicator */}
+          {scale > 1 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '20px',
+                left: '20px',
+                padding: '8px 12px',
+                borderRadius: '20px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                zIndex: 10001,
+                backdropFilter: 'blur(10px)',
+                pointerEvents: 'none'
+              }}
+            >
+              {Math.round(scale * 100)}%
+            </div>
+          )}
+
           {/* Image */}
           <img
+            ref={imageRef}
             src={fullscreenImage}
             alt="Fullscreen view"
+            onClick={handleImageClick}
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
+              maxWidth: isAnimating && thumbnailRect ? `${thumbnailRect.width}px` : '100%',
+              maxHeight: isAnimating && thumbnailRect ? `${thumbnailRect.height}px` : '100%',
               objectFit: 'contain',
-              borderRadius: '8px'
+              borderRadius: isAnimating && thumbnailRect ? '8px' : '0px',
+              transform: isAnimating && thumbnailRect 
+                ? `translate(${thumbnailRect.left + thumbnailRect.width / 2 - window.innerWidth / 2}px, ${thumbnailRect.top + thumbnailRect.height / 2 - window.innerHeight / 2}px) scale(${scale})`
+                : `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+              transition: isAnimating ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+              cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
+              touchAction: 'none',
+              userSelect: 'none',
+              WebkitUserSelect: 'none'
             }}
-            onClick={(e) => e.stopPropagation()}
+            draggable={false}
           />
+
+          {/* Instructions */}
+          {scale === 1 && !isAnimating && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '40px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                fontSize: '12px',
+                zIndex: 10001,
+                backdropFilter: 'blur(10px)',
+                pointerEvents: 'none',
+                opacity: 0.8,
+                animation: 'fadeIn 0.5s ease 0.5s both'
+              }}
+            >
+              Pinch to zoom • Double tap to zoom
+            </div>
+          )}
         </div>
       )}
 
@@ -553,6 +755,17 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         }
         div::-webkit-scrollbar-thumb:hover {
           background: var(--tg-theme-button-color);
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(10px);
+          }
+          to {
+            opacity: 0.8;
+            transform: translateX(-50%) translateY(0);
+          }
         }
       `}</style>
     </div>
