@@ -215,7 +215,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     // End animation after transition
     setTimeout(() => {
       setIsAnimating(false);
-    }, 300);
+    }, 400);
   };
 
   const closeFullscreen = () => {
@@ -227,7 +227,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       setFullscreenImage(null);
       setThumbnailRect(null);
       setIsAnimating(false);
-    }, 300);
+    }, 400);
   };
 
   if (loading) {
@@ -548,17 +548,55 @@ function ImageViewer({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastTouchDistance = useRef<number | null>(null);
-  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
+
+  // Load image to get dimensions
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      setImageDimensions({ width: img.width, height: img.height });
+      setIsImageLoaded(true);
+    };
+    img.src = imageUrl;
+  }, [imageUrl]);
 
   // Reset on image change
   useEffect(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
+    setIsImageLoaded(false);
   }, [imageUrl]);
+
+  // Calculate fitted dimensions
+  const getFittedDimensions = () => {
+    if (!imageDimensions || !containerRef.current) {
+      return { width: 0, height: 0 };
+    }
+
+    const containerWidth = window.innerWidth;
+    const containerHeight = window.innerHeight;
+    const imageAspect = imageDimensions.width / imageDimensions.height;
+    const containerAspect = containerWidth / containerHeight;
+
+    let width, height;
+
+    if (imageAspect > containerAspect) {
+      // Image is wider - fit to width
+      width = containerWidth;
+      height = containerWidth / imageAspect;
+    } else {
+      // Image is taller - fit to height
+      height = containerHeight;
+      width = containerHeight * imageAspect;
+    }
+
+    return { width, height };
+  };
 
   // Touch handlers for pinch-to-zoom
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -571,10 +609,6 @@ function ImageViewer({
         touch2.clientY - touch1.clientY
       );
       lastTouchDistance.current = distance;
-      
-      const centerX = (touch1.clientX + touch2.clientX) / 2;
-      const centerY = (touch1.clientY + touch2.clientY) / 2;
-      lastTouchCenter.current = { x: centerX, y: centerY };
     } else if (e.touches.length === 1 && scale > 1) {
       // Pan start
       setIsDragging(true);
@@ -618,7 +652,6 @@ function ImageViewer({
 
   const handleTouchEnd = () => {
     lastTouchDistance.current = null;
-    lastTouchCenter.current = null;
     setIsDragging(false);
   };
 
@@ -658,31 +691,47 @@ function ImageViewer({
 
   // Calculate animation styles
   const getAnimationStyle = () => {
-    if (!thumbnailRect || !isAnimating) return {};
-    
-    if (isClosing) {
-      // Animate back to thumbnail
+    if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
+      return {};
+    }
+
+    const fittedDimensions = getFittedDimensions();
+
+    if (isAnimating && !isClosing) {
+      // Opening: Start from thumbnail
       return {
         width: `${thumbnailRect.width}px`,
         height: `${thumbnailRect.height}px`,
         top: `${thumbnailRect.top}px`,
         left: `${thumbnailRect.left}px`,
-        borderRadius: '8px'
+        borderRadius: '8px',
+        objectFit: 'cover' as const
+      };
+    } else if (isAnimating && isClosing) {
+      // Closing: Go back to thumbnail
+      return {
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        top: `${thumbnailRect.top}px`,
+        left: `${thumbnailRect.left}px`,
+        borderRadius: '8px',
+        objectFit: 'cover' as const
       };
     } else {
-      // Animate from thumbnail
+      // Opened: Fit to screen
       return {
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        top: `${thumbnailRect.top}px`,
-        left: `${thumbnailRect.left}px`,
-        borderRadius: '8px'
+        width: `${fittedDimensions.width}px`,
+        height: `${fittedDimensions.height}px`,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '0px',
+        objectFit: 'contain' as const
       };
     }
   };
 
   const animationStyle = getAnimationStyle();
-  const shouldAnimate = isAnimating && thumbnailRect;
 
   return (
     <div
@@ -703,7 +752,7 @@ function ImageViewer({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: isAnimating ? 'background 0.3s ease-out' : 'none',
+        transition: 'background 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: scale > 1 ? 'move' : 'pointer',
         overflow: 'hidden'
       }}
@@ -728,7 +777,7 @@ function ImageViewer({
           cursor: 'pointer',
           zIndex: 10000,
           opacity: isClosing ? 0 : 1,
-          transition: 'opacity 0.3s ease-out'
+          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         ✕
@@ -744,21 +793,17 @@ function ImageViewer({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          maxWidth: shouldAnimate ? undefined : '100%',
-          maxHeight: shouldAnimate ? undefined : '100%',
-          objectFit: 'contain',
-          transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-          transition: shouldAnimate 
-            ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
-            : scale === 1 
-              ? 'transform 0.3s ease-out' 
-              : 'none',
+          position: 'absolute',
+          transform: scale > 1 ? `translate(${position.x / scale}px, ${position.y / scale}px) scale(${scale})` : animationStyle.transform,
+          transition: isAnimating || (scale === 1 && position.x === 0 && position.y === 0)
+            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+            : 'none',
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
           pointerEvents: scale > 1 ? 'auto' : 'none',
-          position: shouldAnimate ? 'absolute' : 'relative',
-          ...(shouldAnimate ? animationStyle : {})
+          transformOrigin: 'center center',
+          ...animationStyle
         }}
       />
     </div>
