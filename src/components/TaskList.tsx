@@ -33,7 +33,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
-  const [showViewer, setShowViewer] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   
   // Zoom state
   const [scale, setScale] = useState(1);
@@ -222,6 +223,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
+    setIsOpening(true);
+    setIsClosing(false);
     
     // Reset zoom
     setScale(1);
@@ -229,10 +232,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setTranslateY(0);
     lastScaleRef.current = 1;
     
-    // Show viewer immediately, then animate
-    requestAnimationFrame(() => {
-      setShowViewer(true);
-    });
+    // End opening animation after transition
+    setTimeout(() => {
+      setIsOpening(false);
+    }, 350);
   };
 
   const closeFullscreen = () => {
@@ -246,12 +249,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
     
     hapticFeedback.light();
-    setShowViewer(false);
+    setIsClosing(true);
     
     setTimeout(() => {
       setFullscreenImage(null);
       setThumbnailRect(null);
-    }, 300);
+      setIsClosing(false);
+    }, 350);
   };
 
   // Touch event handlers for pinch-to-zoom
@@ -361,6 +365,56 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const statusOrder = getFilterOrder();
   const canSeeArchived = userRole === 'Admin' || userRole === 'Lead';
+
+  // Calculate image position for animation
+  const getImageStyle = () => {
+    if (!thumbnailRect) return {};
+
+    if (isOpening) {
+      // Start from thumbnail position, expand to center
+      return {
+        position: 'absolute' as const,
+        left: `${thumbnailRect.left}px`,
+        top: `${thumbnailRect.top}px`,
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        objectFit: 'cover' as const,
+        borderRadius: '8px',
+        transform: 'translate(0, 0) scale(1)',
+        animation: 'expandToCenter 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+      };
+    }
+
+    if (isClosing) {
+      // Shrink from center back to thumbnail position
+      return {
+        position: 'absolute' as const,
+        left: '50%',
+        top: '50%',
+        maxWidth: '90%',
+        maxHeight: '90%',
+        objectFit: 'contain' as const,
+        borderRadius: '0px',
+        transform: `translate(-50%, -50%) scale(${scale})`,
+        animation: `shrinkToThumbnail 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+        animationFillMode: 'forwards'
+      };
+    }
+
+    // Fully open state
+    return {
+      maxWidth: '100%',
+      maxHeight: '100%',
+      objectFit: 'contain' as const,
+      borderRadius: '0px',
+      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+      transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
+      cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
+      touchAction: 'none',
+      userSelect: 'none',
+      WebkitUserSelect: 'none'
+    };
+  };
 
   return (
     <div>
@@ -612,7 +666,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       )}
 
       {/* Fullscreen Image Viewer */}
-      {fullscreenImage && (
+      {fullscreenImage && thumbnailRect && (
         <div
           onClick={closeFullscreen}
           style={{
@@ -627,8 +681,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: scale === 1 ? 'pointer' : 'default',
-            opacity: showViewer ? 1 : 0,
-            transition: 'opacity 0.3s ease',
+            opacity: isClosing ? 0 : 1,
+            transition: isClosing ? 'opacity 0.35s ease' : 'opacity 0.2s ease',
             overflow: 'hidden',
             touchAction: 'none'
           }}
@@ -655,7 +709,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               cursor: 'pointer',
               zIndex: 10001,
               transition: 'background 0.2s',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(10px)',
+              opacity: isOpening ? 0 : 1,
+              transform: isOpening ? 'scale(0.8)' : 'scale(1)',
+              transitionDelay: isOpening ? '0s' : '0.15s'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
@@ -668,7 +725,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           </div>
 
           {/* Zoom indicator */}
-          {scale > 1 && (
+          {scale > 1 && !isOpening && !isClosing && (
             <div
               style={{
                 position: 'absolute',
@@ -690,45 +747,17 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           )}
 
           {/* Image */}
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px'
-            }}
-          >
-            <img
-              ref={imageRef}
-              src={fullscreenImage}
-              alt="Fullscreen view"
-              onClick={handleImageClick}
-              style={{
-                maxWidth: showViewer && !thumbnailRect ? '100%' : thumbnailRect ? `${thumbnailRect.width}px` : '0px',
-                maxHeight: showViewer && !thumbnailRect ? '100%' : thumbnailRect ? `${thumbnailRect.height}px` : '0px',
-                width: showViewer && !thumbnailRect ? 'auto' : thumbnailRect ? `${thumbnailRect.width}px` : '0px',
-                height: showViewer && !thumbnailRect ? 'auto' : thumbnailRect ? `${thumbnailRect.height}px` : '0px',
-                objectFit: 'contain',
-                borderRadius: showViewer ? '0px' : '8px',
-                transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-                transition: showViewer ? 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
-                cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
-                touchAction: 'none',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                position: thumbnailRect && !showViewer ? 'fixed' : 'relative',
-                left: thumbnailRect && !showViewer ? `${thumbnailRect.left}px` : 'auto',
-                top: thumbnailRect && !showViewer ? `${thumbnailRect.top}px` : 'auto'
-              }}
-              draggable={false}
-            />
-          </div>
+          <img
+            ref={imageRef}
+            src={fullscreenImage}
+            alt="Fullscreen view"
+            onClick={handleImageClick}
+            style={getImageStyle()}
+            draggable={false}
+          />
 
           {/* Instructions */}
-          {scale === 1 && showViewer && (
+          {scale === 1 && !isOpening && !isClosing && (
             <div
               style={{
                 position: 'absolute',
@@ -744,7 +773,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 backdropFilter: 'blur(10px)',
                 pointerEvents: 'none',
                 opacity: 0,
-                animation: 'fadeIn 0.5s ease 0.5s forwards'
+                animation: 'fadeInUp 0.5s ease 0.5s forwards'
               }}
             >
               Pinch to zoom • Double tap to zoom
@@ -769,7 +798,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           background: var(--tg-theme-button-color);
         }
         
-        @keyframes fadeIn {
+        @keyframes fadeInUp {
           from {
             opacity: 0;
             transform: translateX(-50%) translateY(10px);
@@ -777,6 +806,48 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           to {
             opacity: 0.8;
             transform: translateX(-50%) translateY(0);
+          }
+        }
+
+        @keyframes expandToCenter {
+          0% {
+            left: ${thumbnailRect?.left}px;
+            top: ${thumbnailRect?.top}px;
+            width: ${thumbnailRect?.width}px;
+            height: ${thumbnailRect?.height}px;
+            border-radius: 8px;
+            transform: translate(0, 0) scale(1);
+          }
+          100% {
+            left: 50%;
+            top: 50%;
+            width: 90vw;
+            height: 90vh;
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 0px;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        @keyframes shrinkToThumbnail {
+          0% {
+            left: 50%;
+            top: 50%;
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 0px;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          100% {
+            left: ${thumbnailRect?.left + (thumbnailRect?.width || 0) / 2}px;
+            top: ${thumbnailRect?.top + (thumbnailRect?.height || 0) / 2}px;
+            width: ${thumbnailRect?.width}px;
+            height: ${thumbnailRect?.height}px;
+            max-width: ${thumbnailRect?.width}px;
+            max-height: ${thumbnailRect?.height}px;
+            border-radius: 8px;
+            transform: translate(-50%, -50%) scale(1);
           }
         }
       `}</style>
