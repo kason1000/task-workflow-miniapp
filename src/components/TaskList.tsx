@@ -212,7 +212,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setFullscreenImage(thumbnailUrl);
     setIsAnimating(true);
     
-    // End animation after it completes
+    // End animation after transition
     setTimeout(() => {
       setIsAnimating(false);
     }, 300);
@@ -222,7 +222,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     hapticFeedback.light();
     setIsAnimating(true);
     
-    // Wait for close animation
+    // Wait for animation then close
     setTimeout(() => {
       setFullscreenImage(null);
       setThumbnailRect(null);
@@ -499,12 +499,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         </div>
       )}
 
-      {/* Fullscreen Image Viewer with Pinch-to-Zoom */}
+      {/* Fullscreen Image Viewer with Animation and Pinch-to-Zoom */}
       {fullscreenImage && (
-        <FullscreenImageViewer
+        <ImageViewer
           imageUrl={fullscreenImage}
           thumbnailRect={thumbnailRect}
           isAnimating={isAnimating}
+          isClosing={isAnimating && fullscreenImage !== null}
           onClose={closeFullscreen}
         />
       )}
@@ -529,16 +530,18 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
-// Fullscreen Image Viewer Component with Pinch-to-Zoom
-function FullscreenImageViewer({
+// Image Viewer Component with Pinch-to-Zoom
+function ImageViewer({
   imageUrl,
   thumbnailRect,
   isAnimating,
+  isClosing,
   onClose
 }: {
   imageUrl: string;
   thumbnailRect: DOMRect | null;
   isAnimating: boolean;
+  isClosing: boolean;
   onClose: () => void;
 }) {
   const [scale, setScale] = useState(1);
@@ -546,64 +549,34 @@ function FullscreenImageViewer({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
-  const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  const touchesRef = useRef<{ [key: number]: { x: number; y: number } }>({});
-  const initialDistanceRef = useRef<number>(0);
-  const initialScaleRef = useRef<number>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastTouchDistance = useRef<number | null>(null);
+  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
 
-  // Calculate initial animation styles
-  const getInitialStyle = () => {
-    if (!thumbnailRect || !isAnimating) return {};
-    
-    return {
-      position: 'fixed' as const,
-      left: `${thumbnailRect.left}px`,
-      top: `${thumbnailRect.top}px`,
-      width: `${thumbnailRect.width}px`,
-      height: `${thumbnailRect.height}px`,
-      borderRadius: '8px'
-    };
-  };
+  // Reset on image change
+  useEffect(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, [imageUrl]);
 
-  const getFinalStyle = () => {
-    if (!isAnimating) return {};
-    
-    return {
-      position: 'fixed' as const,
-      left: '20px',
-      top: '50%',
-      right: '20px',
-      height: 'auto',
-      maxHeight: 'calc(100vh - 40px)',
-      transform: 'translateY(-50%)',
-      borderRadius: '8px'
-    };
-  };
-
-  // Touch event handlers for pinch-to-zoom
+  // Touch handlers for pinch-to-zoom
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    
     if (e.touches.length === 2) {
-      // Two finger touch - prepare for pinch
+      // Pinch start
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
-      
-      touchesRef.current = {
-        [touch1.identifier]: { x: touch1.clientX, y: touch1.clientY },
-        [touch2.identifier]: { x: touch2.clientX, y: touch2.clientY }
-      };
-      
       const distance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
+      lastTouchDistance.current = distance;
       
-      initialDistanceRef.current = distance;
-      initialScaleRef.current = scale;
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+      lastTouchCenter.current = { x: centerX, y: centerY };
     } else if (e.touches.length === 1 && scale > 1) {
-      // One finger touch on zoomed image - prepare for pan
+      // Pan start
       setIsDragging(true);
       setDragStart({
         x: e.touches[0].clientX - position.x,
@@ -613,113 +586,132 @@ function FullscreenImageViewer({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    
-    if (e.touches.length === 2) {
-      // Pinch gesture
+    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+      // Pinch zoom
+      e.preventDefault();
+      
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
-      
       const distance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
       
-      if (initialDistanceRef.current > 0) {
-        const newScale = Math.min(
-          Math.max((distance / initialDistanceRef.current) * initialScaleRef.current, 1),
-          4
-        );
-        setScale(newScale);
-        
-        // Reset position when zooming out to 1
-        if (newScale === 1) {
-          setPosition({ x: 0, y: 0 });
-        }
+      const scaleChange = distance / lastTouchDistance.current;
+      const newScale = Math.min(Math.max(scale * scaleChange, 1), 4);
+      
+      setScale(newScale);
+      lastTouchDistance.current = distance;
+      
+      // If zooming out to 1, reset position
+      if (newScale === 1) {
+        setPosition({ x: 0, y: 0 });
       }
     } else if (e.touches.length === 1 && isDragging && scale > 1) {
-      // Pan gesture
+      // Pan
+      e.preventDefault();
       const newX = e.touches[0].clientX - dragStart.x;
       const newY = e.touches[0].clientY - dragStart.y;
-      
-      // Apply bounds
-      if (imageRef.current && containerRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const imageRect = imageRef.current.getBoundingClientRect();
-        
-        const maxX = Math.max(0, (imageRect.width - containerRect.width) / 2);
-        const maxY = Math.max(0, (imageRect.height - containerRect.height) / 2);
-        
-        setPosition({
-          x: Math.min(Math.max(newX, -maxX), maxX),
-          y: Math.min(Math.max(newY, -maxY), maxY)
-        });
-      }
+      setPosition({ x: newX, y: newY });
     }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
+  const handleTouchEnd = () => {
+    lastTouchDistance.current = null;
+    lastTouchCenter.current = null;
+    setIsDragging(false);
+  };
+
+  // Mouse wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(scale * delta, 1), 4);
+    setScale(newScale);
     
-    if (e.touches.length < 2) {
-      touchesRef.current = {};
-      initialDistanceRef.current = 0;
-    }
-    
-    if (e.touches.length === 0) {
-      setIsDragging(false);
-    }
-  };
-
-  const handleBackgroundClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && scale === 1) {
-      onClose();
-    }
-  };
-
-  const handleCloseClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-    onClose();
-  };
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (scale === 1) {
-      setScale(2);
-    } else {
-      setScale(1);
+    if (newScale === 1) {
       setPosition({ x: 0, y: 0 });
     }
   };
 
+  // Double tap to zoom
+  const lastTap = useRef<number>(0);
+  const handleDoubleClick = () => {
+    if (scale > 1) {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    } else {
+      setScale(2);
+    }
+  };
+
+  const handleTap = () => {
+    const now = Date.now();
+    const timeSince = now - lastTap.current;
+    
+    if (timeSince < 300 && timeSince > 0) {
+      handleDoubleClick();
+    }
+    
+    lastTap.current = now;
+  };
+
+  // Calculate animation styles
+  const getAnimationStyle = () => {
+    if (!thumbnailRect || !isAnimating) return {};
+    
+    if (isClosing) {
+      // Animate back to thumbnail
+      return {
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        top: `${thumbnailRect.top}px`,
+        left: `${thumbnailRect.left}px`,
+        borderRadius: '8px'
+      };
+    } else {
+      // Animate from thumbnail
+      return {
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        top: `${thumbnailRect.top}px`,
+        left: `${thumbnailRect.left}px`,
+        borderRadius: '8px'
+      };
+    }
+  };
+
+  const animationStyle = getAnimationStyle();
+  const shouldAnimate = isAnimating && thumbnailRect;
+
   return (
     <div
       ref={containerRef}
-      onClick={handleBackgroundClick}
+      onClick={(e) => {
+        if (e.target === containerRef.current && scale === 1) {
+          onClose();
+        }
+      }}
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.95)',
+        background: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.95)',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
-        cursor: scale > 1 ? 'grab' : 'pointer',
-        opacity: isAnimating ? (thumbnailRect ? 0 : 1) : 1,
-        transition: isAnimating ? 'opacity 0.3s ease-in-out' : 'none',
-        overflow: 'hidden',
-        touchAction: 'none'
+        transition: isAnimating ? 'background 0.3s ease-out' : 'none',
+        cursor: scale > 1 ? 'move' : 'pointer',
+        overflow: 'hidden'
       }}
+      onWheel={handleWheel}
     >
       {/* Close button */}
       <div
-        onClick={handleCloseClick}
+        onClick={onClose}
         style={{
           position: 'absolute',
           top: '20px',
@@ -735,72 +727,38 @@ function FullscreenImageViewer({
           color: 'white',
           cursor: 'pointer',
           zIndex: 10000,
-          backdropFilter: 'blur(4px)'
+          opacity: isClosing ? 0 : 1,
+          transition: 'opacity 0.3s ease-out'
         }}
       >
         ✕
       </div>
-
-      {/* Scale indicator */}
-      {scale > 1 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            padding: '8px 16px',
-            borderRadius: '20px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            color: 'white',
-            fontSize: '14px',
-            fontWeight: '600',
-            zIndex: 10000,
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          {Math.round(scale * 100)}%
-        </div>
-      )}
 
       {/* Image */}
       <img
         ref={imageRef}
         src={imageUrl}
         alt="Fullscreen view"
-        onDoubleClick={handleDoubleClick}
+        onClick={handleTap}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          ...(isAnimating && thumbnailRect ? getInitialStyle() : {}),
-          maxWidth: scale === 1 ? '100%' : 'none',
-          maxHeight: scale === 1 ? '100%' : 'none',
-          width: scale > 1 ? `${100 * scale}%` : 'auto',
-          height: scale > 1 ? 'auto' : 'auto',
+          maxWidth: shouldAnimate ? undefined : '100%',
+          maxHeight: shouldAnimate ? undefined : '100%',
           objectFit: 'contain',
-          borderRadius: isAnimating ? '8px' : '0px',
-          transform: `translate(${position.x}px, ${position.y}px)`,
-          transition: isAnimating 
+          transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+          transition: shouldAnimate 
             ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
-            : isDragging 
-              ? 'none' 
-              : 'transform 0.2s ease-out',
-          cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+            : scale === 1 
+              ? 'transform 0.3s ease-out' 
+              : 'none',
+          touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
-          pointerEvents: 'auto'
-        }}
-        draggable={false}
-        onLoad={() => {
-          // Trigger animation after image loads
-          if (imageRef.current && isAnimating && thumbnailRect) {
-            requestAnimationFrame(() => {
-              if (imageRef.current) {
-                Object.assign(imageRef.current.style, getFinalStyle());
-              }
-            });
-          }
+          pointerEvents: scale > 1 ? 'auto' : 'none',
+          position: shouldAnimate ? 'absolute' : 'relative',
+          ...(shouldAnimate ? animationStyle : {})
         }}
       />
     </div>
@@ -830,7 +788,7 @@ function TaskCard({
   const progress = (completedSets / task.requireSets) * 100;
   const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
 
-  const handleThumbnailClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     if (thumbnailUrl && thumbnailRef.current) {
       const rect = thumbnailRef.current.getBoundingClientRect();
       onThumbnailClick(thumbnailUrl, rect, e);
@@ -842,7 +800,7 @@ function TaskCard({
       {/* Thumbnail */}
       <div
         ref={thumbnailRef}
-        onClick={handleThumbnailClick}
+        onClick={handleClick}
         style={{
           width: '80px',
           height: '80px',
@@ -875,24 +833,6 @@ function TaskCard({
         }}
       >
         {!thumbnailUrl && '📷'}
-        {thumbnailUrl && (
-          <div style={{
-            position: 'absolute',
-            bottom: '4px',
-            right: '4px',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            background: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '10px',
-            color: 'white'
-          }}>
-            🔍
-          </div>
-        )}
       </div>
 
       {/* Content */}
