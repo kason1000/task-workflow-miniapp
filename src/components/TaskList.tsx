@@ -83,25 +83,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       let fetchArchived = false;
 
       if (filter.showArchived) {
-        // Show only archived tasks
         fetchArchived = true;
       } else if (filter.status === 'all') {
-        // Show all active tasks (no specific status)
         statusFilter = undefined;
         fetchArchived = false;
       } else if (filter.status === 'InProgress') {
-        // Viewer-specific: show non-completed active tasks
         statusFilter = undefined;
         fetchArchived = false;
       } else {
-        // Show specific status
         statusFilter = filter.status as TaskStatus;
         fetchArchived = false;
       }
 
       const { tasks: fetchedTasks } = await api.getTasks(statusFilter, fetchArchived);
       
-      // Additional client-side filter for "InProgress" (Viewer only)
       let filteredTasks = fetchedTasks;
       if (roleData.role === 'Viewer' && filter.status === 'InProgress') {
         filteredTasks = fetchedTasks.filter((task: Task) => 
@@ -109,7 +104,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         );
       }
 
-      // Sort by status order if "All" selected
       if (filter.status === 'all' && !filter.showArchived) {
         const statusOrder = getFilterOrder();
         filteredTasks.sort((a: Task, b: Task) => {
@@ -129,7 +123,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       
       setTasks(filteredTasks);
 
-      // Load thumbnails for createdPhoto
       const newThumbnails: Record<string, string> = {};
       for (const task of filteredTasks) {
         if (task.createdPhoto?.file_id && !thumbnails[task.createdPhoto.file_id]) {
@@ -143,7 +136,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       }
       setThumbnails(prev => ({ ...prev, ...newThumbnails }));
 
-      // Load user names for doneBy
       const userIds = new Set<number>();
       filteredTasks.forEach((task: Task) => {
         if (task.doneBy) userIds.add(task.doneBy);
@@ -219,20 +211,17 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     e.stopPropagation();
     hapticFeedback.medium();
     
-    // Get thumbnail position for animation
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
     setIsOpening(true);
     setIsClosing(false);
     
-    // Reset zoom
     setScale(1);
     setTranslateX(0);
     setTranslateY(0);
     lastScaleRef.current = 1;
     
-    // End opening animation after transition
     setTimeout(() => {
       setIsOpening(false);
     }, 350);
@@ -240,7 +229,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const closeFullscreen = () => {
     if (scale !== 1) {
-      // If zoomed, reset zoom first
       setScale(1);
       setTranslateX(0);
       setTranslateY(0);
@@ -258,7 +246,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }, 350);
   };
 
-  // Touch event handlers for pinch-to-zoom
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       touchStartRef.current = {
@@ -280,7 +267,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       const scaleChange = distance / lastDistanceRef.current;
       let newScale = lastScaleRef.current * scaleChange;
       
-      // Limit scale between 1 and 4
       newScale = Math.max(1, Math.min(4, newScale));
       
       setScale(newScale);
@@ -320,7 +306,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Double-tap to zoom
   const lastTapRef = useRef<number>(0);
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -329,7 +314,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     const timeSinceLastTap = now - lastTapRef.current;
     
     if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-      // Double tap detected
       hapticFeedback.medium();
       
       if (scale === 1) {
@@ -344,6 +328,50 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
     
     lastTapRef.current = now;
+  };
+
+  const getImageStyle = (): CSSProperties => {
+    if (!thumbnailRect) return {};
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const padding = 20;
+
+    if (isOpening) {
+      return {
+        position: 'fixed',
+        left: `${thumbnailRect.left}px`,
+        top: `${thumbnailRect.top}px`,
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        objectFit: 'cover',
+        borderRadius: '8px',
+        animation: 'expandImage 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
+      };
+    }
+
+    if (isClosing) {
+      return {
+        maxWidth: `${windowWidth - padding * 2}px`,
+        maxHeight: `${windowHeight - padding * 2}px`,
+        objectFit: 'contain',
+        animation: 'shrinkImage 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
+      };
+    }
+
+    return {
+      maxWidth: `${windowWidth - padding * 2}px`,
+      maxHeight: `${windowHeight - padding * 2}px`,
+      width: 'auto',
+      height: 'auto',
+      objectFit: 'contain',
+      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+      transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
+      cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
+      touchAction: 'none',
+      userSelect: 'none',
+      WebkitUserSelect: 'none'
+    };
   };
 
   if (loading) {
@@ -366,43 +394,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const statusOrder = getFilterOrder();
   const canSeeArchived = userRole === 'Admin' || userRole === 'Lead';
 
-  // Calculate image position for animation
-  const getImageStyle = (): CSSProperties => {
-    if (!thumbnailRect) return {};
-
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const padding = 20;
-
-    if (isOpening || isClosing) {
-      // During animation
-      return {
-        position: 'fixed',
-        objectFit: 'contain',
-        animation: isOpening 
-          ? `openImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`
-          : `closeImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
-        borderRadius: isOpening ? '8px' : '0px',
-        transition: 'border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
-      };
-    }
-
-    // Fully open state
-    return {
-      maxWidth: `${windowWidth - padding * 2}px`,
-      maxHeight: `${windowHeight - padding * 2}px`,
-      width: 'auto',
-      height: 'auto',
-      objectFit: 'contain',
-      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-      transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
-      cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
-      touchAction: 'none',
-      userSelect: 'none',
-      WebkitUserSelect: 'none'
-    };
-  };
-
   return (
     <div>
       {/* Fixed Filter Bar */}
@@ -419,9 +410,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          {/* Status Filters Row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* Scrollable Status Filters */}
             <div
               ref={scrollContainerRef}
               style={{
@@ -503,7 +492,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               ))}
             </div>
 
-            {/* Fixed Right Action Buttons */}
             <div style={{ 
               display: 'flex', 
               gap: '8px',
@@ -594,7 +582,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           {tasks.map((task) => (
             <div key={task.id} className="card">
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
-                {/* Task Card (clickable area) */}
                 <div 
                   onClick={() => handleTaskClick(task)} 
                   style={{ 
@@ -611,7 +598,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   />
                 </div>
 
-                {/* Send to Chat Button */}
                 <button
                   onClick={(e) => handleSendToChat(task.id, e)}
                   disabled={sending[task.id]}
@@ -652,8 +638,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         </div>
       )}
 
-            {/* Fullscreen Image Viewer */}
-            {fullscreenImage && thumbnailRect && (
+      {/* Fullscreen Image Viewer */}
+      {fullscreenImage && thumbnailRect && (
         <>
           <div
             onClick={closeFullscreen}
@@ -668,9 +654,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              padding: '20px',
               cursor: scale === 1 ? 'pointer' : 'default',
               opacity: isClosing ? 0 : 1,
-              transition: isClosing ? 'opacity 0.4s ease' : 'opacity 0.2s ease',
+              transition: 'opacity 0.35s ease',
               overflow: 'hidden',
               touchAction: 'none'
             }}
@@ -747,61 +734,42 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
           {/* Animation styles */}
           <style>{`
-            div::-webkit-scrollbar {
-              height: 6px;
-            }
-            div::-webkit-scrollbar-track {
-              background: var(--tg-theme-secondary-bg-color);
-              border-radius: 3px;
-            }
-            div::-webkit-scrollbar-thumb {
-              background: var(--tg-theme-hint-color);
-              border-radius: 3px;
-            }
-            div::-webkit-scrollbar-thumb:hover {
-              background: var(--tg-theme-button-color);
-            }
-
-            @keyframes openImage {
+            @keyframes expandImage {
               0% {
                 left: ${thumbnailRect.left}px;
                 top: ${thumbnailRect.top}px;
                 width: ${thumbnailRect.width}px;
                 height: ${thumbnailRect.height}px;
                 border-radius: 8px;
+                object-fit: cover;
               }
               100% {
                 left: 50%;
                 top: 50%;
                 width: calc(100vw - 40px);
                 height: calc(100vh - 40px);
-                transform: translate(-50%, -50%);
+                max-width: calc(100vw - 40px);
+                max-height: calc(100vh - 40px);
                 border-radius: 0px;
+                object-fit: contain;
+                transform: translate(-50%, -50%);
               }
             }
 
-            @keyframes closeImage {
+            @keyframes shrinkImage {
               0% {
-                left: 50%;
-                top: 50%;
-                width: calc(100vw - 40px);
-                height: calc(100vh - 40px);
-                transform: translate(-50%, -50%);
-                border-radius: 0px;
+                opacity: 1;
+                transform: scale(1);
               }
               100% {
-                left: ${thumbnailRect.left}px;
-                top: ${thumbnailRect.top}px;
-                width: ${thumbnailRect.width}px;
-                height: ${thumbnailRect.height}px;
-                border-radius: 8px;
+                opacity: 0;
+                transform: scale(0.8);
               }
             }
           `}</style>
         </>
       )}
 
-      {/* Static scrollbar styles - always present */}
       <style>{`
         div::-webkit-scrollbar {
           height: 6px;
