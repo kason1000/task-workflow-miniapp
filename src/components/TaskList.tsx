@@ -235,7 +235,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     // End opening animation after transition
     setTimeout(() => {
       setIsOpening(false);
-    }, 400);
+    }, 350);
   };
 
   const closeFullscreen = () => {
@@ -255,7 +255,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       setFullscreenImage(null);
       setThumbnailRect(null);
       setIsClosing(false);
-    }, 400);
+    }, 350);
   };
 
   // Touch event handlers for pinch-to-zoom
@@ -377,8 +377,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     // Calculate the center positions
     const thumbnailCenterX = thumbnailRect.left + thumbnailRect.width / 2;
     const thumbnailCenterY = thumbnailRect.top + thumbnailRect.height / 2;
-    const screenCenterX = windowWidth / 2;
-    const screenCenterY = windowHeight / 2;
 
     if (isOpening) {
       // Opening: Move from thumbnail position to center while scaling up
@@ -391,7 +389,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         objectFit: 'contain',
         padding: `${padding}px`,
         transformOrigin: `${thumbnailCenterX}px ${thumbnailCenterY}px`,
-        animation: `openImage 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+        animation: `openImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
         opacity: 1
       };
     }
@@ -407,19 +405,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         objectFit: 'contain',
         padding: `${padding}px`,
         transformOrigin: `${thumbnailCenterX}px ${thumbnailCenterY}px`,
-        animation: `closeImage 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+        animation: `closeImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
         opacity: 1
       };
     }
 
-    // Fully open state
+    // Fully open state - keep the same size as animation end state
     return {
-      position: 'relative',
-      maxWidth: `${windowWidth - padding * 2}px`,
-      maxHeight: `${windowHeight - padding * 2}px`,
-      width: 'auto',
-      height: 'auto',
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      width: '100vw',
+      height: '100vh',
       objectFit: 'contain',
+      padding: `${padding}px`,
       transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
       transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
       cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
@@ -800,14 +799,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 transform: scale(${thumbnailRect.width / (window.innerWidth - 40)});
               }
               100% {
-                clip-path: inset(20px 20px 20px 20px round 0px);
+                clip-path: inset(0px 0px 0px 0px round 0px);
                 transform: scale(1);
               }
             }
 
             @keyframes closeImage {
               0% {
-                clip-path: inset(20px 20px 20px 20px round 0px);
+                clip-path: inset(0px 0px 0px 0px round 0px);
                 transform: scale(1);
               }
               100% {
