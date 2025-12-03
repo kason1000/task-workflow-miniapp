@@ -374,39 +374,45 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     const windowHeight = window.innerHeight;
     const padding = 20;
 
+    // Calculate the center positions
+    const thumbnailCenterX = thumbnailRect.left + thumbnailRect.width / 2;
+    const thumbnailCenterY = thumbnailRect.top + thumbnailRect.height / 2;
+    const screenCenterX = windowWidth / 2;
+    const screenCenterY = windowHeight / 2;
+
     if (isOpening) {
-      // Start from thumbnail center, animate to screen center
+      // Opening: Move from thumbnail position to center while scaling up
       return {
-        position: 'absolute',
-        left: `${thumbnailRect.left + thumbnailRect.width / 2}px`,
-        top: `${thumbnailRect.top + thumbnailRect.height / 2}px`,
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        objectFit: 'cover',
-        borderRadius: '8px',
-        transform: 'translate(-50%, -50%)',
-        animation: `expandToCenter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`
+        position: 'fixed',
+        left: '0',
+        top: '0',
+        width: '100vw',
+        height: '100vh',
+        objectFit: 'contain',
+        padding: `${padding}px`,
+        transformOrigin: `${thumbnailCenterX}px ${thumbnailCenterY}px`,
+        animation: `openImage 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+        opacity: 1
       };
     }
 
     if (isClosing) {
-      // Shrink from center back to thumbnail center
+      // Closing: Scale down and move back to thumbnail position
       return {
-        position: 'absolute',
-        left: '50%',
-        top: '50%',
-        width: 'auto',
-        height: 'auto',
-        maxWidth: `${windowWidth - padding * 2}px`,
-        maxHeight: `${windowHeight - padding * 2}px`,
+        position: 'fixed',
+        left: '0',
+        top: '0',
+        width: '100vw',
+        height: '100vh',
         objectFit: 'contain',
-        borderRadius: '0px',
-        transform: `translate(-50%, -50%) scale(${scale})`,
-        animation: `shrinkToThumbnail 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`
+        padding: `${padding}px`,
+        transformOrigin: `${thumbnailCenterX}px ${thumbnailCenterY}px`,
+        animation: `closeImage 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+        opacity: 1
       };
     }
 
-    // Fully open state - always contain within screen
+    // Fully open state
     return {
       position: 'relative',
       maxWidth: `${windowWidth - padding * 2}px`,
@@ -414,7 +420,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       width: 'auto',
       height: 'auto',
       objectFit: 'contain',
-      borderRadius: '0px',
       transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
       transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
       cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
@@ -766,7 +771,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             />
           </div>
 
-          {/* Animation styles - moved outside and wrapped in fragment */}
+          {/* Animation styles */}
           <style>{`
             div::-webkit-scrollbar {
               height: 6px;
@@ -783,53 +788,37 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               background: var(--tg-theme-button-color);
             }
 
-            @keyframes expandToCenter {
+            @keyframes openImage {
               0% {
-                left: ${thumbnailRect.left + thumbnailRect.width / 2}px;
-                top: ${thumbnailRect.top + thumbnailRect.height / 2}px;
-                width: ${thumbnailRect.width}px;
-                height: ${thumbnailRect.height}px;
-                object-fit: cover;
-                border-radius: 8px;
-              }
-              99% {
-                object-fit: cover;
+                clip-path: inset(
+                  ${thumbnailRect.top}px 
+                  ${window.innerWidth - thumbnailRect.right}px 
+                  ${window.innerHeight - thumbnailRect.bottom}px 
+                  ${thumbnailRect.left}px 
+                  round 8px
+                );
+                transform: scale(${thumbnailRect.width / (window.innerWidth - 40)});
               }
               100% {
-                left: 50vw;
-                top: 50vh;
-                width: auto;
-                height: auto;
-                max-width: calc(100vw - 40px);
-                max-height: calc(100vh - 40px);
-                object-fit: contain;
-                border-radius: 0px;
+                clip-path: inset(20px 20px 20px 20px round 0px);
+                transform: scale(1);
               }
             }
 
-            @keyframes shrinkToThumbnail {
+            @keyframes closeImage {
               0% {
-                left: 50vw;
-                top: 50vh;
-                width: auto;
-                height: auto;
-                max-width: calc(100vw - 40px);
-                max-height: calc(100vh - 40px);
-                object-fit: contain;
-                border-radius: 0px;
-              }
-              1% {
-                object-fit: contain;
+                clip-path: inset(20px 20px 20px 20px round 0px);
+                transform: scale(1);
               }
               100% {
-                left: ${thumbnailRect.left + thumbnailRect.width / 2}px;
-                top: ${thumbnailRect.top + thumbnailRect.height / 2}px;
-                width: ${thumbnailRect.width}px;
-                height: ${thumbnailRect.height}px;
-                max-width: ${thumbnailRect.width}px;
-                max-height: ${thumbnailRect.height}px;
-                object-fit: cover;
-                border-radius: 8px;
+                clip-path: inset(
+                  ${thumbnailRect.top}px 
+                  ${window.innerWidth - thumbnailRect.right}px 
+                  ${window.innerHeight - thumbnailRect.bottom}px 
+                  ${thumbnailRect.left}px 
+                  round 8px
+                );
+                transform: scale(${thumbnailRect.width / (window.innerWidth - 40)});
               }
             }
           `}</style>
