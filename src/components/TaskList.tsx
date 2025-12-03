@@ -377,18 +377,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     // Calculate the center positions
     const thumbnailCenterX = thumbnailRect.left + thumbnailRect.width / 2;
     const thumbnailCenterY = thumbnailRect.top + thumbnailRect.height / 2;
+    const screenCenterX = windowWidth / 2;
+    const screenCenterY = windowHeight / 2;
 
     if (isOpening) {
       // Opening: Move from thumbnail position to center while scaling up
       return {
         position: 'fixed',
-        left: '0',
-        top: '0',
+        left: '50%',
+        top: '50%',
         width: '100vw',
         height: '100vh',
         objectFit: 'contain',
         padding: `${padding}px`,
-        transformOrigin: `${thumbnailCenterX}px ${thumbnailCenterY}px`,
+        transform: 'translate(-50%, -50%)',
         animation: `openImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
         opacity: 1
       };
@@ -398,13 +400,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       // Closing: Scale down and move back to thumbnail position
       return {
         position: 'fixed',
-        left: '0',
-        top: '0',
+        left: '50%',
+        top: '50%',
         width: '100vw',
         height: '100vh',
         objectFit: 'contain',
         padding: `${padding}px`,
-        transformOrigin: `${thumbnailCenterX}px ${thumbnailCenterY}px`,
+        transform: 'translate(-50%, -50%)',
         animation: `closeImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
         opacity: 1
       };
@@ -413,13 +415,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     // Fully open state - keep the same size as animation end state
     return {
       position: 'fixed',
-      left: '0',
-      top: '0',
+      left: '50%',
+      top: '50%',
       width: '100vw',
       height: '100vh',
       objectFit: 'contain',
       padding: `${padding}px`,
-      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+      transform: `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`,
       transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
       cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
       touchAction: 'none',
@@ -789,35 +791,23 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
             @keyframes openImage {
               0% {
-                clip-path: inset(
-                  ${thumbnailRect.top}px 
-                  ${window.innerWidth - thumbnailRect.right}px 
-                  ${window.innerHeight - thumbnailRect.bottom}px 
-                  ${thumbnailRect.left}px 
-                  round 8px
-                );
-                transform: scale(${thumbnailRect.width / (window.innerWidth - 40)});
+                clip-path: circle(${thumbnailRect.width / 2}px at ${thumbnailRect.left + thumbnailRect.width / 2}px ${thumbnailRect.top + thumbnailRect.height / 2}px);
+                opacity: 1;
               }
               100% {
-                clip-path: inset(0px 0px 0px 0px round 0px);
-                transform: scale(1);
+                clip-path: circle(100% at 50% 50%);
+                opacity: 1;
               }
             }
 
             @keyframes closeImage {
               0% {
-                clip-path: inset(0px 0px 0px 0px round 0px);
-                transform: scale(1);
+                clip-path: circle(100% at 50% 50%);
+                opacity: 1;
               }
               100% {
-                clip-path: inset(
-                  ${thumbnailRect.top}px 
-                  ${window.innerWidth - thumbnailRect.right}px 
-                  ${window.innerHeight - thumbnailRect.bottom}px 
-                  ${thumbnailRect.left}px 
-                  round 8px
-                );
-                transform: scale(${thumbnailRect.width / (window.innerWidth - 40)});
+                clip-path: circle(${thumbnailRect.width / 2}px at ${thumbnailRect.left + thumbnailRect.width / 2}px ${thumbnailRect.top + thumbnailRect.height / 2}px);
+                opacity: 1;
               }
             }
           `}</style>
