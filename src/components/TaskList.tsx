@@ -384,7 +384,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         height: `${thumbnailRect.height}px`,
         objectFit: 'cover',
         borderRadius: '8px',
-        transform: 'translate(-50%, -50%) scale(1)',
+        transform: 'translate(-50%, -50%)',
         animation: `expandToCenter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`
       };
     }
@@ -395,6 +395,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         position: 'absolute',
         left: '50%',
         top: '50%',
+        width: 'auto',
+        height: 'auto',
         maxWidth: `${windowWidth - padding * 2}px`,
         maxHeight: `${windowHeight - padding * 2}px`,
         objectFit: 'contain',
@@ -406,6 +408,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
     // Fully open state - always contain within screen
     return {
+      position: 'relative',
       maxWidth: `${windowWidth - padding * 2}px`,
       maxHeight: `${windowHeight - padding * 2}px`,
       width: 'auto',
@@ -782,36 +785,41 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
             @keyframes expandToCenter {
               0% {
-                left: ${thumbnailRect.left}px;
-                top: ${thumbnailRect.top}px;
+                left: ${thumbnailRect.left + thumbnailRect.width / 2}px;
+                top: ${thumbnailRect.top + thumbnailRect.height / 2}px;
                 width: ${thumbnailRect.width}px;
                 height: ${thumbnailRect.height}px;
-                border-radius: 8px;
                 object-fit: cover;
-                transform: translate(0, 0);
+                border-radius: 8px;
+              }
+              99% {
+                object-fit: cover;
               }
               100% {
-                left: 50%;
-                top: 50%;
+                left: 50vw;
+                top: 50vh;
                 width: auto;
                 height: auto;
                 max-width: calc(100vw - 40px);
                 max-height: calc(100vh - 40px);
-                border-radius: 0px;
                 object-fit: contain;
-                transform: translate(-50%, -50%);
+                border-radius: 0px;
               }
             }
 
             @keyframes shrinkToThumbnail {
               0% {
-                left: 50%;
-                top: 50%;
+                left: 50vw;
+                top: 50vh;
+                width: auto;
+                height: auto;
                 max-width: calc(100vw - 40px);
                 max-height: calc(100vh - 40px);
-                border-radius: 0px;
                 object-fit: contain;
-                transform: translate(-50%, -50%);
+                border-radius: 0px;
+              }
+              1% {
+                object-fit: contain;
               }
               100% {
                 left: ${thumbnailRect.left + thumbnailRect.width / 2}px;
@@ -820,9 +828,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 height: ${thumbnailRect.height}px;
                 max-width: ${thumbnailRect.width}px;
                 max-height: ${thumbnailRect.height}px;
-                border-radius: 8px;
                 object-fit: cover;
-                transform: translate(-50%, -50%);
+                border-radius: 8px;
               }
             }
           `}</style>
