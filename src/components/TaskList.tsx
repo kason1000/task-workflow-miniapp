@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
@@ -33,20 +33,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
-  const [isOpening, setIsOpening] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  
-  // Zoom state
-  const [scale, setScale] = useState(1);
-  const [translateX, setTranslateX] = useState(0);
-  const [translateY, setTranslateY] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const lastDistanceRef = useRef<number>(0);
-  const lastScaleRef = useRef<number>(1);
 
   const getFilterOrder = (): TaskStatus[] => {
     if (userRole === 'Member') {
@@ -83,20 +73,25 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       let fetchArchived = false;
 
       if (filter.showArchived) {
+        // Show only archived tasks
         fetchArchived = true;
       } else if (filter.status === 'all') {
+        // Show all active tasks (no specific status)
         statusFilter = undefined;
         fetchArchived = false;
       } else if (filter.status === 'InProgress') {
+        // Viewer-specific: show non-completed active tasks
         statusFilter = undefined;
         fetchArchived = false;
       } else {
+        // Show specific status
         statusFilter = filter.status as TaskStatus;
         fetchArchived = false;
       }
 
       const { tasks: fetchedTasks } = await api.getTasks(statusFilter, fetchArchived);
       
+      // Additional client-side filter for "InProgress" (Viewer only)
       let filteredTasks = fetchedTasks;
       if (roleData.role === 'Viewer' && filter.status === 'InProgress') {
         filteredTasks = fetchedTasks.filter((task: Task) => 
@@ -104,6 +99,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         );
       }
 
+      // Sort by status order if "All" selected
       if (filter.status === 'all' && !filter.showArchived) {
         const statusOrder = getFilterOrder();
         filteredTasks.sort((a: Task, b: Task) => {
@@ -123,6 +119,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       
       setTasks(filteredTasks);
 
+      // Load thumbnails for createdPhoto
       const newThumbnails: Record<string, string> = {};
       for (const task of filteredTasks) {
         if (task.createdPhoto?.file_id && !thumbnails[task.createdPhoto.file_id]) {
@@ -136,6 +133,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       }
       setThumbnails(prev => ({ ...prev, ...newThumbnails }));
 
+      // Load user names for doneBy
       const userIds = new Set<number>();
       filteredTasks.forEach((task: Task) => {
         if (task.doneBy) userIds.add(task.doneBy);
@@ -207,171 +205,29 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
   };
 
-  const handleThumbnailClick = (thumbnailUrl: string, e: React.MouseEvent) => {
+  const handleThumbnailClick = (thumbnailUrl: string, rect: DOMRect, e: React.MouseEvent) => {
     e.stopPropagation();
     hapticFeedback.medium();
-    
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
-    setIsOpening(true);
-    setIsClosing(false);
+    setIsAnimating(true);
     
-    setScale(1);
-    setTranslateX(0);
-    setTranslateY(0);
-    lastScaleRef.current = 1;
-    
+    // End animation after it completes
     setTimeout(() => {
-      setIsOpening(false);
-    }, 350);
+      setIsAnimating(false);
+    }, 300);
   };
 
   const closeFullscreen = () => {
-    if (scale !== 1) {
-      setScale(1);
-      setTranslateX(0);
-      setTranslateY(0);
-      lastScaleRef.current = 1;
-      return;
-    }
-    
     hapticFeedback.light();
-    setIsClosing(true);
+    setIsAnimating(true);
     
+    // Wait for close animation
     setTimeout(() => {
       setFullscreenImage(null);
       setThumbnailRect(null);
-      setIsClosing(false);
-    }, 350);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      touchStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      };
-    } else if (e.touches.length === 2) {
-      const distance = getDistance(e.touches[0], e.touches[1]);
-      lastDistanceRef.current = distance;
-      lastScaleRef.current = scale;
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      
-      const distance = getDistance(e.touches[0], e.touches[1]);
-      const scaleChange = distance / lastDistanceRef.current;
-      let newScale = lastScaleRef.current * scaleChange;
-      
-      newScale = Math.max(1, Math.min(4, newScale));
-      
-      setScale(newScale);
-      
-      if (newScale === 1) {
-        setTranslateX(0);
-        setTranslateY(0);
-      }
-    } else if (e.touches.length === 1 && scale > 1 && touchStartRef.current) {
-      e.preventDefault();
-      
-      const deltaX = e.touches[0].clientX - touchStartRef.current.x;
-      const deltaY = e.touches[0].clientY - touchStartRef.current.y;
-      
-      setTranslateX(prev => prev + deltaX);
-      setTranslateY(prev => prev + deltaY);
-      
-      touchStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      };
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (e.touches.length < 2) {
-      lastDistanceRef.current = 0;
-    }
-    if (e.touches.length === 0) {
-      touchStartRef.current = null;
-    }
-  };
-
-  const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
-    const dx = touch1.clientX - touch2.clientX;
-    const dy = touch1.clientY - touch2.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  const lastTapRef = useRef<number>(0);
-  const handleImageClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    const now = Date.now();
-    const timeSinceLastTap = now - lastTapRef.current;
-    
-    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-      hapticFeedback.medium();
-      
-      if (scale === 1) {
-        setScale(2);
-        lastScaleRef.current = 2;
-      } else {
-        setScale(1);
-        setTranslateX(0);
-        setTranslateY(0);
-        lastScaleRef.current = 1;
-      }
-    }
-    
-    lastTapRef.current = now;
-  };
-
-  const getImageStyle = (): CSSProperties => {
-    if (!thumbnailRect) return {};
-
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const padding = 20;
-
-    if (isOpening) {
-      return {
-        position: 'fixed',
-        left: `${thumbnailRect.left}px`,
-        top: `${thumbnailRect.top}px`,
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        objectFit: 'cover',
-        borderRadius: '8px',
-        animation: 'expandImage 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
-      };
-    }
-
-    if (isClosing) {
-      return {
-        maxWidth: `${windowWidth - padding * 2}px`,
-        maxHeight: `${windowHeight - padding * 2}px`,
-        objectFit: 'contain',
-        animation: 'shrinkImage 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
-      };
-    }
-
-    return {
-      maxWidth: `${windowWidth - padding * 2}px`,
-      maxHeight: `${windowHeight - padding * 2}px`,
-      width: 'auto',
-      height: 'auto',
-      objectFit: 'contain',
-      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-      transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
-      cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
-      touchAction: 'none',
-      userSelect: 'none',
-      WebkitUserSelect: 'none'
-    };
+      setIsAnimating(false);
+    }, 300);
   };
 
   if (loading) {
@@ -410,7 +266,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          {/* Status Filters Row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Scrollable Status Filters */}
             <div
               ref={scrollContainerRef}
               style={{
@@ -492,6 +350,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               ))}
             </div>
 
+            {/* Fixed Right Action Buttons */}
             <div style={{ 
               display: 'flex', 
               gap: '8px',
@@ -582,6 +441,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           {tasks.map((task) => (
             <div key={task.id} className="card">
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                {/* Task Card (clickable area) */}
                 <div 
                   onClick={() => handleTaskClick(task)} 
                   style={{ 
@@ -598,6 +458,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   />
                 </div>
 
+                {/* Send to Chat Button */}
                 <button
                   onClick={(e) => handleSendToChat(task.id, e)}
                   disabled={sending[task.id]}
@@ -638,136 +499,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         </div>
       )}
 
-      {/* Fullscreen Image Viewer */}
-      {fullscreenImage && thumbnailRect && (
-        <>
-          <div
-            onClick={closeFullscreen}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.95)',
-              zIndex: 9999,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px',
-              cursor: scale === 1 ? 'pointer' : 'default',
-              opacity: isClosing ? 0 : 1,
-              transition: 'opacity 0.35s ease',
-              overflow: 'hidden',
-              touchAction: 'none'
-            }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            {/* Close button */}
-            <div
-              onClick={closeFullscreen}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                color: 'white',
-                cursor: 'pointer',
-                zIndex: 10001,
-                transition: 'background 0.2s, opacity 0.2s, transform 0.2s',
-                backdropFilter: 'blur(10px)',
-                opacity: isOpening ? 0 : 1,
-                transform: isOpening ? 'scale(0.8)' : 'scale(1)',
-                transitionDelay: isOpening ? '0s' : '0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-              }}
-            >
-              ✕
-            </div>
-
-            {/* Zoom indicator */}
-            {scale > 1 && !isOpening && !isClosing && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  left: '20px',
-                  padding: '8px 12px',
-                  borderRadius: '20px',
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  zIndex: 10001,
-                  backdropFilter: 'blur(10px)',
-                  pointerEvents: 'none'
-                }}
-              >
-                {Math.round(scale * 100)}%
-              </div>
-            )}
-
-            {/* Image */}
-            <img
-              ref={imageRef}
-              src={fullscreenImage}
-              alt="Fullscreen view"
-              onClick={handleImageClick}
-              style={getImageStyle()}
-              draggable={false}
-            />
-          </div>
-
-          {/* Animation styles */}
-          <style>{`
-            @keyframes expandImage {
-              0% {
-                left: ${thumbnailRect.left}px;
-                top: ${thumbnailRect.top}px;
-                width: ${thumbnailRect.width}px;
-                height: ${thumbnailRect.height}px;
-                border-radius: 8px;
-                object-fit: cover;
-              }
-              100% {
-                left: 50%;
-                top: 50%;
-                width: calc(100vw - 40px);
-                height: calc(100vh - 40px);
-                max-width: calc(100vw - 40px);
-                max-height: calc(100vh - 40px);
-                border-radius: 0px;
-                object-fit: contain;
-                transform: translate(-50%, -50%);
-              }
-            }
-
-            @keyframes shrinkImage {
-              0% {
-                opacity: 1;
-                transform: scale(1);
-              }
-              100% {
-                opacity: 0;
-                transform: scale(0.8);
-              }
-            }
-          `}</style>
-        </>
+      {/* Fullscreen Image Viewer with Pinch-to-Zoom */}
+      {fullscreenImage && (
+        <FullscreenImageViewer
+          imageUrl={fullscreenImage}
+          thumbnailRect={thumbnailRect}
+          isAnimating={isAnimating}
+          onClose={closeFullscreen}
+        />
       )}
 
       <style>{`
@@ -790,6 +529,284 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
+// Fullscreen Image Viewer Component with Pinch-to-Zoom
+function FullscreenImageViewer({
+  imageUrl,
+  thumbnailRect,
+  isAnimating,
+  onClose
+}: {
+  imageUrl: string;
+  thumbnailRect: DOMRect | null;
+  isAnimating: boolean;
+  onClose: () => void;
+}) {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const touchesRef = useRef<{ [key: number]: { x: number; y: number } }>({});
+  const initialDistanceRef = useRef<number>(0);
+  const initialScaleRef = useRef<number>(1);
+
+  // Calculate initial animation styles
+  const getInitialStyle = () => {
+    if (!thumbnailRect || !isAnimating) return {};
+    
+    return {
+      position: 'fixed' as const,
+      left: `${thumbnailRect.left}px`,
+      top: `${thumbnailRect.top}px`,
+      width: `${thumbnailRect.width}px`,
+      height: `${thumbnailRect.height}px`,
+      borderRadius: '8px'
+    };
+  };
+
+  const getFinalStyle = () => {
+    if (!isAnimating) return {};
+    
+    return {
+      position: 'fixed' as const,
+      left: '20px',
+      top: '50%',
+      right: '20px',
+      height: 'auto',
+      maxHeight: 'calc(100vh - 40px)',
+      transform: 'translateY(-50%)',
+      borderRadius: '8px'
+    };
+  };
+
+  // Touch event handlers for pinch-to-zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    
+    if (e.touches.length === 2) {
+      // Two finger touch - prepare for pinch
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      
+      touchesRef.current = {
+        [touch1.identifier]: { x: touch1.clientX, y: touch1.clientY },
+        [touch2.identifier]: { x: touch2.clientX, y: touch2.clientY }
+      };
+      
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      initialDistanceRef.current = distance;
+      initialScaleRef.current = scale;
+    } else if (e.touches.length === 1 && scale > 1) {
+      // One finger touch on zoomed image - prepare for pan
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y
+      });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    
+    if (e.touches.length === 2) {
+      // Pinch gesture
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      if (initialDistanceRef.current > 0) {
+        const newScale = Math.min(
+          Math.max((distance / initialDistanceRef.current) * initialScaleRef.current, 1),
+          4
+        );
+        setScale(newScale);
+        
+        // Reset position when zooming out to 1
+        if (newScale === 1) {
+          setPosition({ x: 0, y: 0 });
+        }
+      }
+    } else if (e.touches.length === 1 && isDragging && scale > 1) {
+      // Pan gesture
+      const newX = e.touches[0].clientX - dragStart.x;
+      const newY = e.touches[0].clientY - dragStart.y;
+      
+      // Apply bounds
+      if (imageRef.current && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const imageRect = imageRef.current.getBoundingClientRect();
+        
+        const maxX = Math.max(0, (imageRect.width - containerRect.width) / 2);
+        const maxY = Math.max(0, (imageRect.height - containerRect.height) / 2);
+        
+        setPosition({
+          x: Math.min(Math.max(newX, -maxX), maxX),
+          y: Math.min(Math.max(newY, -maxY), maxY)
+        });
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    
+    if (e.touches.length < 2) {
+      touchesRef.current = {};
+      initialDistanceRef.current = 0;
+    }
+    
+    if (e.touches.length === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && scale === 1) {
+      onClose();
+    }
+  };
+
+  const handleCloseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+    onClose();
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (scale === 1) {
+      setScale(2);
+    } else {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={handleBackgroundClick}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.95)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        cursor: scale > 1 ? 'grab' : 'pointer',
+        opacity: isAnimating ? (thumbnailRect ? 0 : 1) : 1,
+        transition: isAnimating ? 'opacity 0.3s ease-in-out' : 'none',
+        overflow: 'hidden',
+        touchAction: 'none'
+      }}
+    >
+      {/* Close button */}
+      <div
+        onClick={handleCloseClick}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px',
+          color: 'white',
+          cursor: 'pointer',
+          zIndex: 10000,
+          backdropFilter: 'blur(4px)'
+        }}
+      >
+        ✕
+      </div>
+
+      {/* Scale indicator */}
+      {scale > 1 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '600',
+            zIndex: 10000,
+            backdropFilter: 'blur(4px)'
+          }}
+        >
+          {Math.round(scale * 100)}%
+        </div>
+      )}
+
+      {/* Image */}
+      <img
+        ref={imageRef}
+        src={imageUrl}
+        alt="Fullscreen view"
+        onDoubleClick={handleDoubleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          ...(isAnimating && thumbnailRect ? getInitialStyle() : {}),
+          maxWidth: scale === 1 ? '100%' : 'none',
+          maxHeight: scale === 1 ? '100%' : 'none',
+          width: scale > 1 ? `${100 * scale}%` : 'auto',
+          height: scale > 1 ? 'auto' : 'auto',
+          objectFit: 'contain',
+          borderRadius: isAnimating ? '8px' : '0px',
+          transform: `translate(${position.x}px, ${position.y}px)`,
+          transition: isAnimating 
+            ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+            : isDragging 
+              ? 'none' 
+              : 'transform 0.2s ease-out',
+          cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          pointerEvents: 'auto'
+        }}
+        draggable={false}
+        onLoad={() => {
+          // Trigger animation after image loads
+          if (imageRef.current && isAnimating && thumbnailRect) {
+            requestAnimationFrame(() => {
+              if (imageRef.current) {
+                Object.assign(imageRef.current.style, getFinalStyle());
+              }
+            });
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 // TaskCard component with thumbnail
 function TaskCard({ 
   task, 
@@ -800,8 +817,10 @@ function TaskCard({
   task: Task; 
   thumbnailUrl?: string;
   userNames: Record<number, string>;
-  onThumbnailClick: (url: string, e: React.MouseEvent) => void;
+  onThumbnailClick: (url: string, rect: DOMRect, e: React.MouseEvent) => void;
 }) {
+  const thumbnailRef = useRef<HTMLDivElement>(null);
+  
   const completedSets = task.sets.filter((set) => {
     const hasPhotos = set.photos.length >= 3;
     const hasVideo = task.labels.video ? !!set.video : true;
@@ -811,11 +830,19 @@ function TaskCard({
   const progress = (completedSets / task.requireSets) * 100;
   const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
 
+  const handleThumbnailClick = (e: React.MouseEvent) => {
+    if (thumbnailUrl && thumbnailRef.current) {
+      const rect = thumbnailRef.current.getBoundingClientRect();
+      onThumbnailClick(thumbnailUrl, rect, e);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', gap: '12px' }}>
       {/* Thumbnail */}
       <div
-        onClick={thumbnailUrl ? (e) => onThumbnailClick(thumbnailUrl, e) : undefined}
+        ref={thumbnailRef}
+        onClick={handleThumbnailClick}
         style={{
           width: '80px',
           height: '80px',
@@ -848,6 +875,24 @@ function TaskCard({
         }}
       >
         {!thumbnailUrl && '📷'}
+        {thumbnailUrl && (
+          <div style={{
+            position: 'absolute',
+            bottom: '4px',
+            right: '4px',
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: 'white'
+          }}>
+            🔍
+          </div>
+        )}
       </div>
 
       {/* Content */}
