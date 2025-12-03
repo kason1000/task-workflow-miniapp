@@ -33,7 +33,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [showViewer, setShowViewer] = useState(false);
   
   // Zoom state
   const [scale, setScale] = useState(1);
@@ -222,7 +222,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
-    setIsAnimating(true);
     
     // Reset zoom
     setScale(1);
@@ -230,10 +229,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setTranslateY(0);
     lastScaleRef.current = 1;
     
-    // End animation after transition
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 300);
+    // Show viewer immediately, then animate
+    requestAnimationFrame(() => {
+      setShowViewer(true);
+    });
   };
 
   const closeFullscreen = () => {
@@ -247,12 +246,11 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
     
     hapticFeedback.light();
-    setIsAnimating(true);
+    setShowViewer(false);
     
     setTimeout(() => {
       setFullscreenImage(null);
       setThumbnailRect(null);
-      setIsAnimating(false);
     }, 300);
   };
 
@@ -628,10 +626,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px',
             cursor: scale === 1 ? 'pointer' : 'default',
-            opacity: isAnimating && !fullscreenImage ? 0 : 1,
-            transition: isAnimating ? 'opacity 0.3s ease' : 'none',
+            opacity: showViewer ? 1 : 0,
+            transition: 'opacity 0.3s ease',
             overflow: 'hidden',
             touchAction: 'none'
           }}
@@ -693,30 +690,45 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           )}
 
           {/* Image */}
-          <img
-            ref={imageRef}
-            src={fullscreenImage}
-            alt="Fullscreen view"
-            onClick={handleImageClick}
+          <div
             style={{
-              maxWidth: isAnimating && thumbnailRect ? `${thumbnailRect.width}px` : '100%',
-              maxHeight: isAnimating && thumbnailRect ? `${thumbnailRect.height}px` : '100%',
-              objectFit: 'contain',
-              borderRadius: isAnimating && thumbnailRect ? '8px' : '0px',
-              transform: isAnimating && thumbnailRect 
-                ? `translate(${thumbnailRect.left + thumbnailRect.width / 2 - window.innerWidth / 2}px, ${thumbnailRect.top + thumbnailRect.height / 2 - window.innerHeight / 2}px) scale(${scale})`
-                : `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-              transition: isAnimating ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
-              cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
-              touchAction: 'none',
-              userSelect: 'none',
-              WebkitUserSelect: 'none'
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px'
             }}
-            draggable={false}
-          />
+          >
+            <img
+              ref={imageRef}
+              src={fullscreenImage}
+              alt="Fullscreen view"
+              onClick={handleImageClick}
+              style={{
+                maxWidth: showViewer && !thumbnailRect ? '100%' : thumbnailRect ? `${thumbnailRect.width}px` : '0px',
+                maxHeight: showViewer && !thumbnailRect ? '100%' : thumbnailRect ? `${thumbnailRect.height}px` : '0px',
+                width: showViewer && !thumbnailRect ? 'auto' : thumbnailRect ? `${thumbnailRect.width}px` : '0px',
+                height: showViewer && !thumbnailRect ? 'auto' : thumbnailRect ? `${thumbnailRect.height}px` : '0px',
+                objectFit: 'contain',
+                borderRadius: showViewer ? '0px' : '8px',
+                transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+                transition: showViewer ? 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
+                cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
+                touchAction: 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                position: thumbnailRect && !showViewer ? 'fixed' : 'relative',
+                left: thumbnailRect && !showViewer ? `${thumbnailRect.left}px` : 'auto',
+                top: thumbnailRect && !showViewer ? `${thumbnailRect.top}px` : 'auto'
+              }}
+              draggable={false}
+            />
+          </div>
 
           {/* Instructions */}
-          {scale === 1 && !isAnimating && (
+          {scale === 1 && showViewer && (
             <div
               style={{
                 position: 'absolute',
@@ -731,8 +743,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 zIndex: 10001,
                 backdropFilter: 'blur(10px)',
                 pointerEvents: 'none',
-                opacity: 0.8,
-                animation: 'fadeIn 0.5s ease 0.5s both'
+                opacity: 0,
+                animation: 'fadeIn 0.5s ease 0.5s forwards'
               }}
             >
               Pinch to zoom • Double tap to zoom
@@ -830,24 +842,6 @@ function TaskCard({
         }}
       >
         {!thumbnailUrl && '📷'}
-        {thumbnailUrl && (
-          <div style={{
-            position: 'absolute',
-            bottom: '4px',
-            right: '4px',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            background: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '10px',
-            color: 'white'
-          }}>
-            🔍
-          </div>
-        )}
       </div>
 
       {/* Content */}
