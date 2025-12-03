@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
@@ -37,6 +37,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  const thumbnailRef = useRef<HTMLDivElement>(null);
 
   // FIX: Calculate correct media index (photos are indexed 0,1,2..., video comes after)
   const handleOpenGallery = (setIndex: number, photoIndex: number) => {
@@ -56,16 +60,31 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleCreatedPhotoClick = () => {
     if (task.createdPhoto) {
       const thumbnailUrl = mediaCache[task.createdPhoto.file_id];
-      if (thumbnailUrl) {
+      if (thumbnailUrl && thumbnailRef.current) {
+        const rect = thumbnailRef.current.getBoundingClientRect();
         hapticFeedback.medium();
+        setThumbnailRect(rect);
         setFullscreenImage(thumbnailUrl);
+        setIsAnimating(true);
+        
+        // End animation after transition
+        setTimeout(() => {
+          setIsAnimating(false);
+        }, 400);
       }
     }
   };
 
   const closeFullscreen = () => {
     hapticFeedback.light();
-    setFullscreenImage(null);
+    setIsAnimating(true);
+    
+    // Wait for animation then close
+    setTimeout(() => {
+      setFullscreenImage(null);
+      setThumbnailRect(null);
+      setIsAnimating(false);
+    }, 400);
   };
 
   // Handle batch delete
@@ -232,7 +251,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     if (task.createdPhoto?.file_id) {
       loadMediaUrl(task.createdPhoto.file_id);
     }
-
     // Load set media
     task.sets.forEach(set => {
       set.photos?.forEach(photo => loadMediaUrl(photo.file_id));
@@ -378,7 +396,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const isArchived = task.status === 'Archived';
   const canDeleteMedia = userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member';
-
   const createdPhotoUrl = task.createdPhoto ? mediaCache[task.createdPhoto.file_id] : undefined;
 
   return (
@@ -388,6 +405,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* Created Photo Thumbnail */}
           <div
+            ref={thumbnailRef}
             onClick={handleCreatedPhotoClick}
             style={{
               width: '80px',
@@ -422,24 +440,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             }}
           >
             {!createdPhotoUrl && (loadingMedia.has(task.createdPhoto?.file_id || '') ? '⏳' : '📷')}
-            {createdPhotoUrl && (
-              <div style={{
-                position: 'absolute',
-                bottom: '4px',
-                right: '4px',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                background: 'rgba(0, 0, 0, 0.6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '10px',
-                color: 'white'
-              }}>
-                🔍
-              </div>
-            )}
           </div>
 
           {/* Task Info */}
@@ -1006,60 +1006,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Fullscreen Image Viewer */}
+      {/* Fullscreen Image Viewer with Animation and Pinch-to-Zoom */}
       {fullscreenImage && (
-        <div
-          onClick={closeFullscreen}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            cursor: 'pointer'
-          }}
-        >
-          {/* Close button */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              color: 'white',
-              cursor: 'pointer',
-              zIndex: 10000
-            }}
-          >
-            ✕
-          </div>
-
-          {/* Image */}
-          <img
-            src={fullscreenImage}
-            alt="Fullscreen view"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+        <ImageViewer
+          imageUrl={fullscreenImage}
+          thumbnailRect={thumbnailRect}
+          isAnimating={isAnimating}
+          isClosing={isAnimating && fullscreenImage !== null}
+          onClose={closeFullscreen}
+        />
       )}
 
       {/* Gallery Overlay Modal */}
@@ -1072,6 +1027,286 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         onClose={() => setGalleryOpen(false)}
         onTaskUpdated={onTaskUpdated}
         userRole={userRole}
+      />
+    </div>
+  );
+}
+
+// Image Viewer Component with Pinch-to-Zoom (same as TaskList)
+function ImageViewer({
+  imageUrl,
+  thumbnailRect,
+  isAnimating,
+  isClosing,
+  onClose
+}: {
+  imageUrl: string;
+  thumbnailRect: DOMRect | null;
+  isAnimating: boolean;
+  isClosing: boolean;
+  onClose: () => void;
+}) {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  
+  const imageRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastTouchDistance = useRef<number | null>(null);
+
+  // Load image to get dimensions
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      setImageDimensions({ width: img.width, height: img.height });
+      setIsImageLoaded(true);
+    };
+    img.src = imageUrl;
+  }, [imageUrl]);
+
+  // Reset on image change
+  useEffect(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+    setIsImageLoaded(false);
+  }, [imageUrl]);
+
+  // Calculate fitted dimensions
+  const getFittedDimensions = () => {
+    if (!imageDimensions || !containerRef.current) {
+      return { width: 0, height: 0 };
+    }
+
+    const containerWidth = window.innerWidth;
+    const containerHeight = window.innerHeight;
+    const imageAspect = imageDimensions.width / imageDimensions.height;
+    const containerAspect = containerWidth / containerHeight;
+
+    let width, height;
+
+    if (imageAspect > containerAspect) {
+      // Image is wider - fit to width
+      width = containerWidth;
+      height = containerWidth / imageAspect;
+    } else {
+      // Image is taller - fit to height
+      height = containerHeight;
+      width = containerHeight * imageAspect;
+    }
+
+    return { width, height };
+  };
+
+  // Touch handlers for pinch-to-zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch start
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      lastTouchDistance.current = distance;
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Pan start
+      setIsDragging(true);
+      setDragStart({
+        x: e.touches[0].clientX - position.x,
+        y: e.touches[0].clientY - position.y
+      });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+      // Pinch zoom
+      e.preventDefault();
+      
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      const scaleChange = distance / lastTouchDistance.current;
+      const newScale = Math.min(Math.max(scale * scaleChange, 1), 4);
+      
+      setScale(newScale);
+      lastTouchDistance.current = distance;
+      
+      // If zooming out to 1, reset position
+      if (newScale === 1) {
+        setPosition({ x: 0, y: 0 });
+      }
+    } else if (e.touches.length === 1 && isDragging && scale > 1) {
+      // Pan
+      e.preventDefault();
+      const newX = e.touches[0].clientX - dragStart.x;
+      const newY = e.touches[0].clientY - dragStart.y;
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    lastTouchDistance.current = null;
+    setIsDragging(false);
+  };
+
+  // Mouse wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.min(Math.max(scale * delta, 1), 4);
+    setScale(newScale);
+    
+    if (newScale === 1) {
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  // Double tap to zoom
+  const lastTap = useRef<number>(0);
+  const handleDoubleClick = () => {
+    if (scale > 1) {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    } else {
+      setScale(2);
+    }
+  };
+
+  const handleTap = () => {
+    const now = Date.now();
+    const timeSince = now - lastTap.current;
+    
+    if (timeSince < 300 && timeSince > 0) {
+      handleDoubleClick();
+    }
+    
+    lastTap.current = now;
+  };
+
+  // Calculate animation styles
+  const getAnimationStyle = () => {
+    if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
+      return {};
+    }
+
+    const fittedDimensions = getFittedDimensions();
+
+    if (isAnimating && !isClosing) {
+      // Opening: Start from thumbnail
+      return {
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        top: `${thumbnailRect.top}px`,
+        left: `${thumbnailRect.left}px`,
+        borderRadius: '8px',
+        objectFit: 'cover' as const
+      };
+    } else if (isAnimating && isClosing) {
+      // Closing: Go back to thumbnail
+      return {
+        width: `${thumbnailRect.width}px`,
+        height: `${thumbnailRect.height}px`,
+        top: `${thumbnailRect.top}px`,
+        left: `${thumbnailRect.left}px`,
+        borderRadius: '8px',
+        objectFit: 'cover' as const
+      };
+    } else {
+      // Opened: Fit to screen
+      return {
+        width: `${fittedDimensions.width}px`,
+        height: `${fittedDimensions.height}px`,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '0px',
+        objectFit: 'contain' as const
+      };
+    }
+  };
+
+  const animationStyle = getAnimationStyle();
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={(e) => {
+        if (e.target === containerRef.current && scale === 1) {
+          onClose();
+        }
+      }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.95)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'background 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: scale > 1 ? 'move' : 'pointer',
+        overflow: 'hidden'
+      }}
+      onWheel={handleWheel}
+    >
+      {/* Close button */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px',
+          color: 'white',
+          cursor: 'pointer',
+          zIndex: 10000,
+          opacity: isClosing ? 0 : 1,
+          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+      >
+        ✕
+      </div>
+
+      {/* Image */}
+      <img
+        ref={imageRef}
+        src={imageUrl}
+        alt="Fullscreen view"
+        onClick={handleTap}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          position: 'absolute',
+          transform: scale > 1 ? `translate(${position.x / scale}px, ${position.y / scale}px) scale(${scale})` : animationStyle.transform,
+          transition: isAnimating || (scale === 1 && position.x === 0 && position.y === 0)
+            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+            : 'none',
+          touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          pointerEvents: scale > 1 ? 'auto' : 'none',
+          transformOrigin: 'center center',
+          ...animationStyle
+        }}
       />
     </div>
   );
