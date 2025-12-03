@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { Task, TaskStatus } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
@@ -367,7 +367,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const canSeeArchived = userRole === 'Admin' || userRole === 'Lead';
 
   // Calculate image position for animation
-  const getImageStyle = () => {
+  const getImageStyle = (): CSSProperties => {
     if (!thumbnailRect) return {};
 
     const windowWidth = window.innerWidth;
@@ -377,12 +377,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     if (isOpening) {
       // Start from thumbnail, animate to center with proper aspect ratio
       return {
-        position: 'absolute' as const,
+        position: 'absolute',
         left: `${thumbnailRect.left}px`,
         top: `${thumbnailRect.top}px`,
         width: `${thumbnailRect.width}px`,
         height: `${thumbnailRect.height}px`,
-        objectFit: 'cover' as const,
+        objectFit: 'cover',
         borderRadius: '8px',
         transform: 'translate(0, 0) scale(1)',
         animation: `expandToCenter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`
@@ -392,12 +392,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     if (isClosing) {
       // Shrink from center back to thumbnail
       return {
-        position: 'absolute' as const,
+        position: 'absolute',
         left: '50%',
         top: '50%',
         maxWidth: `${windowWidth - padding * 2}px`,
         maxHeight: `${windowHeight - padding * 2}px`,
-        objectFit: 'contain' as const,
+        objectFit: 'contain',
         borderRadius: '0px',
         transform: `translate(-50%, -50%) scale(${scale})`,
         animation: `shrinkToThumbnail 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`
@@ -410,7 +410,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       maxHeight: `${windowHeight - padding * 2}px`,
       width: 'auto',
       height: 'auto',
-      objectFit: 'contain' as const,
+      objectFit: 'contain',
       borderRadius: '0px',
       transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
       transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
@@ -670,99 +670,166 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         </div>
       )}
 
-      {/* Fullscreen Image Viewer */}
-      {fullscreenImage && thumbnailRect && (
-        <div
-          onClick={closeFullscreen}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: scale === 1 ? 'pointer' : 'default',
-            opacity: isClosing ? 0 : 1,
-            transition: isClosing ? 'opacity 0.4s ease' : 'opacity 0.2s ease',
-            overflow: 'hidden',
-            touchAction: 'none'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* Close button */}
+            {/* Fullscreen Image Viewer */}
+            {fullscreenImage && thumbnailRect && (
+        <>
           <div
             onClick={closeFullscreen}
             style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              background: 'rgba(255, 255, 255, 0.2)',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.95)',
+              zIndex: 9999,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
-              color: 'white',
-              cursor: 'pointer',
-              zIndex: 10001,
-              transition: 'background 0.2s, opacity 0.2s, transform 0.2s',
-              backdropFilter: 'blur(10px)',
-              opacity: isOpening ? 0 : 1,
-              transform: isOpening ? 'scale(0.8)' : 'scale(1)',
-              transitionDelay: isOpening ? '0s' : '0.2s'
+              cursor: scale === 1 ? 'pointer' : 'default',
+              opacity: isClosing ? 0 : 1,
+              transition: isClosing ? 'opacity 0.4s ease' : 'opacity 0.2s ease',
+              overflow: 'hidden',
+              touchAction: 'none'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
-            ✕
-          </div>
-
-          {/* Zoom indicator */}
-          {scale > 1 && !isOpening && !isClosing && (
+            {/* Close button */}
             <div
+              onClick={closeFullscreen}
               style={{
                 position: 'absolute',
                 top: '20px',
-                left: '20px',
-                padding: '8px 12px',
-                borderRadius: '20px',
+                right: '20px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
                 background: 'rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
                 color: 'white',
-                fontSize: '14px',
-                fontWeight: '600',
+                cursor: 'pointer',
                 zIndex: 10001,
+                transition: 'background 0.2s, opacity 0.2s, transform 0.2s',
                 backdropFilter: 'blur(10px)',
-                pointerEvents: 'none'
+                opacity: isOpening ? 0 : 1,
+                transform: isOpening ? 'scale(0.8)' : 'scale(1)',
+                transitionDelay: isOpening ? '0s' : '0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
               }}
             >
-              {Math.round(scale * 100)}%
+              ✕
             </div>
-          )}
 
-          {/* Image */}
-          <img
-            ref={imageRef}
-            src={fullscreenImage}
-            alt="Fullscreen view"
-            onClick={handleImageClick}
-            style={getImageStyle()}
-            draggable={false}
-          />
-        </div>
+            {/* Zoom indicator */}
+            {scale > 1 && !isOpening && !isClosing && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  left: '20px',
+                  padding: '8px 12px',
+                  borderRadius: '20px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  zIndex: 10001,
+                  backdropFilter: 'blur(10px)',
+                  pointerEvents: 'none'
+                }}
+              >
+                {Math.round(scale * 100)}%
+              </div>
+            )}
+
+            {/* Image */}
+            <img
+              ref={imageRef}
+              src={fullscreenImage}
+              alt="Fullscreen view"
+              onClick={handleImageClick}
+              style={getImageStyle()}
+              draggable={false}
+            />
+          </div>
+
+          {/* Animation styles - moved outside and wrapped in fragment */}
+          <style>{`
+            div::-webkit-scrollbar {
+              height: 6px;
+            }
+            div::-webkit-scrollbar-track {
+              background: var(--tg-theme-secondary-bg-color);
+              border-radius: 3px;
+            }
+            div::-webkit-scrollbar-thumb {
+              background: var(--tg-theme-hint-color);
+              border-radius: 3px;
+            }
+            div::-webkit-scrollbar-thumb:hover {
+              background: var(--tg-theme-button-color);
+            }
+
+            @keyframes expandToCenter {
+              0% {
+                left: ${thumbnailRect.left}px;
+                top: ${thumbnailRect.top}px;
+                width: ${thumbnailRect.width}px;
+                height: ${thumbnailRect.height}px;
+                border-radius: 8px;
+                object-fit: cover;
+                transform: translate(0, 0);
+              }
+              100% {
+                left: 50%;
+                top: 50%;
+                width: auto;
+                height: auto;
+                max-width: calc(100vw - 40px);
+                max-height: calc(100vh - 40px);
+                border-radius: 0px;
+                object-fit: contain;
+                transform: translate(-50%, -50%);
+              }
+            }
+
+            @keyframes shrinkToThumbnail {
+              0% {
+                left: 50%;
+                top: 50%;
+                max-width: calc(100vw - 40px);
+                max-height: calc(100vh - 40px);
+                border-radius: 0px;
+                object-fit: contain;
+                transform: translate(-50%, -50%);
+              }
+              100% {
+                left: ${thumbnailRect.left + thumbnailRect.width / 2}px;
+                top: ${thumbnailRect.top + thumbnailRect.height / 2}px;
+                width: ${thumbnailRect.width}px;
+                height: ${thumbnailRect.height}px;
+                max-width: ${thumbnailRect.width}px;
+                max-height: ${thumbnailRect.height}px;
+                border-radius: 8px;
+                object-fit: cover;
+                transform: translate(-50%, -50%);
+              }
+            }
+          `}</style>
+        </>
       )}
 
+      {/* Static scrollbar styles - always present */}
       <style>{`
         div::-webkit-scrollbar {
           height: 6px;
@@ -777,52 +844,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         }
         div::-webkit-scrollbar-thumb:hover {
           background: var(--tg-theme-button-color);
-        }
-
-        @keyframes expandToCenter {
-          0% {
-            left: ${thumbnailRect?.left}px;
-            top: ${thumbnailRect?.top}px;
-            width: ${thumbnailRect?.width}px;
-            height: ${thumbnailRect?.height}px;
-            border-radius: 8px;
-            object-fit: cover;
-            transform: translate(0, 0);
-          }
-          100% {
-            left: 50%;
-            top: 50%;
-            width: auto;
-            height: auto;
-            max-width: calc(100vw - 40px);
-            max-height: calc(100vh - 40px);
-            border-radius: 0px;
-            object-fit: contain;
-            transform: translate(-50%, -50%);
-          }
-        }
-
-        @keyframes shrinkToThumbnail {
-          0% {
-            left: 50%;
-            top: 50%;
-            max-width: calc(100vw - 40px);
-            max-height: calc(100vh - 40px);
-            border-radius: 0px;
-            object-fit: contain;
-            transform: translate(-50%, -50%);
-          }
-          100% {
-            left: ${thumbnailRect?.left + (thumbnailRect?.width || 0) / 2}px;
-            top: ${thumbnailRect?.top + (thumbnailRect?.height || 0) / 2}px;
-            width: ${thumbnailRect?.width}px;
-            height: ${thumbnailRect?.height}px;
-            max-width: ${thumbnailRect?.width}px;
-            max-height: ${thumbnailRect?.height}px;
-            border-radius: 8px;
-            object-fit: cover;
-            transform: translate(-50%, -50%);
-          }
         }
       `}</style>
     </div>
