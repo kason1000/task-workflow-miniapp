@@ -375,22 +375,22 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     const padding = 20;
 
     if (isOpening) {
-      // Start from thumbnail, animate to center with proper aspect ratio
+      // Start from thumbnail center, animate to screen center
       return {
         position: 'absolute',
-        left: `${thumbnailRect.left}px`,
-        top: `${thumbnailRect.top}px`,
+        left: `${thumbnailRect.left + thumbnailRect.width / 2}px`,
+        top: `${thumbnailRect.top + thumbnailRect.height / 2}px`,
         width: `${thumbnailRect.width}px`,
         height: `${thumbnailRect.height}px`,
         objectFit: 'cover',
         borderRadius: '8px',
-        transform: 'translate(0, 0) scale(1)',
+        transform: 'translate(-50%, -50%) scale(1)',
         animation: `expandToCenter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards`
       };
     }
 
     if (isClosing) {
-      // Shrink from center back to thumbnail
+      // Shrink from center back to thumbnail center
       return {
         position: 'absolute',
         left: '50%',
