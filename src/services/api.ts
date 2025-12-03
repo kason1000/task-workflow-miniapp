@@ -3,6 +3,16 @@ import { config } from '../config';
 
 class ApiService {
   private getHeaders(): HeadersInit {
+    // Check for session token (browser)
+    const sessionToken = sessionStorage.getItem('auth_token');
+    if (sessionToken) {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      };
+    }
+
+    // Mock auth (development)
     if (config.useMockAuth) {
       console.log('Using mock authentication');
       return {
@@ -11,12 +21,33 @@ class ApiService {
       };
     }
 
+    // Telegram auth
     const initData = WebApp.initData;
     
     return {
       'Content-Type': 'application/json',
       'X-Telegram-InitData': initData,
     };
+  }
+
+  // Add logout method
+  async logout() {
+    const sessionToken = sessionStorage.getItem('auth_token');
+    
+    if (sessionToken) {
+      try {
+        await this.request('/auth/logout', {
+          method: 'POST',
+          body: JSON.stringify({ sessionToken })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('user_role');
+    sessionStorage.removeItem('user_id');
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
