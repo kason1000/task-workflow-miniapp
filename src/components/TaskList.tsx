@@ -374,54 +374,27 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     const windowHeight = window.innerHeight;
     const padding = 20;
 
-    // Calculate the center positions
-    const thumbnailCenterX = thumbnailRect.left + thumbnailRect.width / 2;
-    const thumbnailCenterY = thumbnailRect.top + thumbnailRect.height / 2;
-    const screenCenterX = windowWidth / 2;
-    const screenCenterY = windowHeight / 2;
-
-    if (isOpening) {
-      // Opening: Move from thumbnail position to center while scaling up
+    if (isOpening || isClosing) {
+      // During animation
       return {
         position: 'fixed',
-        left: '50%',
-        top: '50%',
-        width: '100vw',
-        height: '100vh',
         objectFit: 'contain',
-        padding: `${padding}px`,
-        transform: 'translate(-50%, -50%)',
-        animation: `openImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
-        opacity: 1
+        animation: isOpening 
+          ? `openImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`
+          : `closeImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+        borderRadius: isOpening ? '8px' : '0px',
+        transition: 'border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
       };
     }
 
-    if (isClosing) {
-      // Closing: Scale down and move back to thumbnail position
-      return {
-        position: 'fixed',
-        left: '50%',
-        top: '50%',
-        width: '100vw',
-        height: '100vh',
-        objectFit: 'contain',
-        padding: `${padding}px`,
-        transform: 'translate(-50%, -50%)',
-        animation: `closeImage 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
-        opacity: 1
-      };
-    }
-
-    // Fully open state - keep the same size as animation end state
+    // Fully open state
     return {
-      position: 'fixed',
-      left: '50%',
-      top: '50%',
-      width: '100vw',
-      height: '100vh',
+      maxWidth: `${windowWidth - padding * 2}px`,
+      maxHeight: `${windowHeight - padding * 2}px`,
+      width: 'auto',
+      height: 'auto',
       objectFit: 'contain',
-      padding: `${padding}px`,
-      transform: `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`,
+      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
       transition: scale !== 1 ? 'none' : 'transform 0.2s ease-out',
       cursor: scale === 1 ? 'zoom-in' : 'zoom-out',
       touchAction: 'none',
@@ -791,23 +764,37 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
             @keyframes openImage {
               0% {
-                clip-path: circle(${thumbnailRect.width / 2}px at ${thumbnailRect.left + thumbnailRect.width / 2}px ${thumbnailRect.top + thumbnailRect.height / 2}px);
-                opacity: 1;
+                left: ${thumbnailRect.left}px;
+                top: ${thumbnailRect.top}px;
+                width: ${thumbnailRect.width}px;
+                height: ${thumbnailRect.height}px;
+                border-radius: 8px;
               }
               100% {
-                clip-path: circle(100% at 50% 50%);
-                opacity: 1;
+                left: 50%;
+                top: 50%;
+                width: calc(100vw - 40px);
+                height: calc(100vh - 40px);
+                transform: translate(-50%, -50%);
+                border-radius: 0px;
               }
             }
 
             @keyframes closeImage {
               0% {
-                clip-path: circle(100% at 50% 50%);
-                opacity: 1;
+                left: 50%;
+                top: 50%;
+                width: calc(100vw - 40px);
+                height: calc(100vh - 40px);
+                transform: translate(-50%, -50%);
+                border-radius: 0px;
               }
               100% {
-                clip-path: circle(${thumbnailRect.width / 2}px at ${thumbnailRect.left + thumbnailRect.width / 2}px ${thumbnailRect.top + thumbnailRect.height / 2}px);
-                opacity: 1;
+                left: ${thumbnailRect.left}px;
+                top: ${thumbnailRect.top}px;
+                width: ${thumbnailRect.width}px;
+                height: ${thumbnailRect.height}px;
+                border-radius: 8px;
               }
             }
           `}</style>
