@@ -309,13 +309,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     hapticFeedback.medium();
 
     try {
+      console.log(`Attempting transition: ${task.status} → ${to}`);
+      console.log('Task ID:', task.id);
+      console.log('User Role:', userRole);
+      
       await api.transitionTask(task.id, to);
+      
       hapticFeedback.success();
-      showAlert(`Task transitioned to ${to}`);
+      showAlert(`✅ Task transitioned to ${to}`);
       onTaskUpdated();
     } catch (error: any) {
+      console.error('Transition error:', error);
+      console.error('Error details:', error.message);
+      
       hapticFeedback.error();
-      showAlert(`Error: ${error.message}`);
+      showAlert(`❌ ${error.message || 'Failed to transition task'}`);
     } finally {
       setLoading(false);
     }
