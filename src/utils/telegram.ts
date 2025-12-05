@@ -1,6 +1,8 @@
 // Check if running in Telegram
 const isTelegram = () => {
-  return typeof window !== 'undefined' && window.Telegram?.WebApp;
+  return typeof window !== 'undefined' && 
+         window.Telegram?.WebApp?.initData &&
+         window.Telegram?.WebApp?.initData.length > 0;
 };
 
 // Mock WebApp for development
@@ -9,6 +11,7 @@ const createMockWebApp = () => ({
   expand: () => {},
   enableClosingConfirmation: () => {},
   setHeaderColor: () => {},
+  close: () => {},
   initData: '',
   initDataUnsafe: {
     user: {
@@ -58,37 +61,93 @@ export const showAlert = (message: string) => {
     alert(message);
     return;
   }
-  window.Telegram!.WebApp.showAlert(message);
+  
+  // Check if method is supported
+  try {
+    window.Telegram!.WebApp.showAlert(message);
+  } catch (error) {
+    console.warn('showAlert not supported, using fallback');
+    alert(message);
+  }
 };
 
+// ✅ FIX: Update showConfirm to handle browser mode properly
 export const showConfirm = (message: string): Promise<boolean> => {
   if (!isTelegram()) {
     return Promise.resolve(confirm(message));
   }
   
   return new Promise((resolve) => {
-    window.Telegram!.WebApp.showConfirm(message, resolve);
+    try {
+      // Check if showConfirm is supported
+      if (typeof window.Telegram!.WebApp.showConfirm === 'function') {
+        window.Telegram!.WebApp.showConfirm(message, resolve);
+      } else {
+        // Fallback to browser confirm
+        console.warn('showConfirm not supported, using browser confirm');
+        resolve(confirm(message));
+      }
+    } catch (error) {
+      console.warn('showConfirm error, using browser confirm:', error);
+      resolve(confirm(message));
+    }
   });
 };
 
 export const hapticFeedback = {
   light: () => {
-    if (isTelegram()) window.Telegram!.WebApp.HapticFeedback.impactOccurred('light');
+    if (isTelegram()) {
+      try {
+        window.Telegram!.WebApp.HapticFeedback.impactOccurred('light');
+      } catch (e) {
+        // Silently fail if not supported
+      }
+    }
   },
   medium: () => {
-    if (isTelegram()) window.Telegram!.WebApp.HapticFeedback.impactOccurred('medium');
+    if (isTelegram()) {
+      try {
+        window.Telegram!.WebApp.HapticFeedback.impactOccurred('medium');
+      } catch (e) {
+        // Silently fail
+      }
+    }
   },
   heavy: () => {
-    if (isTelegram()) window.Telegram!.WebApp.HapticFeedback.impactOccurred('heavy');
+    if (isTelegram()) {
+      try {
+        window.Telegram!.WebApp.HapticFeedback.impactOccurred('heavy');
+      } catch (e) {
+        // Silently fail
+      }
+    }
   },
   success: () => {
-    if (isTelegram()) window.Telegram!.WebApp.HapticFeedback.notificationOccurred('success');
+    if (isTelegram()) {
+      try {
+        window.Telegram!.WebApp.HapticFeedback.notificationOccurred('success');
+      } catch (e) {
+        // Silently fail
+      }
+    }
   },
   warning: () => {
-    if (isTelegram()) window.Telegram!.WebApp.HapticFeedback.notificationOccurred('warning');
+    if (isTelegram()) {
+      try {
+        window.Telegram!.WebApp.HapticFeedback.notificationOccurred('warning');
+      } catch (e) {
+        // Silently fail
+      }
+    }
   },
   error: () => {
-    if (isTelegram()) window.Telegram!.WebApp.HapticFeedback.notificationOccurred('error');
+    if (isTelegram()) {
+      try {
+        window.Telegram!.WebApp.HapticFeedback.notificationOccurred('error');
+      } catch (e) {
+        // Silently fail
+      }
+    }
   },
 };
 
