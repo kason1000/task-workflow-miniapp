@@ -25,7 +25,7 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
       setError(null);
       
       const data = userRole === 'Admin' 
-        ? await api.getAllGroups()
+        ? await api.getGroups()
         : await api.getMyLedGroups();
       
       setGroups(data.groups || []);
