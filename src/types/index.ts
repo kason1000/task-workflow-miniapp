@@ -14,6 +14,24 @@ export interface TaskSet {
   };
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  leadUserIds: number[];
+  members: GroupMember[];
+  telegramChatId?: number;
+  createdBy: number;
+  createdAt: string;
+  isDefault?: boolean;
+}
+
+export interface GroupMember {
+  userId: number;
+  role: 'Lead' | 'Member' | 'Viewer';
+  joinedAt: string;
+  invitedBy: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -22,6 +40,8 @@ export interface Task {
   requireSets: number;
   completedSets: number;
   sets: TaskSet[];
+  groupId: string;  // NEW
+  createdInGroupChat?: boolean;  // NEW
   
   // Created photo is the TASK PHOTO (locked, cannot be deleted)
   createdPhoto: { 

@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { initTelegramWebApp, getTelegramUser } from './utils/telegram';
 import { api } from './services/api';
-import { Task } from './types';
+import { Task, Group } from './types';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
 import { ShareScreen } from './components/ShareScreen';
 import { CreateTaskMessage } from './components/CreateTaskForm';
 import { LoginScreen } from './components/LoginScreen';
+import { GroupList } from './components/Grouplist';
+import { GroupDetail } from './components/GroupDetail';
+import { CreateGroup } from './components/CreateGroup';
 import { config } from './config';
+import { Users } from 'lucide-react';
 
-type View = 'list' | 'detail' | 'create' | 'share' | 'gallery';
+type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -19,6 +23,7 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [view, setView] = useState<View>('list');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -114,7 +119,6 @@ function App() {
     try {
       const { task } = await api.getTask(taskId);
       setSelectedTask(task);
-
       setView(targetView);
     } catch (error: any) {
       console.error('Failed to load task:', error);
@@ -212,6 +216,36 @@ function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  // NEW: Group navigation handlers
+  const handleGroupsClick = () => {
+    setView('groups');
+  };
+
+  const handleGroupClick = (group: Group) => {
+    setSelectedGroup(group);
+    setView('groupDetail');
+  };
+
+  const handleBackToGroups = () => {
+    setSelectedGroup(null);
+    setView('groups');
+  };
+
+  const handleCreateGroupClick = () => {
+    setView('createGroup');
+  };
+
+  const handleGroupCreated = () => {
+    setView('groups');
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleGroupDeleted = () => {
+    setSelectedGroup(null);
+    setView('groups');
+    setRefreshKey(prev => prev + 1);
+  };
+
   // Show loading screen
   if (loading) {
     return (
@@ -270,11 +304,13 @@ function App() {
           margin: '0 auto'
         }}>
           <div style={{ minWidth: '60px' }}>
-            {view !== 'list' && (
+            {view !== 'list' && view !== 'groups' && (
               <button
                 onClick={() => {
                   if (view === 'detail') {
                     handleBackToList();
+                  } else if (view === 'groupDetail' || view === 'createGroup') {
+                    handleBackToGroups();
                   } else {
                     setView('list');
                     setSelectedTask(null);
@@ -341,10 +377,53 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* NEW: Navigation Tabs */}
+        {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            maxWidth: '600px',
+            margin: '12px auto 0',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={() => setView('list')}
+              style={{
+                flex: 1,
+                padding: '8px',
+                background: view === 'list' ? 'var(--tg-theme-button-color)' : 'transparent',
+                color: view === 'list' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                border: view === 'list' ? 'none' : '1px solid var(--tg-theme-hint-color)',
+                fontSize: '14px'
+              }}
+            >
+              📋 Tasks
+            </button>
+            <button
+              onClick={handleGroupsClick}
+              style={{
+                flex: 1,
+                padding: '8px',
+                background: view === 'groups' ? 'var(--tg-theme-button-color)' : 'transparent',
+                color: view === 'groups' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                border: view === 'groups' ? 'none' : '1px solid var(--tg-theme-hint-color)',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              <Users size={16} />
+              Groups
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div style={{ paddingTop: '60px' }}>
+      <div style={{ paddingTop: view === 'list' || view === 'groups' ? '120px' : '60px' }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
         )}
@@ -366,6 +445,31 @@ function App() {
           <ShareScreen
             taskId={selectedTask.id}
             onBack={handleBackToDetail}
+          />
+        )}
+
+        {view === 'groups' && (
+          <GroupList
+            key={refreshKey}
+            userRole={role}
+            onGroupClick={handleGroupClick}
+            onCreateGroup={handleCreateGroupClick}
+          />
+        )}
+
+        {view === 'groupDetail' && selectedGroup && (
+          <GroupDetail
+            groupId={selectedGroup.id}
+            userRole={role}
+            onBack={handleBackToGroups}
+            onGroupDeleted={handleGroupDeleted}
+          />
+        )}
+
+        {view === 'createGroup' && (
+          <CreateGroup
+            onBack={handleBackToGroups}
+            onGroupCreated={handleGroupCreated}
           />
         )}
       </div>

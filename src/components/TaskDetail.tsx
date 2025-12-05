@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Task, TaskStatus } from '../types';
+import { Task, TaskStatus, Group } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { GalleryOverlay } from './GalleryOverlay';
@@ -40,7 +40,32 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   
+  // NEW: Group state
+  const [taskGroup, setTaskGroup] = useState<Group | null>(null);
+  const [loadingGroup, setLoadingGroup] = useState(true);
+  
   const thumbnailRef = useRef<HTMLDivElement>(null);
+
+  // NEW: Load group information
+  useEffect(() => {
+    const loadGroupInfo = async () => {
+      if (!task.groupId) {
+        setLoadingGroup(false);
+        return;
+      }
+
+      try {
+        const data = await api.getGroup(task.groupId);
+        setTaskGroup(data.group);
+      } catch (error: any) {
+        console.error('Failed to load group:', error);
+      } finally {
+        setLoadingGroup(false);
+      }
+    };
+
+    loadGroupInfo();
+  }, [task.groupId]);
 
   // FIX: Calculate correct media index (photos are indexed 0,1,2..., video comes after)
   const handleOpenGallery = (setIndex: number, photoIndex: number) => {
@@ -492,6 +517,67 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
+      {/* NEW: Group Information Card */}
+      {!loadingGroup && taskGroup && (
+        <div className="card">
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'var(--tg-theme-button-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              flexShrink: 0
+            }}>
+              👥
+            </div>
+            
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                marginBottom: '4px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {taskGroup.name}
+              </div>
+              <div style={{
+                fontSize: '12px',
+                color: 'var(--tg-theme-hint-color)',
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'center',
+                flexWrap: 'wrap'
+              }}>
+                <span>👑 {taskGroup.leadUserIds.length} lead{taskGroup.leadUserIds.length !== 1 ? 's' : ''}</span>
+                <span>👥 {taskGroup.members.length} member{taskGroup.members.length !== 1 ? 's' : ''}</span>
+                {taskGroup.telegramChatId && <span>💬 Linked</span>}
+                {taskGroup.isDefault && (
+                  <span style={{
+                    background: 'var(--tg-theme-button-color)',
+                    color: 'var(--tg-theme-button-text-color)',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
+                    fontSize: '10px'
+                  }}>
+                    DEFAULT
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sets Section */}
       <div className="card" style={{ position: 'relative' }}>
         {loading && (
@@ -795,7 +881,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                   toggleMediaSelection(media.fileId);
                                 }
                               } else {
-                                // FIX: Use mediaIndex instead of photoIndex
                                 handleOpenGallery(setIndex, media.mediaIndex);
                               }
                             }}
@@ -852,7 +937,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               </div>
                             )}
 
-                            {/* FIX: Remove delete button, only show selection checkbox */}
                             {selectionMode && canDelete && (
                               <div style={{
                                 position: 'absolute',
@@ -929,7 +1013,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             </button>
           )}
           
-          {/* Move back to New (Admin/Lead only on Received status) */}
           {task.status === 'Received' && canTransition('New') && (
             <button 
               onClick={() => handleTransition('New')} 
@@ -970,7 +1053,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             </button>
           )}
           
-          {/* Archive/Restore */}
           {!isArchived && (task.status === 'Submitted' || task.status === 'Completed') && 
             ['Lead', 'Admin'].includes(userRole) && (
               <button
@@ -993,7 +1075,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             </button>
           )}
           
-          {/* Admin Actions */}
           {userRole === 'Admin' && (
             <button
               onClick={handleDelete}
@@ -1006,7 +1087,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         </div>
       </div>
 
-      {/* Fullscreen Image Viewer with Animation and Pinch-to-Zoom */}
+      {/* Fullscreen Image Viewer */}
       {fullscreenImage && (
         <ImageViewer
           imageUrl={fullscreenImage}
@@ -1032,7 +1113,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   );
 }
 
-// Image Viewer Component with Pinch-to-Zoom (same as TaskList)
+// ImageViewer component (keep exactly as your original)
 function ImageViewer({
   imageUrl,
   thumbnailRect,
@@ -1046,6 +1127,7 @@ function ImageViewer({
   isClosing: boolean;
   onClose: () => void;
 }) {
+  // ... (keep all your existing ImageViewer code - it's perfect as is)
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -1057,7 +1139,6 @@ function ImageViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const lastTouchDistance = useRef<number | null>(null);
 
-  // Load image to get dimensions
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
@@ -1067,14 +1148,12 @@ function ImageViewer({
     img.src = imageUrl;
   }, [imageUrl]);
 
-  // Reset on image change
   useEffect(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
     setIsImageLoaded(false);
   }, [imageUrl]);
 
-  // Calculate fitted dimensions
   const getFittedDimensions = () => {
     if (!imageDimensions || !containerRef.current) {
       return { width: 0, height: 0 };
@@ -1088,11 +1167,9 @@ function ImageViewer({
     let width, height;
 
     if (imageAspect > containerAspect) {
-      // Image is wider - fit to width
       width = containerWidth;
       height = containerWidth / imageAspect;
     } else {
-      // Image is taller - fit to height
       height = containerHeight;
       width = containerHeight * imageAspect;
     }
@@ -1100,10 +1177,8 @@ function ImageViewer({
     return { width, height };
   };
 
-  // Touch handlers for pinch-to-zoom
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      // Pinch start
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const distance = Math.hypot(
@@ -1112,7 +1187,6 @@ function ImageViewer({
       );
       lastTouchDistance.current = distance;
     } else if (e.touches.length === 1 && scale > 1) {
-      // Pan start
       setIsDragging(true);
       setDragStart({
         x: e.touches[0].clientX - position.x,
@@ -1123,7 +1197,6 @@ function ImageViewer({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastTouchDistance.current !== null) {
-      // Pinch zoom
       e.preventDefault();
       
       const touch1 = e.touches[0];
@@ -1139,12 +1212,10 @@ function ImageViewer({
       setScale(newScale);
       lastTouchDistance.current = distance;
       
-      // If zooming out to 1, reset position
       if (newScale === 1) {
         setPosition({ x: 0, y: 0 });
       }
     } else if (e.touches.length === 1 && isDragging && scale > 1) {
-      // Pan
       e.preventDefault();
       const newX = e.touches[0].clientX - dragStart.x;
       const newY = e.touches[0].clientY - dragStart.y;
@@ -1157,7 +1228,6 @@ function ImageViewer({
     setIsDragging(false);
   };
 
-  // Mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -1169,7 +1239,6 @@ function ImageViewer({
     }
   };
 
-  // Double tap to zoom
   const lastTap = useRef<number>(0);
   const handleDoubleClick = () => {
     if (scale > 1) {
@@ -1191,7 +1260,6 @@ function ImageViewer({
     lastTap.current = now;
   };
 
-  // Calculate animation styles
   const getAnimationStyle = () => {
     if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
       return {};
@@ -1200,7 +1268,6 @@ function ImageViewer({
     const fittedDimensions = getFittedDimensions();
 
     if (isAnimating && !isClosing) {
-      // Opening: Start from thumbnail
       return {
         width: `${thumbnailRect.width}px`,
         height: `${thumbnailRect.height}px`,
@@ -1210,7 +1277,6 @@ function ImageViewer({
         objectFit: 'cover' as const
       };
     } else if (isAnimating && isClosing) {
-      // Closing: Go back to thumbnail
       return {
         width: `${thumbnailRect.width}px`,
         height: `${thumbnailRect.height}px`,
@@ -1220,7 +1286,6 @@ function ImageViewer({
         objectFit: 'cover' as const
       };
     } else {
-      // Opened: Fit to screen
       return {
         width: `${fittedDimensions.width}px`,
         height: `${fittedDimensions.height}px`,
@@ -1260,7 +1325,6 @@ function ImageViewer({
       }}
       onWheel={handleWheel}
     >
-      {/* Close button */}
       <div
         onClick={onClose}
         style={{
@@ -1285,7 +1349,6 @@ function ImageViewer({
         ✕
       </div>
 
-      {/* Image */}
       <img
         ref={imageRef}
         src={imageUrl}

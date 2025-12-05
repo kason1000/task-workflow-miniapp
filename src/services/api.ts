@@ -1,5 +1,6 @@
 import WebApp from '@twa-dev/sdk';
 import { config } from '../config';
+import { Group, Task } from '../types';
 
 class ApiService {
   private getHeaders(): HeadersInit {
@@ -152,6 +153,76 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ userId, role }),
     });
+  }
+
+  // Groups
+  async getGroups() {
+    return this.request<{ groups: Group[] }>('/groups');
+  }
+
+  async getGroup(groupId: string) {
+    return this.request<{ group: Group }>(`/groups/${groupId}`);
+  }
+
+  async getMyLedGroups() {
+    return this.request<{ groups: Group[] }>('/groups/my-led');
+  }
+
+  async createGroup(name: string, leadUserIds?: number[], telegramChatId?: number) {
+    return this.request<{ group: Group }>('/groups', {
+      method: 'POST',
+      body: JSON.stringify({ name, leadUserIds, telegramChatId }),
+    });
+  }
+
+  async updateGroup(groupId: string, updates: Partial<Group>) {
+    return this.request<{ group: Group }>(`/groups/${groupId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteGroup(groupId: string) {
+    return this.request<{ success: boolean }>(`/groups/${groupId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addGroupMember(groupId: string, userId: number, role: 'Lead' | 'Member' | 'Viewer') {
+    return this.request<{ success: boolean }>(`/groups/${groupId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, role }),
+    });
+  }
+
+  async removeGroupMember(groupId: string, userId: number) {
+    return this.request<{ success: boolean }>(`/groups/${groupId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addGroupLead(groupId: string, userId: number) {
+    return this.request<{ success: boolean }>(`/groups/${groupId}/leads`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
+  async removeGroupLead(groupId: string, userId: number) {
+    return this.request<{ success: boolean }>(`/groups/${groupId}/leads/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async linkTelegramChat(groupId: string, chatId: number) {
+    return this.request<{ success: boolean }>(`/groups/${groupId}/link-chat`, {
+      method: 'POST',
+      body: JSON.stringify({ chatId }),
+    });
+  }
+
+  async getGroupTasks(groupId: string) {
+    return this.request<{ tasks: Task[] }>(`/groups/${groupId}/tasks`);
   }
 
   // Media
