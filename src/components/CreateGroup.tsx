@@ -83,10 +83,6 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
   return (
     <div>
       <div className="card">
-        <button onClick={onBack} style={{ marginBottom: '12px' }}>
-          ← Back
-        </button>
-        
         <h2 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Users size={24} />
           Create New Group

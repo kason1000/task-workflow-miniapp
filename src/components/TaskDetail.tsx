@@ -67,6 +67,39 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     loadGroupInfo();
   }, [task.groupId]);
 
+  // NEW: User names state
+  const [userNames, setUserNames] = useState<Record<number, string>>({});
+
+  // NEW: Fetch user names for all users in task
+  useEffect(() => {
+    const fetchUserNames = async () => {
+      const userIds = new Set<number>();
+      
+      // Add task creator
+      if (task.createdBy) userIds.add(task.createdBy);
+      
+      // Add submitter
+      if (task.doneBy) userIds.add(task.doneBy);
+      
+      // Add uploaders
+      task.sets.forEach(set => {
+        set.photos?.forEach(photo => userIds.add(photo.by));
+        if (set.video) userIds.add(set.video.by);
+      });
+
+      if (userIds.size > 0) {
+        try {
+          const { userNames: fetchedNames } = await api.getUserNames(Array.from(userIds));
+          setUserNames(fetchedNames);
+        } catch (err) {
+          console.error('Failed to load user names:', err);
+        }
+      }
+    };
+
+    fetchUserNames();
+  }, [task.id]);
+
   // FIX: Calculate correct media index (photos are indexed 0,1,2..., video comes after)
   const handleOpenGallery = (setIndex: number, photoIndex: number) => {
     const set = task.sets[setIndex];
@@ -427,12 +460,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       if (set.video) uploaderIds.add(set.video.by);
     });
     
-    return Array.from(uploaderIds).map(id => {
-      if (WebApp.initDataUnsafe?.user?.id === id) {
-        return WebApp.initDataUnsafe.user.first_name || `User ${id}`;
-      }
-      return `User ${id}`;
-    });
+    return Array.from(uploaderIds).map(id => userNames[id] || `User ${id}`);
   };
 
   const isArchived = task.status === 'Archived';

@@ -319,8 +319,8 @@ function App() {
                 style={{ 
                   padding: '8px 12px', 
                   fontSize: '14px',
-                  background: 'transparent',
-                  color: 'var(--tg-theme-button-color)',
+                  background: 'var(--tg-theme-button-color)',
+                  color: 'var(--tg-theme-button-text-color)',
                   border: 'none'
                 }}
               >
@@ -378,7 +378,7 @@ function App() {
           </div>
         </div>
 
-        {/* NEW: Navigation Tabs */}
+        {/* NEW: Navigation Tabs - ONLY show for Admin or Lead */}
         {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
           <div style={{
             display: 'flex',
@@ -395,7 +395,8 @@ function App() {
                 background: view === 'list' ? 'var(--tg-theme-button-color)' : 'transparent',
                 color: view === 'list' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
                 border: view === 'list' ? 'none' : '1px solid var(--tg-theme-hint-color)',
-                fontSize: '14px'
+                fontSize: '14px',
+                borderRadius: '8px'
               }}
             >
               📋 Tasks
@@ -409,6 +410,7 @@ function App() {
                 color: view === 'groups' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
                 border: view === 'groups' ? 'none' : '1px solid var(--tg-theme-hint-color)',
                 fontSize: '14px',
+                borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -423,7 +425,11 @@ function App() {
       </div>
 
       {/* Content */}
-      <div style={{ paddingTop: view === 'list' || view === 'groups' ? '120px' : '60px' }}>
+      <div style={{ 
+        paddingTop: (view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead')
+          ? '120px'  // Extra padding when tabs are visible
+          : '60px'   // Normal padding
+      }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
         )}

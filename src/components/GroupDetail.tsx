@@ -117,10 +117,6 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
     <div>
       {/* Header */}
       <div className="card">
-        <button onClick={onBack} style={{ marginBottom: '12px' }}>
-          ← Back
-        </button>
-        
         <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
           <Users size={32} style={{ color: 'var(--tg-theme-button-color)' }} />
           <div style={{ flex: 1 }}>
