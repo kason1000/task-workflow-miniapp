@@ -251,13 +251,21 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       await api.sendTaskToChat(taskId);
       hapticFeedback.success();
       
-      setTimeout(() => {
-        WebApp.close();
-      }, 300);
+      // Only close if in Telegram
+      if (window.Telegram?.WebApp?.initData) {
+        setTimeout(() => {
+          WebApp.close();
+        }, 300);
+      } else {
+        // In browser mode, just show success and reset button
+        showAlert('✅ Task sent to chat!');
+        setSending(prev => ({ ...prev, [taskId]: false }));
+      }
     } catch (error: any) {
       console.error('Failed to send task:', error);
       showAlert('❌ Failed to send task: ' + error.message);
       hapticFeedback.error();
+      // Always reset button state on error
       setSending(prev => ({ ...prev, [taskId]: false }));
     }
   };
@@ -681,6 +689,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       )}
 
       <style>{`
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
         div::-webkit-scrollbar {
           height: 6px;
         }
@@ -715,6 +731,9 @@ function TaskCard({
   onThumbnailClick: (url: string, rect: DOMRect, e: React.MouseEvent) => void;
 }) {
   const thumbnailRef = useRef<HTMLDivElement>(null);
+
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const completedSets = task.sets.filter((set) => {
     const hasPhotos = set.photos.length >= 3;
@@ -745,8 +764,8 @@ function TaskCard({
           minWidth: '80px',
           borderRadius: '8px',
           overflow: 'hidden',
-          background: thumbnailUrl 
-            ? `url(${thumbnailUrl}) center/cover`
+          background: thumbnailUrl && !imageError
+            ? 'var(--tg-theme-secondary-bg-color)'
             : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
           display: 'flex',
           alignItems: 'center',
@@ -770,6 +789,37 @@ function TaskCard({
           }
         }}
       >
+        {/* Background image (hidden until loaded) */}
+        {thumbnailUrl && !imageError && (
+          <img
+            src={thumbnailUrl}
+            alt="Task thumbnail"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+            style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: imageLoaded ? 1 : 0,
+              transition: 'opacity 0.3s ease'
+            }}
+          />
+        )}
+        
+        {/* Loading skeleton or placeholder */}
+        {!imageLoaded && !imageError && thumbnailUrl && (
+          <div style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite'
+          }} />
+        )}
+        
+        {/* Fallback icon */}
         {!thumbnailUrl && '📷'}
       </div>
 

@@ -389,12 +389,20 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       await api.sendTaskToChat(task.id);
       hapticFeedback.success();
       
-      setTimeout(() => {
-        WebApp.close();
-      }, 300);
+      // Only close if in Telegram
+      if (window.Telegram?.WebApp?.initData) {
+        setTimeout(() => {
+          WebApp.close();
+        }, 300);
+      } else {
+        // In browser mode, show success and reset
+        showAlert('✅ Task sent to chat!');
+        setLoading(false);
+      }
     } catch (error: any) {
       hapticFeedback.error();
       showAlert(`Failed to send: ${error.message}`);
+      // Always reset loading state on error
       setLoading(false);
     }
   };
