@@ -233,9 +233,9 @@ class ApiService {
       const isInBrowser = !!sessionToken;
       
       if (isInBrowser) {
-        // In browser mode, ALWAYS use proxy
-        console.log('Browser mode: Using proxied media URL for', fileId);
-        return this.getProxiedMediaUrl(fileId);
+        // In browser mode, ALWAYS use proxy and fetch as blob
+        console.log('Browser mode: Fetching media as blob for', fileId);
+        return await this.getProxiedMediaAsBlob(fileId);
       }
       
       // In Telegram mode, get direct URL
@@ -255,6 +255,25 @@ class ApiService {
       console.error('Failed to get media URL for', fileId, error);
       throw error;
     }
+  }
+  // NEW: Fetch media as blob and create object URL
+  async getProxiedMediaAsBlob(fileId: string): Promise<{ fileUrl: string }> {
+    const proxyUrl = `${config.apiBaseUrl}/media/proxy/${fileId}`;
+    
+    const response = await fetch(proxyUrl, {
+      headers: this.getHeaders()
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media: ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    console.log('Created object URL for', fileId);
+    
+    return { fileUrl: objectUrl };
   }
 
   async getProxiedMediaUrl(fileId: string): Promise<{ fileUrl: string }> {
