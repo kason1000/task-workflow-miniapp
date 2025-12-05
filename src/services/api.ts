@@ -281,6 +281,13 @@ class ApiService {
     console.log('Using proxied URL:', proxyUrl);
     return { fileUrl: proxyUrl };
   }
+  
+  async getUserNames(userIds: number[]) {
+    if (userIds.length === 0) return { userNames: {} };
+    
+    const idsParam = userIds.join(',');
+    return this.request<{ userNames: Record<number, string> }>(`/tasks/user-names?userIds=${idsParam}`);
+  }
 }
 
 export const api = new ApiService();

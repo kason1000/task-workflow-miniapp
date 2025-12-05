@@ -182,27 +182,27 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       }
       setThumbnails(prev => ({ ...prev, ...newThumbnails }));
 
-      // Load user names for doneBy
+      // NEW: Load user names from backend instead of using WebApp
       const userIds = new Set<number>();
       filteredTasks.forEach((task: Task) => {
+        if (task.createdBy) userIds.add(task.createdBy);
         if (task.doneBy) userIds.add(task.doneBy);
       });
 
-      const currentUserId = WebApp.initDataUnsafe?.user?.id;
-      const currentUserName = WebApp.initDataUnsafe?.user?.first_name;
-      const nameMap: Record<number, string> = {};
-      
-      if (currentUserId && currentUserName) {
-        nameMap[currentUserId] = currentUserName;
-      }
-
-      Array.from(userIds).forEach(userId => {
-        if (!nameMap[userId]) {
-          nameMap[userId] = `User ${userId}`;
+      if (userIds.size > 0) {
+        try {
+          const { userNames: fetchedNames } = await api.getUserNames(Array.from(userIds));
+          setUserNames(fetchedNames);
+        } catch (err) {
+          console.error('Failed to load user names:', err);
+          // Fallback to User {id} format
+          const fallbackNames: Record<number, string> = {};
+          Array.from(userIds).forEach(id => {
+            fallbackNames[id] = `User ${id}`;
+          });
+          setUserNames(fallbackNames);
         }
-      });
-      
-      setUserNames(nameMap);
+      }
     } catch (error: any) {
       console.error('Failed to fetch tasks:', error);
       setError(error.message);
