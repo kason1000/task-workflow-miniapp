@@ -228,6 +228,17 @@ class ApiService {
   // Media
   async getMediaUrl(fileId: string): Promise<{ fileUrl: string }> {
     try {
+      // Check if in browser mode (has session token)
+      const sessionToken = sessionStorage.getItem('auth_token');
+      const isInBrowser = !!sessionToken;
+      
+      if (isInBrowser) {
+        // In browser mode, ALWAYS use proxy
+        console.log('Browser mode: Using proxied media URL for', fileId);
+        return this.getProxiedMediaUrl(fileId);
+      }
+      
+      // In Telegram mode, get direct URL
       const response = await this.request<any>(`/media?fileId=${fileId}`);
       console.log('Media URL response:', response);
       
