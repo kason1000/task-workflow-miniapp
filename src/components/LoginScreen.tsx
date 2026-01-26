@@ -70,7 +70,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             fontSize: '14px',
             marginTop: '8px'
           }}>
-            Get your login code from the Telegram bot
+            Get your login code from the Telegram bot. - Clawd
           </p>
         </div>
 
