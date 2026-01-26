@@ -334,7 +334,7 @@ function App() {
             margin: 0,
             fontWeight: '600'
           }}>
-            Task Workflow
+            Task Workflow - Clawd
           </h1>
           
           <div style={{ 
