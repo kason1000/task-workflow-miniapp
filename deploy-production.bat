@@ -6,6 +6,10 @@ echo Task Workflow MiniApp Production Deployment
 echo =========================================
 echo.
 
+echo Updating version to new format (x.x.xxxx)...
+for /f %%i in ('node scripts\update-version.cjs') do set NEW_VERSION=%%i
+echo Version updated: %NEW_VERSION%
+
 echo Building Mini App...
 call npm run build
 
@@ -34,7 +38,7 @@ for /f %%i in ('git status --porcelain ^| find /c /v ""') do set COUNT=%%i
 if !COUNT! gtr 0 (
     echo.
     echo Committing changes after successful deployment...
-    git commit -m "Deploy %date% %time%: Mini App deployment with version update to v1.1.0024"
+    git commit -m "Deploy %date% %time%: Mini App deployment with version increment to v%NEW_VERSION%"
     
     if !errorlevel! neq 0 (
         echo Error committing changes

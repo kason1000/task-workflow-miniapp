@@ -329,13 +329,25 @@ function App() {
             )}
           </div>
           
-          <h1 style={{ 
-            fontSize: '18px', 
-            margin: 0,
-            fontWeight: '600'
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center'
           }}>
-            Task Workflow - Clawd v1.1.0024
-          </h1>
+            <h1 style={{ 
+              fontSize: '18px', 
+              margin: 0,
+              fontWeight: '600'
+            }}>
+              Task Workflow - Clawd
+            </h1>
+            <span style={{ 
+              fontSize: '10px', 
+              color: 'var(--tg-theme-hint-color)',
+              marginTop: '2px'
+            }}>
+              v1.1.0133</span>
+          </div>
           
           <div style={{ 
             textAlign: 'right',
