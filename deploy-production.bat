@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo =========================================
-echo Deploying Mini App with Version Control
+echo Task Workflow MiniApp Production Deployment
 echo =========================================
 echo.
 
@@ -34,7 +34,7 @@ for /f %%i in ('git status --porcelain ^| find /c /v ""') do set COUNT=%%i
 if !COUNT! gtr 0 (
     echo.
     echo Committing changes after successful deployment...
-    git commit -m "Deploy %date% %time%: Mini App deployment with latest changes"
+    git commit -m "Deploy %date% %time%: Mini App deployment with version update to v1.1.0024"
     
     if !errorlevel! neq 0 (
         echo Error committing changes
