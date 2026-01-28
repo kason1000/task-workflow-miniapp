@@ -1,10 +1,10 @@
 {
   "name": "task-workflow-miniapp",
-  "version": "1.1.0133",
+  "version": "1.1.0138",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/update-version.cjs && vite build",
+    "build": "vite build",
     "build:tsc": "tsc && vite build",
     "preview": "vite preview",
     "deploy": "node scripts/update-version.cjs && npm run build && gh-pages -d dist"
