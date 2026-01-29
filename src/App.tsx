@@ -354,7 +354,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '2px'
             }}>
-              v1.1.0193</span>
+              v1.1.0195</span>
           </div>
           
           <div style={{ 

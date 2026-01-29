@@ -1404,18 +1404,43 @@ function ImageViewer({
         }}
       />
 
-      {/* Send to Chat button only (no navigation buttons) */}
+      {/* Navigation and action buttons at the bottom - arranged with nav buttons on far sides */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
+        left: 0,
+        right: 0,
         zIndex: 10000,
         display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        padding: '0 20px',
         opacity: isClosing ? 0 : 1,
         transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
+        <button
+          onClick={goToPreviousPhoto}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            color: 'white',
+            cursor: 'pointer',
+            border: 'none',
+            backdropFilter: 'blur(4px)',
+            flexShrink: 0,
+            boxSizing: 'border-box',
+            outline: 'none'
+          }}
+        >
+          &lt;
+        </button>
+        
         <button
           onClick={(e) => onSendToChat(currentTask.id, e)}
           disabled={sending[currentTask.id]}
@@ -1432,7 +1457,9 @@ function ImageViewer({
             border: 'none',
             borderRadius: '24px',
             cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
-            backdropFilter: 'blur(4px)'
+            backdropFilter: 'blur(4px)',
+            margin: '0 20px', // Add margin to prevent touching side buttons
+            flexShrink: 0
           }}
         >
           <span style={{ fontSize: '18px' }}>
@@ -1441,6 +1468,29 @@ function ImageViewer({
           <span>
             {sending[currentTask.id] ? 'Sending...' : 'Send to Chat'}
           </span>
+        </button>
+        
+        <button
+          onClick={goToNextPhoto}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            color: 'white',
+            cursor: 'pointer',
+            border: 'none',
+            backdropFilter: 'blur(4px)',
+            flexShrink: 0,
+            boxSizing: 'border-box',
+            outline: 'none'
+          }}
+        >
+          &gt;
         </button>
       </div>
     </div>
