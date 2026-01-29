@@ -1361,7 +1361,7 @@ function ImageViewer({
           right: '20px',
           width: '40px',
           height: '40px',
-          borderRadius: '8px',
+          borderRadius: '50%',
           background: 'rgba(255, 255, 255, 0.2)',
           display: 'flex',
           alignItems: 'center',
