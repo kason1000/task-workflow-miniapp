@@ -791,15 +791,18 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           {tasks.map((task) => (
             <div key={task.id} className="card">
               {/* Colored Bar at Top */}
-              {taskGroup && (
-                <div 
-                  style={{
-                    height: '4px',
-                    backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
-                    width: '100%'
-                  }}
-                />
-              )}
+              {(() => {
+                const taskGroup = groups.find(g => g.id === task.groupId);
+                return taskGroup ? (
+                  <div 
+                    style={{
+                      height: '4px',
+                      backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
+                      width: '100%'
+                    }}
+                  />
+                ) : null;
+              })()}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                 {/* Task Card (clickable area) */}
                 <div 
