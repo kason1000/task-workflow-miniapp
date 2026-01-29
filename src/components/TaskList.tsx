@@ -882,7 +882,21 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
-// TaskCard component with group badge
+// Helper function to generate consistent colors for groups
+const getGroupColor = (groupId: string) => {
+  // Simple hash function to generate consistent colors for group IDs
+  let hash = 0;
+  for (let i = 0; i < groupId.length; i++) {
+    hash = groupId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate hue based on hash to ensure different groups have different colors
+  const hue = hash % 360;
+  // Use a consistent saturation and lightness to maintain readability
+  return `hsl(${hue}, 70%, 50%)`;
+};
+
+// TaskCard component with group badge and colored bar
 function TaskCard({ 
   task, 
   thumbnailUrl,
@@ -919,170 +933,184 @@ function TaskCard({
   };
 
   return (
-    <div style={{ display: 'flex', gap: '12px' }}>
-      {/* Thumbnail */}
-      <div
-        ref={thumbnailRef}
-        onClick={handleClick}
-        style={{
-          width: '80px',
-          height: '80px',
-          minWidth: '80px',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          background: thumbnailUrl && !imageError
-            ? 'var(--tg-theme-secondary-bg-color)'
-            : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '32px',
-          border: '2px solid var(--tg-theme-secondary-bg-color)',
-          cursor: thumbnailUrl ? 'pointer' : 'default',
-          position: 'relative',
-          transition: 'transform 0.2s, border-color 0.2s'
-        }}
-        onMouseEnter={(e) => {
-          if (thumbnailUrl) {
-            e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.borderColor = 'var(--tg-theme-button-color)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (thumbnailUrl) {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.borderColor = 'var(--tg-theme-secondary-bg-color)';
-          }
-        }}
-      >
-        {/* Background image (hidden until loaded) */}
-        {thumbnailUrl && !imageError && (
-          <img
-            src={thumbnailUrl}
-            alt="Task thumbnail"
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
-            style={{
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Colored bar for group identification */}
+      {taskGroup && (
+        <div 
+          style={{
+            height: '4px',
+            backgroundColor: getGroupColor(taskGroup.id),
+            borderRadius: '2px 2px 0 0',
+            width: '100%'
+          }}
+        />
+      )}
+      
+      <div style={{ display: 'flex', gap: '12px', padding: '12px 0 0 0', borderRadius: '0 0 8px 8px' }}>
+        {/* Thumbnail */}
+        <div
+          ref={thumbnailRef}
+          onClick={handleClick}
+          style={{
+            width: '80px',
+            height: '80px',
+            minWidth: '80px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            background: thumbnailUrl && !imageError
+              ? 'var(--tg-theme-secondary-bg-color)'
+              : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '32px',
+            border: '2px solid var(--tg-theme-secondary-bg-color)',
+            cursor: thumbnailUrl ? 'pointer' : 'default',
+            position: 'relative',
+            transition: 'transform 0.2s, border-color 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            if (thumbnailUrl) {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.borderColor = 'var(--tg-theme-button-color)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (thumbnailUrl) {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.borderColor = 'var(--tg-theme-secondary-bg-color)';
+            }
+          }}
+        >
+          {/* Background image (hidden until loaded) */}
+          {thumbnailUrl && !imageError && (
+            <img
+              src={thumbnailUrl}
+              alt="Task thumbnail"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: imageLoaded ? 1 : 0,
+                transition: 'opacity 0.3s ease'
+              }}
+            />
+          )}
+          
+          {/* Loading skeleton or placeholder */}
+          {!imageLoaded && !imageError && thumbnailUrl && (
+            <div style={{
               position: 'absolute',
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
-              opacity: imageLoaded ? 1 : 0,
-              transition: 'opacity 0.3s ease'
-            }}
-          />
-        )}
-        
-        {/* Loading skeleton or placeholder */}
-        {!imageLoaded && !imageError && thumbnailUrl && (
-          <div style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%)',
-            backgroundSize: '200% 100%',
-            animation: 'shimmer 1.5s infinite'
-          }} />
-        )}
-        
-        {/* Fallback icon */}
-        {!thumbnailUrl && '📷'}
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '8px'
-        }}>
-          <h3 style={{
-            fontSize: '16px',
-            fontWeight: '600',
-            flex: 1,
-            marginRight: '12px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            margin: 0
-          }}>
-            {task.title}
-          </h3>
-          <span className={`badge ${statusColors[task.status]}`}>
-            {task.status}
-          </span>
+              background: 'linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 1.5s infinite'
+            }} />
+          )}
+          
+          {/* Fallback icon */}
+          {!thumbnailUrl && '📷'}
         </div>
 
-        {/* NEW: Group Badge */}
-        {taskGroup && (
-          <div style={{ marginBottom: '8px' }}>
-            <span style={{
-              display: 'inline-block',
-              fontSize: '11px',
-              padding: '2px 6px',
-              background: 'var(--tg-theme-secondary-bg-color)',
-              color: 'var(--tg-theme-hint-color)',
-              borderRadius: '4px'
-            }}>
-              👥 {taskGroup.name}
-            </span>
-          </div>
-        )}
-
-        <div style={{ marginBottom: '8px' }}>
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '12px',
-            color: 'var(--tg-theme-hint-color)',
-            marginBottom: '4px',
-            gap: '8px'
+            alignItems: 'flex-start',
+            marginBottom: '8px'
           }}>
-            <span>Progress</span>
-            {doneName && task.status !== 'New' && task.status !== 'Received' && (
-              <span style={{ 
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
-                textAlign: 'center'
-              }}>
-                👤 {doneName}
-              </span>
-            )}
-            <span style={{ whiteSpace: 'nowrap' }}>
-              {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
+            <h3 style={{
+              fontSize: '16px',
+              fontWeight: '600',
+              flex: 1,
+              marginRight: '12px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              margin: 0
+            }}>
+              {task.title}
+            </h3>
+            <span className={`badge ${statusColors[task.status]}`}>
+              {task.status}
             </span>
           </div>
-          <div style={{
-            height: '6px',
-            background: 'var(--tg-theme-bg-color)',
-            borderRadius: '3px',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${progress}%`,
-              background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
-              transition: 'width 0.3s',
-            }} />
-          </div>
-        </div>
 
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          fontSize: '12px',
-          color: 'var(--tg-theme-hint-color)',
-          flexWrap: 'wrap',
-          alignItems: 'center'
-        }}>
-          {task.labels.video && <span>🎥</span>}
-          {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-            <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+          {/* NEW: Group Badge */}
+          {taskGroup && (
+            <div style={{ marginBottom: '8px' }}>
+              <span style={{
+                display: 'inline-block',
+                fontSize: '11px',
+                padding: '2px 6px',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                color: 'var(--tg-theme-hint-color)',
+                borderRadius: '4px'
+              }}>
+                👥 {taskGroup.name}
+              </span>
+            </div>
           )}
+
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '12px',
+              color: 'var(--tg-theme-hint-color)',
+              marginBottom: '4px',
+              gap: '8px'
+            }}>
+              <span>Progress</span>
+              {doneName && task.status !== 'New' && task.status !== 'Received' && (
+                <span style={{ 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  textAlign: 'center'
+                }}>
+                  👤 {doneName}
+                </span>
+              )}
+              <span style={{ whiteSpace: 'nowrap' }}>
+                {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div style={{
+              height: '6px',
+              background: 'var(--tg-theme-bg-color)',
+              borderRadius: '3px',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${progress}%`,
+                background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
+                transition: 'width 0.3s',
+              }} />
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            fontSize: '12px',
+            color: 'var(--tg-theme-hint-color)',
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
+            {task.labels.video && <span>🎥</span>}
+            {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
+              <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+            )}
+          </div>
         </div>
       </div>
     </div>

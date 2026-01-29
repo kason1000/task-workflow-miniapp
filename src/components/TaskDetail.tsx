@@ -5,6 +5,20 @@ import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
 
+// Helper function to generate consistent colors for groups
+const getGroupColor = (groupId: string) => {
+  // Simple hash function to generate consistent colors for group IDs
+  let hash = 0;
+  for (let i = 0; i < groupId.length; i++) {
+    hash = groupId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Generate hue based on hash to ensure different groups have different colors
+  const hue = hash % 360;
+  // Use a consistent saturation and lightness to maintain readability
+  return `hsl(${hue}, 70%, 50%)`;
+};
+
 interface TaskDetailProps {
   task: Task;
   userRole: string;
@@ -25,7 +39,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [loading, setLoading] = useState(false);
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
-  
+
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryInitialSet, setGalleryInitialSet] = useState(0);
@@ -41,11 +55,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [isAnimating, setIsAnimating] = useState(false);
   const [allTaskPhotos, setAllTaskPhotos] = useState<string[]>([]); // All photos for navigation in this task
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0); // Current photo index in the task
-  
+
   // NEW: Group state
   const [taskGroup, setTaskGroup] = useState<Group | null>(null);
   const [loadingGroup, setLoadingGroup] = useState(true);
-  
+
   const thumbnailRef = useRef<HTMLDivElement>(null);
 
   // NEW: Load group information
@@ -76,13 +90,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   useEffect(() => {
     const fetchUserNames = async () => {
       const userIds = new Set<number>();
-      
+
       // Add task creator
       if (task.createdBy) userIds.add(task.createdBy);
-      
+
       // Add submitter
       if (task.doneBy) userIds.add(task.doneBy);
-      
+
       // Add uploaders
       task.sets.forEach(set => {
         set.photos?.forEach(photo => userIds.add(photo.by));
@@ -110,28 +124,28 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     // If photoIndex is provided, use it directly
     // Photos come first in order, then video
     let mediaIndex = photoIndex;
-    
+
     // Build array of all photos in the task for potential fullscreen navigation
     const allPhotos = buildAllTaskPhotos();
-    
+
     setGalleryInitialSet(setIndex);
     setGalleryInitialMedia(mediaIndex);
     setGalleryOpen(true);
-    
+
     // Set all task photos for potential fullscreen navigation from gallery
     setAllTaskPhotos(allPhotos);
-    
+
     // Calculate the correct global index for the selected media item
     let globalIndex = 0;
-    
-    // If there's a created photo, it comes first in the array (index 0), 
+
+    // If there's a created photo, it comes first in the array (index 0),
     // so all other items need to account for it
     if (task.createdPhoto && mediaCache[task.createdPhoto.file_id]) {
       globalIndex = 1; // Start after the created photo
     } else {
       globalIndex = 0; // No created photo, start from 0
     }
-    
+
     // Count items before the current set
     for (let i = 0; i < setIndex; i++) {
       const prevSet = task.sets[i];
@@ -140,24 +154,24 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         if (prevSet.video) globalIndex++;
       }
     }
-    
+
     // Add the index within the current set
     globalIndex += photoIndex;
-    
+
     setCurrentPhotoIndex(globalIndex);
-    
+
     hapticFeedback.medium();
   };
 
   // Function to build array of all photos in the task (created photo + set photos)
   const buildAllTaskPhotos = (): string[] => {
     const allPhotos: string[] = [];
-    
+
     // Add created photo if it exists
     if (task.createdPhoto && mediaCache[task.createdPhoto.file_id]) {
       allPhotos.push(mediaCache[task.createdPhoto.file_id]);
     }
-    
+
     // Add all set photos
     task.sets.forEach(set => {
       set.photos?.forEach(photo => {
@@ -165,13 +179,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           allPhotos.push(mediaCache[photo.file_id]);
         }
       });
-      
+
       // Add set videos if they exist
       if (set.video && mediaCache[set.video.file_id]) {
         allPhotos.push(mediaCache[set.video.file_id]);
       }
     });
-    
+
     return allPhotos;
   };
 
@@ -180,21 +194,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       const thumbnailUrl = mediaCache[task.createdPhoto.file_id];
       if (thumbnailUrl && thumbnailRef.current) {
         const allPhotos = buildAllTaskPhotos();
-        
+
         const rect = thumbnailRef.current.getBoundingClientRect();
         hapticFeedback.medium();
         setThumbnailRect(rect);
         setFullscreenImage(thumbnailUrl);
         setAllTaskPhotos(allPhotos);
-        
+
         // Find the index of the clicked photo in the allPhotos array
         const photoIndex = allPhotos.indexOf(thumbnailUrl);
         if (photoIndex !== -1) {
           setCurrentPhotoIndex(photoIndex);
         }
-        
+
         setIsAnimating(true);
-        
+
         // End animation after transition
         setTimeout(() => {
           setIsAnimating(false);
@@ -206,7 +220,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const closeFullscreen = () => {
     hapticFeedback.light();
     setIsAnimating(true);
-    
+
     // Wait for animation then close
     setTimeout(() => {
       setFullscreenImage(null);
@@ -226,7 +240,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     hapticFeedback.medium();
 
     try {
-      const deletePromises = Array.from(selectedMedia).map(fileId => 
+      const deletePromises = Array.from(selectedMedia).map(fileId =>
         api.deleteUpload(task.id, fileId)
       );
       await Promise.all(deletePromises);
@@ -259,38 +273,38 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const shareSetDirect = async (setIndex: number) => {
     hapticFeedback.medium();
-    
+
     try {
       const set = task.sets[setIndex];
-      
+
       if (!set) {
         throw new Error(`Set ${setIndex + 1} not found`);
       }
-      
+
       setLoading(true);
-      
+
       const files: File[] = [];
-      
+
       if (set.photos && set.photos.length > 0) {
         for (let i = 0; i < set.photos.length; i++) {
           const photo = set.photos[i];
-          
+
           try {
             const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
             const response = await fetch(fileUrl, {
               headers: { 'X-Telegram-InitData': WebApp.initData }
             });
-            
+
             if (!response.ok) {
               throw new Error(`HTTP ${response.status}`);
             }
-            
+
             const blob = await response.blob();
-            
+
             if (blob.size < 100) {
               throw new Error(`Too small (${blob.size} bytes)`);
             }
-            
+
             const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
             files.push(file);
           } catch (photoError: any) {
@@ -299,25 +313,25 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           }
         }
       }
-      
+
       if (set.video) {
         try {
           const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
           const response = await fetch(fileUrl, {
             headers: { 'X-Telegram-InitData': WebApp.initData }
           });
-          
+
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
-          
+
           const blob = await response.blob();
           const contentType = response.headers.get('content-type') || 'video/mp4';
-          
+
           if (blob.size < 100) {
             throw new Error(`Too small (${blob.size} bytes)`);
           }
-          
+
           const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
           files.push(file);
         } catch (videoError: any) {
@@ -325,27 +339,27 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           throw new Error(`Video: ${videoError.message}`);
         }
       }
-      
+
       if (files.length === 0) {
         throw new Error('No files to share');
       }
-      
+
       if (!navigator.share || !navigator.canShare({ files })) {
         throw new Error('Share not supported');
       }
-      
+
       setLoading(false);
-      
+
       await navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
         files
       });
-      
+
       hapticFeedback.success();
-      
+
     } catch (error: any) {
       console.error('❌ Share failed:', error);
-      
+
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(`Failed to share: ${error.message}`);
@@ -357,9 +371,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const loadMediaUrl = async (fileId: string) => {
     if (mediaCache[fileId] || loadingMedia.has(fileId)) return;
-    
+
     setLoadingMedia(prev => new Set(prev).add(fileId));
-    
+
     try {
       const result = await api.getMediaUrl(fileId);
       setMediaCache(prev => ({ ...prev, [fileId]: result.fileUrl }));
@@ -398,7 +412,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       'Archived->Completed': ['Admin'],
       'Redo->Submitted': ['Member', 'Lead', 'Admin'],
     };
-    
+
     const key = `${task.status}->${to}`;
     const allowedRoles = transitions[key];
     return allowedRoles ? allowedRoles.includes(userRole) : false;
@@ -415,16 +429,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       console.log(`Attempting transition: ${task.status} -> ${to}`);
       console.log('Task ID:', task.id);
       console.log('User Role:', userRole);
-      
+
       await api.transitionTask(task.id, to);
-      
+
       hapticFeedback.success();
       showAlert(`✅ Task transitioned to ${to}`);
       onTaskUpdated();
     } catch (error: any) {
       console.error('Transition error:', error);
       console.error('Error details:', error.message);
-      
+
       hapticFeedback.error();
       showAlert(`❌ ${error.message || 'Failed to transition task'}`);
     } finally {
@@ -499,7 +513,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     try {
       await api.sendTaskToChat(task.id);
       hapticFeedback.success();
-      
+
       // Only close if in Telegram
       if (window.Telegram?.WebApp?.initData) {
         setTimeout(() => {
@@ -524,12 +538,12 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const getUploaders = (): string[] => {
     const uploaderIds = new Set<number>();
-    
+
     task.sets.forEach(set => {
       set.photos?.forEach(photo => uploaderIds.add(photo.by));
       if (set.video) uploaderIds.add(set.video.by);
     });
-    
+
     return Array.from(uploaderIds).map(id => userNames[id] || `User ${id}`);
   };
 
@@ -539,6 +553,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   return (
     <div style={{ paddingBottom: '100px' }}>
+      {/* Group Color Bar */}
+      {taskGroup && (
+        <div
+          style={{
+            height: '4px',
+            backgroundColor: getGroupColor(taskGroup.id),
+            width: '100%',
+            marginBottom: '8px'
+          }}
+        />
+      )}
+
       {/* Compact Information Section */}
       <div className="card">
         <div style={{ display: 'flex', gap: '12px' }}>
@@ -552,7 +578,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               minWidth: '80px',
               borderRadius: '8px',
               overflow: 'hidden',
-              background: createdPhotoUrl 
+              background: createdPhotoUrl
                 ? `url(${createdPhotoUrl}) center/cover`
                 : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
               display: 'flex',
@@ -583,9 +609,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
           {/* Task Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'flex-start',
               marginBottom: '8px' 
             }}>
@@ -597,6 +623,32 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               </span>
             </div>
             
+            {/* Group Information */}
+            {taskGroup && (
+              <div style={{ 
+                marginBottom: '8px',
+                padding: '6px 8px',
+                borderRadius: '6px',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <div style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: getGroupColor(taskGroup.id)
+                }}></div>
+                <span style={{
+                  fontSize: '12px',
+                  color: 'var(--tg-theme-hint-color)'
+                }}>
+                  👥 {taskGroup.name}
+                </span>
+              </div>
+            )}
+            
             <div style={{ 
               fontSize: '13px', 
               lineHeight: '1.5',
@@ -606,13 +658,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               gap: '4px'
             }}>
               <div>
-                👤 {WebApp.initDataUnsafe?.user?.id === task.createdBy 
+                👤 {WebApp.initDataUnsafe?.user?.id === task.createdBy
                   ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
                   : `User ${task.createdBy}`}
                 {' • '}
                 📅 {new Date(task.createdAt).toLocaleDateString()}
               </div>
-              
+
               {task.doneBy && (
                 <div>
                   ✅ Submitted by {WebApp.initDataUnsafe?.user?.id === task.doneBy
@@ -620,7 +672,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     : `User ${task.doneBy}`}
                 </div>
               )}
-              
+
               {totalMedia > 0 && getUploaders().length > 0 && (
                 <div>
                   📤 Uploaded by: {getUploaders().join(', ')}
@@ -652,7 +704,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             }}>
               👥
             </div>
-            
+
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: '14px',
@@ -744,7 +796,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               </div>
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '8px' }}>
             {/* Selection Mode Toggle */}
             {canDeleteMedia && totalMedia > 0 && (
@@ -776,11 +828,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   hapticFeedback.medium();
                   try {
                     const files: File[] = [];
-                    
+
                     for (let si = 0; si < task.requireSets; si++) {
                       const set = task.sets[si];
                       if (!set) continue;
-                      
+
                       if (set.photos) {
                         for (let i = 0; i < set.photos.length; i++) {
                           const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
@@ -793,7 +845,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                           files.push(file);
                         }
                       }
-                      
+
                       if (set.video) {
                         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
                         const response = await fetch(fileUrl, {
@@ -805,7 +857,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                         files.push(file);
                       }
                     }
-                    
+
                     if (navigator.share && navigator.canShare({ files })) {
                       setLoading(false);
                       await navigator.share({
@@ -893,21 +945,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               photoIndex?: number;
               mediaIndex: number;
             }> = [];
-            
+
             // Photos come first
             set.photos?.forEach((photo, idx) => {
-              allSetMedia.push({ 
-                type: 'photo', 
-                fileId: photo.file_id, 
+              allSetMedia.push({
+                type: 'photo',
+                fileId: photo.file_id,
                 photoIndex: idx,
                 mediaIndex: idx
               });
             });
-            
+
             // Video comes after photos
             if (set.video) {
-              allSetMedia.push({ 
-                type: 'video', 
+              allSetMedia.push({
+                type: 'video',
                 fileId: set.video.file_id,
                 mediaIndex: photoCount
               });
@@ -933,7 +985,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   <div style={{ fontSize: '13px', fontWeight: '600' }}>
                     Set {setIndex + 1}
                   </div>
-                  
+
                   {fileCount > 0 && !selectionMode && (
                     <button
                       onClick={() => shareSetDirect(setIndex)}
@@ -1010,15 +1062,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontSize: '28px',
-                              border: selectionMode && isSelected 
-                                ? '3px solid #ef4444' 
+                              border: selectionMode && isSelected
+                                ? '3px solid #ef4444'
                                 : '2px solid var(--tg-theme-button-color)',
                               overflow: 'hidden',
                               opacity: selectionMode && !canDelete ? 0.5 : 1
                             }}
                           >
                             {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
-                            
+
                             {media.type === 'video' && imageUrl && (
                               <div style={{
                                 position: 'absolute',
@@ -1034,7 +1086,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                 ▶️
                               </div>
                             )}
-                            
+
                             {media.type === 'photo' && imageUrl && !selectionMode && (
                               <div style={{
                                 position: 'absolute',
@@ -1093,8 +1145,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         zIndex: 50,
         boxShadow: '0 -2px 10px rgba(0,0,0,0.1)'
       }}>
-        <div style={{ 
-          maxWidth: '600px', 
+        <div style={{
+          maxWidth: '600px',
           margin: '0 auto',
           display: 'flex',
           gap: '8px',
@@ -1104,7 +1156,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           <button
             onClick={handleSendToChat}
             disabled={loading}
-            style={{ 
+            style={{
               flex: '1 1 100%',
               background: 'var(--tg-theme-button-color)',
               color: 'var(--tg-theme-button-text-color)',
@@ -1118,35 +1170,35 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
           {/* Status Transitions */}
           {task.status === 'New' && canTransition('Received') && (
-            <button 
-              onClick={() => handleTransition('Received')} 
+            <button
+              onClick={() => handleTransition('Received')}
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)' }}
             >
               📦 Receive
             </button>
           )}
-          
+
           {task.status === 'Received' && canTransition('New') && (
-            <button 
-              onClick={() => handleTransition('New')} 
+            <button
+              onClick={() => handleTransition('New')}
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
             >
               ↩️ Move to New
             </button>
           )}
-          
+
           {(task.status === 'Received' || task.status === 'Redo') && canTransition('Submitted') && (
-            <button 
-              onClick={() => handleTransition('Submitted')} 
+            <button
+              onClick={() => handleTransition('Submitted')}
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
             >
               ✅ Submit
             </button>
           )}
-          
+
           {task.status === 'Submitted' && canTransition('Redo') && (
             <button
               onClick={() => handleTransition('Redo')}
@@ -1156,7 +1208,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               🔄 Redo
             </button>
           )}
-          
+
           {task.status === 'Submitted' && canTransition('Completed') && (
             <button
               onClick={() => handleTransition('Completed')}
@@ -1166,8 +1218,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               ✅ Complete
             </button>
           )}
-          
-          {!isArchived && (task.status === 'Submitted' || task.status === 'Completed') && 
+
+          {!isArchived && (task.status === 'Submitted' || task.status === 'Completed') &&
             ['Lead', 'Admin'].includes(userRole) && (
               <button
                 onClick={handleArchive}
@@ -1178,7 +1230,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               </button>
             )
           }
-          
+
           {isArchived && userRole === 'Admin' && (
             <button
               onClick={handleRestore}
@@ -1188,7 +1240,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               📤 Restore
             </button>
           )}
-          
+
           {userRole === 'Admin' && (
             <button
               onClick={handleDelete}
@@ -1259,7 +1311,7 @@ function ImageViewer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  
+
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastTouchDistance = useRef<number | null>(null);
@@ -1323,20 +1375,20 @@ function ImageViewer({
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastTouchDistance.current !== null) {
       e.preventDefault();
-      
+
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const distance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
-      
+
       const scaleChange = distance / lastTouchDistance.current;
       const newScale = Math.min(Math.max(scale * scaleChange, 1), 4);
-      
+
       setScale(newScale);
       lastTouchDistance.current = distance;
-      
+
       if (newScale === 1) {
         setPosition({ x: 0, y: 0 });
       }
@@ -1358,7 +1410,7 @@ function ImageViewer({
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newScale = Math.min(Math.max(scale * delta, 1), 4);
     setScale(newScale);
-    
+
     if (newScale === 1) {
       setPosition({ x: 0, y: 0 });
     }
@@ -1377,27 +1429,27 @@ function ImageViewer({
   const handleTap = () => {
     const now = Date.now();
     const timeSince = now - lastTap.current;
-    
+
     if (timeSince < 300 && timeSince > 0) {
       handleDoubleClick();
     }
-    
+
     lastTap.current = now;
   };
 
   // NEW: Simple and reliable navigation functions
   const goToPreviousPhoto = () => {
     hapticFeedback.light();
-    
+
     // Check if we have photos to navigate
     if (allTaskPhotos.length === 0) return;
-    
+
     // Calculate new index with wrap-around to the end
     let newIndex = currentPhotoIndex - 1;
     if (newIndex < 0) {
       newIndex = allTaskPhotos.length - 1; // Loop to last photo
     }
-    
+
     // Update both index and image
     setCurrentPhotoIndex(newIndex);
     setFullscreenImage(allTaskPhotos[newIndex]);
@@ -1405,16 +1457,16 @@ function ImageViewer({
 
   const goToNextPhoto = () => {
     hapticFeedback.light();
-    
+
     // Check if we have photos to navigate
     if (allTaskPhotos.length === 0) return;
-    
+
     // Calculate new index with wrap-around to the beginning
     let newIndex = currentPhotoIndex + 1;
     if (newIndex >= allTaskPhotos.length) {
       newIndex = 0; // Loop to first photo
     }
-    
+
     // Update both index and image
     setCurrentPhotoIndex(newIndex);
     setFullscreenImage(allTaskPhotos[newIndex]);
@@ -1521,7 +1573,7 @@ function ImageViewer({
           position: 'absolute',
           transform: scale > 1 ? `translate(${position.x / scale}px, ${position.y / scale}px) scale(${scale})` : animationStyle.transform,
           transition: isAnimating || (scale === 1 && position.x === 0 && position.y === 0)
-            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             : 'none',
           touchAction: 'none',
           userSelect: 'none',
@@ -1566,7 +1618,7 @@ function ImageViewer({
         >
           {'<'}
         </button>
-        
+
         <span style={{
           color: 'white',
           fontSize: '14px',
@@ -1579,7 +1631,7 @@ function ImageViewer({
         }}>
           {currentPhotoIndex + 1}/{allTaskPhotos.length}
         </span>
-        
+
         <button
           onClick={goToNextPhoto}
           style={{
