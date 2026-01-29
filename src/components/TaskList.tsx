@@ -507,9 +507,22 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   cursor: 'pointer'
                 }}
               >
-                <span>
-                  👥 {selectedGroup ? selectedGroup.name : 'All Groups'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {selectedGroup ? (
+                    <>
+                      <div style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '4px',
+                        backgroundColor: selectedGroup.color || '#3b82f6', // Default color if none set
+                        border: '1px solid var(--tg-theme-hint-color)'
+                      }} />
+                      <span>👥 {selectedGroup.name}</span>
+                    </>
+                  ) : (
+                    <span>👥 All Groups</span>
+                  )}
+                </div>
                 <span style={{ fontSize: '12px' }}>
                   {showGroupDropdown ? '▲' : '▼'}
                 </span>
@@ -561,7 +574,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                         alignItems: 'center'
                       }}
                     >
-                      <span>{group.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '4px',
+                          backgroundColor: group.color || '#3b82f6', // Default color if none set
+                          border: '1px solid var(--tg-theme-hint-color)'
+                        }} />
+                        <span>{group.name}</span>
+                      </div>
                       {group.isDefault && (
                         <span style={{
                           fontSize: '10px',
@@ -882,8 +904,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   );
 }
 
-// Helper function to generate consistent colors for groups
-const getGroupColor = (groupId: string) => {
+// Helper function to get group color (use configured color if available, otherwise generate)
+const getGroupColor = (groupId: string, configuredColor?: string) => {
+  if (configuredColor) {
+    return configuredColor;
+  }
+  
   // Simple hash function to generate consistent colors for group IDs
   let hash = 0;
   for (let i = 0; i < groupId.length; i++) {
@@ -939,14 +965,22 @@ function TaskCard({
         <div 
           style={{
             height: '4px',
-            backgroundColor: getGroupColor(taskGroup.id),
+            backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
             borderRadius: '2px 2px 0 0',
             width: '100%'
           }}
         />
       )}
       
-      <div style={{ display: 'flex', gap: '12px', padding: '12px 0 0 0', borderRadius: '0 0 8px 8px' }}>
+      <div style={{ 
+        display: 'flex', 
+        gap: '12px', 
+        padding: '12px 0 0 0', 
+        borderRadius: '0 0 8px 8px',
+        background: taskGroup ? `${getGroupColor(taskGroup.id, taskGroup.color)}20` : 'var(--tg-theme-bg-color)', // 20 = 12.5% opacity
+        border: taskGroup ? `1px solid ${getGroupColor(taskGroup.id, taskGroup.color)}` : '1px solid var(--tg-theme-secondary-bg-color)',
+        transition: 'all 0.2s ease'
+      }}>
         {/* Thumbnail */}
         <div
           ref={thumbnailRef}

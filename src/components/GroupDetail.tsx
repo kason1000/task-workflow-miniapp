@@ -2,7 +2,23 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Group } from '../types';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
-import { Users, Trash2, Link as LinkIcon, Crown, User, Eye } from 'lucide-react';
+import { Users, Trash2, Link as LinkIcon, Crown, User, Eye, Palette } from 'lucide-react';
+
+// Modern color palette for groups
+const GROUP_COLORS = [
+  '#3b82f6', // blue-500
+  '#ef4444', // red-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#8b5cf6', // violet-500
+  '#ec4899', // pink-500
+  '#06b6d4', // cyan-500
+  '#84cc16', // lime-500
+  '#f97316', // orange-500
+  '#6366f1', // indigo-500
+  '#14b8a6', // teal-500
+  '#f43f5e', // rose-500
+];
 
 interface GroupDetailProps {
   groupId: string;
@@ -16,6 +32,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [editingColor, setEditingColor] = useState(false); // NEW: State for color editing
 
   useEffect(() => {
     fetchGroup();
@@ -33,6 +50,26 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
       showAlert('❌ Failed to load group: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Function to update group color
+  const updateGroupColor = async (newColor: string) => {
+    if (!group) return;
+
+    try {
+      setActionLoading(true);
+      const updatedGroup = await api.updateGroup(groupId, { color: newColor });
+      setGroup(updatedGroup.group);
+      setEditingColor(false);
+      hapticFeedback.success();
+      showAlert('✅ Group color updated!');
+    } catch (error: any) {
+      console.error('Failed to update group color:', error);
+      showAlert('❌ Failed to update color: ' + error.message);
+      hapticFeedback.error();
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -118,7 +155,17 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
       {/* Header */}
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
-          <Users size={32} style={{ color: 'var(--tg-theme-button-color)' }} />
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            backgroundColor: group.color || '#3b82f6', // Default to blue if no color set
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Users size={18} style={{ color: 'white' }} />
+          </div>
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0, marginBottom: '4px' }}>{group.name}</h2>
             <div style={{ 
@@ -126,7 +173,8 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
               color: 'var(--tg-theme-hint-color)',
               display: 'flex',
               gap: '12px',
-              flexWrap: 'wrap'
+              flexWrap: 'wrap',
+              alignItems: 'center'
             }}>
               <span>ID: {group.id}</span>
               {group.isDefault && (
@@ -140,9 +188,116 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                   DEFAULT
                 </span>
               )}
+              
+              {/* Color Display/Edit */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                marginTop: '4px'
+              }}>
+                <span style={{ fontSize: '10px' }}>COLOR:</span>
+                <div 
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '4px',
+                    backgroundColor: group.color || '#3b82f6',
+                    border: '1px solid var(--tg-theme-hint-color)'
+                  }}
+                />
+                {canManage && (
+                  <button
+                    onClick={() => setEditingColor(!editingColor)}
+                    disabled={actionLoading}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid var(--tg-theme-hint-color)',
+                      borderRadius: '4px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      color: 'var(--tg-theme-text-color)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {editingColor ? 'Cancel' : 'Edit'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Color Editor */}
+        {editingColor && canManage && (
+          <div style={{
+            marginTop: '12px',
+            padding: '12px',
+            background: 'var(--tg-theme-secondary-bg-color)',
+            borderRadius: '8px'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '8px' 
+            }}>
+              <Palette size={16} style={{ marginRight: '6px' }} />
+              <h4 style={{ margin: 0, fontSize: '14px' }}>Choose Group Color</h4>
+            </div>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(30px, 1fr))', 
+              gap: '8px',
+              marginBottom: '8px'
+            }}>
+              {GROUP_COLORS.map((colorOption) => (
+                <button
+                  key={colorOption}
+                  type="button"
+                  onClick={() => updateGroupColor(colorOption)}
+                  disabled={actionLoading}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: group.color === colorOption 
+                      ? '3px solid var(--tg-theme-text-color)' 
+                      : '2px solid var(--tg-theme-hint-color)',
+                    background: colorOption,
+                    cursor: 'pointer',
+                    padding: 0,
+                    margin: 0
+                  }}
+                  title={colorOption}
+                />
+              ))}
+            </div>
+            
+            {/* Current Color Preview */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px',
+              background: 'var(--tg-theme-bg-color)',
+              borderRadius: '6px'
+            }}>
+              <div 
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '4px',
+                  backgroundColor: group.color || '#3b82f6',
+                  border: '1px solid var(--tg-theme-hint-color)'
+                }}
+              />
+              <span style={{ fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
+                Current: {group.color || '#3b82f6'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div style={{

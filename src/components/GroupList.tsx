@@ -129,6 +129,14 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
                 alignItems: 'center',
                 gap: '8px'
               }}>
+                {/* Group Color Indicator */}
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '4px',
+                  backgroundColor: group.color || '#3b82f6', // Default color if none set
+                  border: '1px solid var(--tg-theme-hint-color)'
+                }} />
                 {group.name}
                 {group.isDefault && (
                   <span style={{

@@ -23,6 +23,7 @@ export interface Group {
   createdBy: number;
   createdAt: string;
   isDefault?: boolean;
+  color?: string;  // NEW: Color for group identification
 }
 
 export interface GroupMember {

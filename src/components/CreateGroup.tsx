@@ -3,6 +3,22 @@ import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import { Users, Plus, X } from 'lucide-react';
 
+// Modern color palette for groups
+const GROUP_COLORS = [
+  '#3b82f6', // blue-500
+  '#ef4444', // red-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#8b5cf6', // violet-500
+  '#ec4899', // pink-500
+  '#06b6d4', // cyan-500
+  '#84cc16', // lime-500
+  '#f97316', // orange-500
+  '#6366f1', // indigo-500
+  '#14b8a6', // teal-500
+  '#f43f5e', // rose-500
+];
+
 interface CreateGroupProps {
   onBack: () => void;
   onGroupCreated: () => void;
@@ -13,6 +29,7 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
   const [leadUserIds, setLeadUserIds] = useState<number[]>([]);
   const [leadInput, setLeadInput] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
+  const [color, setColor] = useState(GROUP_COLORS[0]); // Default to first color
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +81,8 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
       await api.createGroup(
         groupName.trim(),
         leadUserIds.length > 0 ? leadUserIds : undefined,
-        chatId
+        chatId,
+        color  // NEW: Pass color when creating group
       );
       
       hapticFeedback.success();
@@ -210,6 +228,72 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
             }}>
               Add Telegram user IDs of group leads
             </p>
+          </div>
+
+          {/* Group Color */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px',
+              fontWeight: '500'
+            }}>
+              Group Color
+            </label>
+            
+            {/* Color Picker */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(30px, 1fr))', 
+              gap: '8px',
+              marginBottom: '8px'
+            }}>
+              {GROUP_COLORS.map((colorOption) => (
+                <button
+                  key={colorOption}
+                  type="button"
+                  onClick={() => {
+                    setColor(colorOption);
+                    hapticFeedback.light();
+                  }}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: color === colorOption 
+                      ? '3px solid var(--tg-theme-text-color)' 
+                      : '2px solid var(--tg-theme-hint-color)',
+                    background: colorOption,
+                    cursor: 'pointer',
+                    padding: 0,
+                    margin: 0
+                  }}
+                  title={colorOption}
+                />
+              ))}
+            </div>
+            
+            {/* Selected Color Preview */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px',
+              background: 'var(--tg-theme-secondary-bg-color)',
+              borderRadius: '6px'
+            }}>
+              <div 
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '4px',
+                  backgroundColor: color,
+                  border: '1px solid var(--tg-theme-hint-color)'
+                }}
+              />
+              <span style={{ fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
+                Selected: {color}
+              </span>
+            </div>
           </div>
 
           {/* Telegram Chat ID */}

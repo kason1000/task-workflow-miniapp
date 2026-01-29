@@ -187,10 +187,10 @@ class ApiService {
     return this.request<{ groups: Group[] }>('/groups/my-led');
   }
 
-  async createGroup(name: string, leadUserIds?: number[], telegramChatId?: number) {
+  async createGroup(name: string, leadUserIds?: number[], telegramChatId?: number, color?: string) {
     return this.request<{ group: Group }>('/groups', {
       method: 'POST',
-      body: JSON.stringify({ name, leadUserIds, telegramChatId }),
+      body: JSON.stringify({ name, leadUserIds, telegramChatId, color }),
     });
   }
 

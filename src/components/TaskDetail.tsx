@@ -5,14 +5,18 @@ import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
 
-// Helper function to generate consistent colors for groups
-const getGroupColor = (groupId: string) => {
+// Helper function to get group color (use configured color if available, otherwise generate)
+const getGroupColor = (groupId: string, configuredColor?: string) => {
+  if (configuredColor) {
+    return configuredColor;
+  }
+  
   // Simple hash function to generate consistent colors for group IDs
   let hash = 0;
   for (let i = 0; i < groupId.length; i++) {
     hash = groupId.charCodeAt(i) + ((hash << 5) - hash);
   }
-
+  
   // Generate hue based on hash to ensure different groups have different colors
   const hue = hash % 360;
   // Use a consistent saturation and lightness to maintain readability
@@ -558,7 +562,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         <div
           style={{
             height: '4px',
-            backgroundColor: getGroupColor(taskGroup.id),
+            backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
             width: '100%',
             marginBottom: '8px'
           }}
@@ -566,7 +570,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       )}
 
       {/* Compact Information Section */}
-      <div className="card">
+      <div 
+        className="card" 
+        style={{
+          ...(taskGroup && taskGroup.color ? {
+            borderLeft: `4px solid ${taskGroup.color}`,
+            background: `${taskGroup.color}20`, // 20 = 12.5% opacity
+          } : {})
+        }}
+      >
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* Created Photo Thumbnail */}
           <div
@@ -613,7 +625,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'flex-start',
-              marginBottom: '8px' 
+              marginBottom: '8px'
             }}>
               <h3 style={{ fontSize: '16px', margin: 0, flex: 1, marginRight: '8px' }}>
                 📋 {task.title}
@@ -622,10 +634,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 {task.status}
               </span>
             </div>
-            
+
             {/* Group Information */}
             {taskGroup && (
-              <div style={{ 
+              <div style={{
                 marginBottom: '8px',
                 padding: '6px 8px',
                 borderRadius: '6px',
@@ -638,7 +650,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   width: '12px',
                   height: '12px',
                   borderRadius: '50%',
-                  backgroundColor: getGroupColor(taskGroup.id)
+                  backgroundColor: getGroupColor(taskGroup.id, taskGroup.color)
                 }}></div>
                 <span style={{
                   fontSize: '12px',
@@ -648,9 +660,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 </span>
               </div>
             )}
-            
-            <div style={{ 
-              fontSize: '13px', 
+
+            <div style={{
+              fontSize: '13px',
               lineHeight: '1.5',
               color: 'var(--tg-theme-hint-color)',
               display: 'flex',
