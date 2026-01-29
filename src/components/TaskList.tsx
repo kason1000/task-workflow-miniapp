@@ -969,18 +969,6 @@ function TaskCard({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* Colored bar for group identification */}
-      {taskGroup && (
-        <div 
-          style={{
-            height: '4px',
-            backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
-            borderRadius: '2px 2px 0 0',
-            width: '100%'
-          }}
-        />
-      )}
-      
       <div style={{ 
         display: 'flex', 
         gap: '12px', 
