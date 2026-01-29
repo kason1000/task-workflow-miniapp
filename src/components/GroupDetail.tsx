@@ -151,13 +151,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   const canManage = isAdmin || isGroupLead;
 
   return (
-    <div style={{
-      ...(group && group.color ? {
-        border: `3px solid ${group.color}`,
-        borderRadius: '12px',
-        padding: '4px'
-      } : {})
-    }}>
+    <div>
       {/* Header */}
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
