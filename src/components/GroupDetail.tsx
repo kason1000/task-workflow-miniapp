@@ -60,7 +60,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
     try {
       setActionLoading(true);
       const updatedGroup = await api.updateGroup(groupId, { color: newColor });
-      setGroup(updatedGroup.group);
+      setGroup(updatedGroup);
       setEditingColor(false);
       hapticFeedback.success();
       showAlert('✅ Group color updated!');
