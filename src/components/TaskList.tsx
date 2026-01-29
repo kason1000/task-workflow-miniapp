@@ -789,20 +789,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       {tasks.length > 0 && (
         <div>
           {tasks.map((task) => (
-            <div key={task.id} className="card">
-              {/* Colored Bar at Top */}
-              {(() => {
-                const taskGroup = groups.find(g => g.id === task.groupId);
-                return taskGroup ? (
-                  <div 
-                    style={{
-                      height: '4px',
-                      backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
-                      width: '100%'
-                    }}
-                  />
-                ) : null;
-              })()}
+            <div 
+              key={task.id} 
+              className="card"
+              style={{
+                ...(groups.find(g => g.id === task.groupId) ? {
+                  border: `2px solid ${getGroupColor(groups.find(g => g.id === task.groupId)?.id, groups.find(g => g.id === task.groupId)?.color)}`,
+                  borderRadius: '8px'
+                } : {})
+              }}
+            >
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                 {/* Task Card (clickable area) */}
                 <div 

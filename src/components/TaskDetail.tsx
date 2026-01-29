@@ -557,20 +557,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   return (
     <div style={{ paddingBottom: '100px' }}>
-      {/* Group Color Bar */}
-      {taskGroup && (
-        <div
-          style={{
-            height: '4px',
-            backgroundColor: getGroupColor(taskGroup.id, taskGroup.color),
-            width: '100%',
-            marginBottom: '8px'
-          }}
-        />
-      )}
-
       {/* Compact Information Section */}
-      <div className="card">
+      <div 
+        className="card"
+        style={{
+          ...(taskGroup && taskGroup.color ? {
+            border: `2px solid ${taskGroup.color}`,
+            borderRadius: '8px'
+          } : {})
+        }}
+      >
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* Created Photo Thumbnail */}
           <div
