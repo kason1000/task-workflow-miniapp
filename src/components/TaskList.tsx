@@ -1359,10 +1359,10 @@ function ImageViewer({
           position: 'absolute',
           top: '20px',
           right: '20px',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.2)',
+          width: '36px',
+          height: '36px',
+          borderRadius: '10px',
+          background: 'rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1371,7 +1371,10 @@ function ImageViewer({
           cursor: 'pointer',
           zIndex: 10000,
           opacity: isClosing ? 0 : 1,
-          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          padding: 0
         }}
       >
         ✕
