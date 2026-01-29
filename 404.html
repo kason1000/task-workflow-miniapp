@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Task Workflow</title>
+    <script type="text/javascript">
+      // Single Page Applications for GitHub Pages
+      (function(l) {
+        if (l.pathname === "/task-workflow-miniapp/" || l.pathname === "/task-workflow-miniapp/404.html" || l.pathname.match(/(\/task-workflow-miniapp\/.*)/i)) {
+          // Skip redirect for root, 404 page and asset paths
+        } else {
+          // Redirect all other routes to index.html
+          var redirect = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + l.pathname.replace(/\/$/, '') + '/index.html' + l.hash;
+          window.location.href = redirect;
+        }
+      })(window.location);
+    </script>
+  </head>
+  <body></body>
+</html>
