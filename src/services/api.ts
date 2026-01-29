@@ -88,10 +88,17 @@ class ApiService {
   }
 
   // Tasks
-  async getTasks(status?: string, archived?: boolean) {
+  async getTasks(status?: string, archived?: boolean, page?: number, pageSize?: number, sortBy?: string, sortOrder?: 'asc' | 'desc') {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (archived !== undefined) params.append('archived', archived.toString());
+    
+    // Only add pagination params if both page and pageSize are provided
+    // This allows the backend to use the non-paginated path when neither is provided
+    if (page !== undefined) params.append('page', page.toString());
+    if (pageSize !== undefined) params.append('pageSize', pageSize.toString());
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
     
     const response = await this.request<any>(`/tasks?${params.toString()}`);
     return { tasks: response.tasks || response };

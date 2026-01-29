@@ -39,8 +39,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [allTaskPhotos, setAllTaskPhotos] = useState<string[]>([]); // All photos for navigation in this task
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0); // Current photo index in the task
   
   // NEW: Group state
   const [taskGroup, setTaskGroup] = useState<Group | null>(null);
@@ -111,88 +109,20 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     // Photos come first in order, then video
     let mediaIndex = photoIndex;
     
-    // Build array of all photos in the task for potential fullscreen navigation
-    const allPhotos = buildAllTaskPhotos();
-    
     setGalleryInitialSet(setIndex);
     setGalleryInitialMedia(mediaIndex);
     setGalleryOpen(true);
-    
-    // Set all task photos for potential fullscreen navigation from gallery
-    setAllTaskPhotos(allPhotos);
-    
-    // Calculate the correct global index for the selected media item
-    let globalIndex = 0;
-    
-    // If there's a created photo, it comes first in the array (index 0), 
-    // so all other items need to account for it
-    if (task.createdPhoto && mediaCache[task.createdPhoto.file_id]) {
-      globalIndex = 1; // Start after the created photo
-    } else {
-      globalIndex = 0; // No created photo, start from 0
-    }
-    
-    // Count items before the current set
-    for (let i = 0; i < setIndex; i++) {
-      const prevSet = task.sets[i];
-      if (prevSet) {
-        globalIndex += prevSet.photos?.length || 0;
-        if (prevSet.video) globalIndex++;
-      }
-    }
-    
-    // Add the index within the current set
-    globalIndex += photoIndex;
-    
-    setCurrentPhotoIndex(globalIndex);
-    
     hapticFeedback.medium();
-  };
-
-  // Function to build array of all photos in the task (created photo + set photos)
-  const buildAllTaskPhotos = (): string[] => {
-    const allPhotos: string[] = [];
-    
-    // Add created photo if it exists
-    if (task.createdPhoto && mediaCache[task.createdPhoto.file_id]) {
-      allPhotos.push(mediaCache[task.createdPhoto.file_id]);
-    }
-    
-    // Add all set photos
-    task.sets.forEach(set => {
-      set.photos?.forEach(photo => {
-        if (mediaCache[photo.file_id]) {
-          allPhotos.push(mediaCache[photo.file_id]);
-        }
-      });
-      
-      // Add set videos if they exist
-      if (set.video && mediaCache[set.video.file_id]) {
-        allPhotos.push(mediaCache[set.video.file_id]);
-      }
-    });
-    
-    return allPhotos;
   };
 
   const handleCreatedPhotoClick = () => {
     if (task.createdPhoto) {
       const thumbnailUrl = mediaCache[task.createdPhoto.file_id];
       if (thumbnailUrl && thumbnailRef.current) {
-        const allPhotos = buildAllTaskPhotos();
-        
         const rect = thumbnailRef.current.getBoundingClientRect();
         hapticFeedback.medium();
         setThumbnailRect(rect);
         setFullscreenImage(thumbnailUrl);
-        setAllTaskPhotos(allPhotos);
-        
-        // Find the index of the clicked photo in the allPhotos array
-        const photoIndex = allPhotos.indexOf(thumbnailUrl);
-        if (photoIndex !== -1) {
-          setCurrentPhotoIndex(photoIndex);
-        }
-        
         setIsAnimating(true);
         
         // End animation after transition
@@ -412,7 +342,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     hapticFeedback.medium();
 
     try {
-      console.log(`Attempting transition: ${task.status} -> ${to}`);
+      console.log(`Attempting transition: ${task.status} → ${to}`);
       console.log('Task ID:', task.id);
       console.log('User Role:', userRole);
       
@@ -1207,12 +1137,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           imageUrl={fullscreenImage}
           thumbnailRect={thumbnailRect}
           isAnimating={isAnimating}
-          isClosing={isAnimating && !fullscreenImage}  /* Only true when actually closing */
+          isClosing={isAnimating && fullscreenImage !== null}
           onClose={closeFullscreen}
-          allTaskPhotos={allTaskPhotos}
-          currentPhotoIndex={currentPhotoIndex}
-          setCurrentPhotoIndex={setCurrentPhotoIndex}
-          setFullscreenImage={setFullscreenImage}
         />
       )}
 
@@ -1231,28 +1157,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   );
 }
 
-// ImageViewer component with navigation
+// ImageViewer component (keep exactly as your original)
 function ImageViewer({
   imageUrl,
   thumbnailRect,
   isAnimating,
   isClosing,
-  onClose,
-  allTaskPhotos,
-  currentPhotoIndex,
-  setCurrentPhotoIndex,
-  setFullscreenImage
+  onClose
 }: {
   imageUrl: string;
   thumbnailRect: DOMRect | null;
   isAnimating: boolean;
   isClosing: boolean;
   onClose: () => void;
-  allTaskPhotos: string[];
-  currentPhotoIndex: number;
-  setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>;
-  setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
+  // ... (keep all your existing ImageViewer code - it's perfect as is)
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -1385,41 +1304,6 @@ function ImageViewer({
     lastTap.current = now;
   };
 
-  // NEW: Simple and reliable navigation functions
-  const goToPreviousPhoto = () => {
-    hapticFeedback.light();
-    
-    // Check if we have photos to navigate
-    if (allTaskPhotos.length === 0) return;
-    
-    // Calculate new index with wrap-around to the end
-    let newIndex = currentPhotoIndex - 1;
-    if (newIndex < 0) {
-      newIndex = allTaskPhotos.length - 1; // Loop to last photo
-    }
-    
-    // Update both index and image
-    setCurrentPhotoIndex(newIndex);
-    setFullscreenImage(allTaskPhotos[newIndex]);
-  };
-
-  const goToNextPhoto = () => {
-    hapticFeedback.light();
-    
-    // Check if we have photos to navigate
-    if (allTaskPhotos.length === 0) return;
-    
-    // Calculate new index with wrap-around to the beginning
-    let newIndex = currentPhotoIndex + 1;
-    if (newIndex >= allTaskPhotos.length) {
-      newIndex = 0; // Loop to first photo
-    }
-    
-    // Update both index and image
-    setCurrentPhotoIndex(newIndex);
-    setFullscreenImage(allTaskPhotos[newIndex]);
-  };
-
   const getAnimationStyle = () => {
     if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
       return {};
@@ -1525,82 +1409,12 @@ function ImageViewer({
             : 'none',
           touchAction: 'none',
           userSelect: 'none',
-          WebKitUserSelect: 'none',
+          WebkitUserSelect: 'none',
           pointerEvents: scale > 1 ? 'auto' : 'none',
           transformOrigin: 'center center',
           ...animationStyle
         }}
       />
-
-      {/* Navigation and action buttons at the bottom - arranged with nav buttons on far sides */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: 0,
-        right: 0,
-        zIndex: 10000,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 20px',
-        opacity: isClosing ? 0 : 1,
-        transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-      }}>
-        <button
-          onClick={goToPreviousPhoto}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            color: 'white',
-            cursor: 'pointer',
-            border: 'none',
-            backdropFilter: 'blur(4px)',
-            flexShrink: 0
-          }}
-        >
-          {'<'}
-        </button>
-        
-        <span style={{
-          color: 'white',
-          fontSize: '14px',
-          padding: '8px 12px',
-          background: 'rgba(0, 0, 0, 0.5)',
-          borderRadius: '20px',
-          backdropFilter: 'blur(4px)',
-          margin: '0 20px', // Add margin to prevent touching side buttons
-          flexShrink: 0
-        }}>
-          {currentPhotoIndex + 1}/{allTaskPhotos.length}
-        </span>
-        
-        <button
-          onClick={goToNextPhoto}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            color: 'white',
-            cursor: 'pointer',
-            border: 'none',
-            backdropFilter: 'blur(4px)',
-            flexShrink: 0
-          }}
-        >
-          {'>'}
-        </button>
-      </div>
     </div>
   );
 }

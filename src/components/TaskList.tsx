@@ -20,6 +20,7 @@ interface TaskListProps {
 export function TaskList({ onTaskClick }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<{
@@ -27,6 +28,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     showArchived: boolean;
     groupId?: string;  // NEW: Group filter
   }>({ status: 'all', showArchived: false });
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [userRole, setUserRole] = useState<string>('Member');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
@@ -39,6 +42,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [currentFullscreenTaskId, setCurrentFullscreenTaskId] = useState<string | null>(null); // Track which task's image is being viewed
+  const [allPhotos, setAllPhotos] = useState<Array<{url: string, taskId: string, taskIndex: number}>>([]); // Store all photos for navigation
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0); // Track current photo index
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
@@ -55,14 +61,38 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     return ['New', 'Received', 'Submitted', 'Redo', 'Completed'];
   };
 
-  // NEW: Fetch user groups
+  // NEW: Fetch user role and groups
   useEffect(() => {
-    fetchGroups();
+    const fetchInitialData = async () => {
+      try {
+        // Fetch role first
+        const roleData = await api.getMyRole();
+        setUserRole(roleData.role);
+      } catch (error) {
+        console.error('Failed to fetch user role:', error);
+        // Default to Member if role fetch fails
+        setUserRole('Member');
+      }
+      
+      // Fetch groups
+      try {
+        const data = await api.getGroups();
+        setGroups(data.groups || []);
+      } catch (error: any) {
+        console.error('Failed to fetch groups:', error);
+      }
+    };
+    
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
-    fetchTasks();
-  }, [filter.status, filter.showArchived, filter.groupId]);
+    // Reset pagination when filter changes
+    setPage(1);
+    setTasks([]);
+    setHasMore(true); // Reset hasMore for new filter
+    fetchTasks(1);
+  }, [filter.status, filter.showArchived, filter.groupId, userRole]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -94,14 +124,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
   };
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (pageNum: number = 1) => {
     try {
-      setLoading(true);
+      if (pageNum === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
-
-      // Fetch role
-      const roleData = await api.getMyRole();
-      setUserRole(roleData.role);
 
       // Determine what to fetch
       let statusFilter: TaskStatus | undefined;
@@ -123,6 +153,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       // NEW: Fetch tasks with group filter
       let fetchedTasks: Task[];
       if (filter.groupId) {
+        // For group-specific tasks, we'll fetch all and filter, but implement pagination if needed
         const data = await api.getGroupTasks(filter.groupId);
         fetchedTasks = data.tasks || [];
         
@@ -135,21 +166,64 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         } else {
           fetchedTasks = fetchedTasks.filter(t => t.status !== 'Archived');
         }
+        
+        // For simplicity in group view, sort all at once
+        if (filter.status === 'all' && !filter.showArchived) {
+          const statusOrder = getFilterOrder();
+          fetchedTasks.sort((a: Task, b: Task) => {
+            const aIndex = statusOrder.indexOf(a.status);
+            const bIndex = statusOrder.indexOf(b.status);
+            
+            const aPos = aIndex === -1 ? 999 : aIndex;
+            const bPos = bIndex === -1 ? 999 : bIndex;
+            
+            if (aPos !== bPos) {
+              return aPos - bPos;
+            }
+            
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+        }
+        
+        // For group view, we'll handle pagination client-side if needed
+        const startIndex = (pageNum - 1) * 20;
+        const paginatedTasks = fetchedTasks.slice(startIndex, startIndex + 20);
+        
+        // For group view, check if there are more tasks beyond this page
+        setHasMore(fetchedTasks.length > startIndex + 20);
+        
+        fetchedTasks = paginatedTasks;
       } else {
-        const { tasks: allTasks } = await api.getTasks(statusFilter, fetchArchived);
-        fetchedTasks = allTasks;
+        if (fetchArchived) {
+          // For archived tasks, fetch with a very large page size to get all archived tasks at once
+          const { tasks: allTasks } = await api.getTasks(statusFilter, fetchArchived, 0, 200, 'archivedAt', 'desc'); // Fetch up to 200 archived tasks
+          fetchedTasks = allTasks;
+          
+          // For archived tasks, set hasMore to false since we're showing all at once in this approach
+          setHasMore(false);
+        } else {
+          // Use pagination for non-archived tasks
+          const backendPage = pageNum - 1; // Convert to 0-indexed
+          const pageSize = 20;
+          
+          const { tasks: allTasks } = await api.getTasks(statusFilter, fetchArchived, backendPage, pageSize);
+          fetchedTasks = allTasks;
+          
+          // Update hasMore based on whether we got a full page back
+          setHasMore(fetchedTasks.length === pageSize);
+        }
       }
       
       // Additional client-side filter for "InProgress" (Viewer only)
       let filteredTasks = fetchedTasks;
-      if (roleData.role === 'Viewer' && filter.status === 'InProgress') {
+      if (userRole === 'Viewer' && filter.status === 'InProgress') {
         filteredTasks = fetchedTasks.filter((task: Task) => 
           task.status !== 'Completed' && task.status !== 'Archived'
         );
       }
 
-      // Sort by status order if "All" selected
-      if (filter.status === 'all' && !filter.showArchived) {
+      // Sort by status order if "All" selected (only for first page or non-group view)
+      if (filter.status === 'all' && !filter.showArchived && !filter.groupId && pageNum === 1) {
         const statusOrder = getFilterOrder();
         filteredTasks.sort((a: Task, b: Task) => {
           const aIndex = statusOrder.indexOf(a.status);
@@ -166,48 +240,86 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         });
       }
       
-      setTasks(filteredTasks);
-
-      // Load thumbnails for createdPhoto
-      const newThumbnails: Record<string, string> = {};
-      for (const task of filteredTasks) {
-        if (task.createdPhoto?.file_id && !thumbnails[task.createdPhoto.file_id]) {
-          try {
-            const { fileUrl } = await api.getMediaUrl(task.createdPhoto.file_id);
-            newThumbnails[task.createdPhoto.file_id] = fileUrl;
-          } catch (err) {
-            console.error('Failed to load thumbnail:', err);
-          }
-        }
+      // For subsequent pages, append to existing tasks
+      if (pageNum === 1) {
+        setTasks(filteredTasks);
+      } else {
+        setTasks(prev => [...prev, ...filteredTasks]);
       }
-      setThumbnails(prev => ({ ...prev, ...newThumbnails }));
 
-      // NEW: Load user names from backend instead of using WebApp
+      // Parallel loading of user names and thumbnails
       const userIds = new Set<number>();
+      const photoIdsToLoad = new Set<string>();
+      
       filteredTasks.forEach((task: Task) => {
         if (task.createdBy) userIds.add(task.createdBy);
         if (task.doneBy) userIds.add(task.doneBy);
+        if (task.createdPhoto?.file_id && !thumbnails[task.createdPhoto.file_id]) {
+          photoIdsToLoad.add(task.createdPhoto.file_id);
+        }
       });
 
+      // Start loading user names if needed
+      let userNamesPromise: Promise<void> | null = null;
       if (userIds.size > 0) {
-        try {
-          const { userNames: fetchedNames } = await api.getUserNames(Array.from(userIds));
-          setUserNames(fetchedNames);
-        } catch (err) {
-          console.error('Failed to load user names:', err);
-          // Fallback to User {id} format
-          const fallbackNames: Record<number, string> = {};
-          Array.from(userIds).forEach(id => {
-            fallbackNames[id] = `User ${id}`;
+        userNamesPromise = api.getUserNames(Array.from(userIds))
+          .then(({ userNames: fetchedNames }) => {
+            setUserNames(prev => ({ ...prev, ...fetchedNames }));
+          })
+          .catch(err => {
+            console.error('Failed to load user names:', err);
+            // Fallback to User {id} format
+            const fallbackNames: Record<number, string> = {};
+            Array.from(userIds).forEach(id => {
+              fallbackNames[id] = `User ${id}`;
+            });
+            setUserNames(prev => ({ ...prev, ...fallbackNames }));
           });
-          setUserNames(fallbackNames);
+      }
+
+      // Load thumbnails for createdPhoto and build allPhotos array
+      const newThumbnails: Record<string, string> = {};
+      const newAllPhotos: Array<{url: string, taskId: string, taskIndex: number}> = [];
+      
+      // Load all needed thumbnails in parallel
+      const thumbnailPromises = Array.from(photoIdsToLoad).map(async (photoId) => {
+        try {
+          const { fileUrl } = await api.getMediaUrl(photoId);
+          return { photoId, fileUrl };
+        } catch (err) {
+          console.error('Failed to load thumbnail:', err);
+          return null;
         }
+      });
+
+      const thumbnailResults = await Promise.all(thumbnailPromises);
+      thumbnailResults.forEach(result => {
+        if (result) {
+          newThumbnails[result.photoId] = result.fileUrl;
+        }
+      });
+
+      // Build allPhotos array
+      for (let i = 0; i < filteredTasks.length; i++) {
+        const task = filteredTasks[i];
+        if (task.createdPhoto?.file_id && newThumbnails[task.createdPhoto.file_id]) {
+          newAllPhotos.push({ url: newThumbnails[task.createdPhoto.file_id], taskId: task.id, taskIndex: (pageNum === 1 ? i : tasks.length + i) });
+        }
+      }
+      
+      setThumbnails(prev => ({ ...prev, ...newThumbnails }));
+      setAllPhotos(prev => [...prev, ...newAllPhotos]);
+
+      // Wait for user names if they were being loaded
+      if (userNamesPromise) {
+        await userNamesPromise;
       }
     } catch (error: any) {
       console.error('Failed to fetch tasks:', error);
       setError(error.message);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -239,7 +351,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const handleRefresh = () => {
     hapticFeedback.medium();
-    fetchTasks();
+    setPage(1);
+    setTasks([]);
+    fetchTasks(1);
     fetchGroups();
   };
 
@@ -270,11 +384,48 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
   };
 
-  const handleThumbnailClick = (thumbnailUrl: string, rect: DOMRect, e: React.MouseEvent) => {
+  // Function to load more tasks
+  const loadMoreTasks = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await fetchTasks(nextPage);
+  };
+
+  // Implement infinite scroll for non-archived tasks
+  useEffect(() => {
+    if (filter.showArchived) {
+      // Don't use infinite scroll for archived tasks - show all at once
+      return;
+    }
+    
+    const handleScroll = () => {
+      // Check if we're near the bottom of the page
+      // Use a smaller threshold to trigger earlier and handle cases where page isn't fully scrollable
+      const threshold = Math.min(500, window.innerHeight / 2); // Use smaller of 500px or half viewport
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - threshold) {
+        loadMoreTasks();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadingMore, hasMore, page, filter.showArchived]);
+
+  const handleThumbnailClick = (task: Task, thumbnailUrl: string, rect: DOMRect, e: React.MouseEvent) => {
     e.stopPropagation();
     hapticFeedback.medium();
     setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
+    setCurrentFullscreenTaskId(task.id); // Track which task's image is being viewed
+    
+    // Find the index of the clicked photo in the allPhotos array
+    const photoIndex = allPhotos.findIndex(photo => photo.url === thumbnailUrl && photo.taskId === task.id);
+    if (photoIndex !== -1) {
+      setCurrentPhotoIndex(photoIndex);
+    }
+    
     setIsAnimating(true);
     
     setTimeout(() => {
@@ -602,7 +753,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       </div>
 
       {/* Task List */}
-      {tasks.length === 0 && (
+      {tasks.length === 0 && !loading && (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p style={{ fontSize: '48px', marginBottom: '12px' }}>
             {filter.showArchived ? '🗃️' : '📋'}
@@ -632,7 +783,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
                     userNames={userNames}
                     groups={groups}
-                    onThumbnailClick={handleThumbnailClick}
+                    onThumbnailClick={(taskObj, url, rect, e) => handleThumbnailClick(taskObj, url, rect, e)}
                   />
                 </div>
 
@@ -674,6 +825,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               </div>
             </div>
           ))}
+
+          {/* Loading indicator for "Load More" */}
+          {loadingMore && (
+            <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
+              <p>Loading more tasks...</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -685,6 +843,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           isAnimating={isAnimating}
           isClosing={isAnimating && fullscreenImage !== null}
           onClose={closeFullscreen}
+          tasks={tasks}
+          currentTaskIndex={tasks.findIndex(t => t.id === currentFullscreenTaskId)}
+          onTaskClick={onTaskClick}
+          onSendToChat={handleSendToChat}
+          sending={sending}
+          allPhotos={allPhotos}
+          currentPhotoIndex={currentPhotoIndex}
+          setCurrentPhotoIndex={setCurrentPhotoIndex}
         />
       )}
 
@@ -728,7 +894,7 @@ function TaskCard({
   thumbnailUrl?: string;
   userNames: Record<number, string>;
   groups: Group[];
-  onThumbnailClick: (url: string, rect: DOMRect, e: React.MouseEvent) => void;
+  onThumbnailClick: (task: Task, url: string, rect: DOMRect, e: React.MouseEvent) => void;
 }) {
   const thumbnailRef = useRef<HTMLDivElement>(null);
 
@@ -748,7 +914,7 @@ function TaskCard({
   const handleClick = (e: React.MouseEvent) => {
     if (thumbnailUrl && thumbnailRef.current) {
       const rect = thumbnailRef.current.getBoundingClientRect();
-      onThumbnailClick(thumbnailUrl, rect, e);
+      onThumbnailClick(task, thumbnailUrl, rect, e);
     }
   };
 
@@ -923,21 +1089,36 @@ function TaskCard({
   );
 }
 
-// Keep ImageViewer component exactly as it was in your original file
+// Enhanced ImageViewer component with navigation and send to chat button
 function ImageViewer({
   imageUrl,
   thumbnailRect,
   isAnimating,
   isClosing,
-  onClose
+  onClose,
+  tasks, // All tasks for navigation
+  currentTaskIndex, // Index of current task
+  onTaskClick, // For navigating to task detail
+  onSendToChat, // For sending to chat
+  sending, // For send button state
+  allPhotos, // All photos for navigation
+  currentPhotoIndex, // Current photo index
+  setCurrentPhotoIndex, // Setter for current photo index
 }: {
   imageUrl: string;
   thumbnailRect: DOMRect | null;
   isAnimating: boolean;
   isClosing: boolean;
   onClose: () => void;
+  tasks: Task[]; // All tasks for navigation
+  currentTaskIndex: number; // Index of current task
+  onTaskClick: (task: Task) => void; // For navigating to task detail
+  onSendToChat: (taskId: string, e: React.MouseEvent) => void; // For sending to chat
+  sending: Record<string, boolean>; // For send button state
+  allPhotos: Array<{url: string, taskId: string, taskIndex: number}>; // All photos for navigation
+  currentPhotoIndex: number; // Current photo index
+  setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>; // Setter for current photo index
 }) {
-  // ... (keep all your existing ImageViewer code exactly as is)
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -1070,6 +1251,39 @@ function ImageViewer({
     lastTap.current = now;
   };
 
+  // Navigation between task thumbnails (looping)
+  const goToPreviousPhoto = () => {
+    if (allPhotos.length > 1) {
+      let newIndex = currentPhotoIndex - 1;
+      if (newIndex < 0) {
+        newIndex = allPhotos.length - 1; // Loop to last photo
+      }
+      
+      const targetPhoto = allPhotos[newIndex];
+      if (targetPhoto) {
+        setCurrentPhotoIndex(newIndex);
+        setCurrentFullscreenTaskId(targetPhoto.taskId);
+        setFullscreenImage(targetPhoto.url);
+      }
+    }
+  };
+
+  const goToNextPhoto = () => {
+    if (allPhotos.length > 1) {
+      let newIndex = currentPhotoIndex + 1;
+      if (newIndex >= allPhotos.length) {
+        newIndex = 0; // Loop to first photo
+      }
+      
+      const targetPhoto = allPhotos[newIndex];
+      if (targetPhoto) {
+        setCurrentPhotoIndex(newIndex);
+        setCurrentFullscreenTaskId(targetPhoto.taskId);
+        setFullscreenImage(targetPhoto.url);
+      }
+    }
+  };
+
   const getAnimationStyle = () => {
     if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
       return {};
@@ -1109,6 +1323,10 @@ function ImageViewer({
   };
 
   const animationStyle = getAnimationStyle();
+
+  // Get current photo and corresponding task
+  const currentPhoto = allPhotos[currentPhotoIndex];
+  const currentTask = tasks.find(t => t.id === currentPhoto?.taskId) || tasks[currentTaskIndex];
 
   return (
     <div
@@ -1153,7 +1371,11 @@ function ImageViewer({
           cursor: 'pointer',
           zIndex: 10000,
           opacity: isClosing ? 0 : 1,
-          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          border: 'none',
+          backdropFilter: 'blur(4px)',
+          boxSizing: 'border-box',
+          outline: 'none'
         }}
       >
         ✕
@@ -1175,12 +1397,52 @@ function ImageViewer({
             : 'none',
           touchAction: 'none',
           userSelect: 'none',
-          WebkitUserSelect: 'none',
+          WebKitUserSelect: 'none',
           pointerEvents: scale > 1 ? 'auto' : 'none',
           transformOrigin: 'center center',
           ...animationStyle
         }}
       />
+
+      {/* Send to Chat button only (no navigation buttons) */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        opacity: isClosing ? 0 : 1,
+        transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}>
+        <button
+          onClick={(e) => onSendToChat(currentTask.id, e)}
+          disabled={sending[currentTask.id]}
+          style={{
+            padding: '12px 30px',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: sending[currentTask.id] 
+              ? 'rgba(107, 114, 128, 0.9)' // gray when sending
+              : 'rgba(36, 129, 204, 0.9)', // blue when ready
+            color: 'white',
+            border: 'none',
+            borderRadius: '24px',
+            cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
+            backdropFilter: 'blur(4px)'
+          }}
+        >
+          <span style={{ fontSize: '18px' }}>
+            {sending[currentTask.id] ? '⏳' : '💬'}
+          </span>
+          <span>
+            {sending[currentTask.id] ? 'Sending...' : 'Send to Chat'}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

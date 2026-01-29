@@ -41,6 +41,7 @@ function App() {
         console.log('Running in Telegram');
         console.log('Telegram user:', tgUser);
         setUser(tgUser);
+        setLoading(true); // Set loading state for Telegram flow
         
         const urlParams = new URLSearchParams(window.location.search);
         const taskIdParam = urlParams.get('taskId');
@@ -117,12 +118,19 @@ function App() {
 
   const loadTaskAndSetView = async (taskId: string, targetView: View, urlParams: URLSearchParams) => {
     try {
+      setLoading(true); // Set loading state while fetching task
       const { task } = await api.getTask(taskId);
       setSelectedTask(task);
       setView(targetView);
     } catch (error: any) {
       console.error('Failed to load task:', error);
       setError(error.message);
+      // If we failed to load the task, go back to the list view
+      setView('list');
+      setSelectedTask(null);
+    } finally {
+      // Always stop loading regardless of success or failure
+      setLoading(false);
     }
   };
 
@@ -346,7 +354,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '2px'
             }}>
-              v1.1.0133</span>
+              v1.1.0193</span>
           </div>
           
           <div style={{ 
