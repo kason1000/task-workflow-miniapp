@@ -22,7 +22,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setError('');
 
     try {
-      const response = await fetch('https://task-workflow-backend.kason1000.workers.dev/auth/verify-code', {
+      const response = await fetch('https://clawdbot-task-workflow-backend.pages.dev/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code })

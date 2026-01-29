@@ -48,7 +48,16 @@ function App() {
         const viewParam = urlParams.get('view') as View;
         
         if (taskIdParam) {
-          loadTaskAndSetView(taskIdParam, viewParam || 'detail', urlParams);
+          // Load user role first, then the specific task - handle errors gracefully
+          fetchUserRole()
+            .then(() => {
+              loadTaskAndSetView(taskIdParam, viewParam || 'detail', urlParams);
+            })
+            .catch(error => {
+              console.error('Failed to fetch user role:', error);
+              // Still load the task even if role fetch fails
+              loadTaskAndSetView(taskIdParam, viewParam || 'detail', urlParams);
+            });
         } else {
           fetchUserRole();
         }
@@ -354,7 +363,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '2px'
             }}>
-              v1.1.0202</span>
+              v1.1.0219</span>
           </div>
           
           <div style={{ 

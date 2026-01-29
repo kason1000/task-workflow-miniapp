@@ -22,8 +22,20 @@ class ApiService {
       };
     }
 
-    // Telegram auth
+    // Telegram auth - ensure WebApp is ready
+    if (typeof WebApp.ready === 'function') {
+      WebApp.ready();
+    }
+    
     const initData = WebApp.initData;
+    
+    if (!initData) {
+      console.warn('No Telegram init data available');
+      // Fallback to empty headers but this will likely fail authentication
+      return {
+        'Content-Type': 'application/json',
+      };
+    }
     
     return {
       'Content-Type': 'application/json',
