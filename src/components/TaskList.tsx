@@ -1371,11 +1371,7 @@ function ImageViewer({
           cursor: 'pointer',
           zIndex: 10000,
           opacity: isClosing ? 0 : 1,
-          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          border: 'none',
-          backdropFilter: 'blur(4px)',
-          boxSizing: 'border-box',
-          outline: 'none'
+          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         ✕
