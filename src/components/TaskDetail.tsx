@@ -574,8 +574,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         className="card" 
         style={{
           ...(taskGroup && taskGroup.color ? {
-            borderLeft: `4px solid ${taskGroup.color}`,
-            background: `${taskGroup.color}20`, // 20 = 12.5% opacity
+            border: `3px solid ${taskGroup.color}`,
           } : {})
         }}
       >

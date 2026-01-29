@@ -977,8 +977,7 @@ function TaskCard({
         gap: '12px', 
         padding: '12px 0 0 0', 
         borderRadius: '0 0 8px 8px',
-        background: taskGroup ? `${getGroupColor(taskGroup.id, taskGroup.color)}20` : 'var(--tg-theme-bg-color)', // 20 = 12.5% opacity
-        border: taskGroup ? `1px solid ${getGroupColor(taskGroup.id, taskGroup.color)}` : '1px solid var(--tg-theme-secondary-bg-color)',
+        border: taskGroup ? `3px solid ${getGroupColor(taskGroup.id, taskGroup.color)}` : '1px solid var(--tg-theme-secondary-bg-color)',
         transition: 'all 0.2s ease'
       }}>
         {/* Thumbnail */}
