@@ -789,7 +789,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       {tasks.length > 0 && (
         <div>
           {tasks.map((task) => (
-            <div key={task.id} className="card">
+            <div 
+              key={task.id} 
+              className="card"
+              style={{
+                ...(taskGroup && taskGroup.color ? {
+                  border: `3px solid ${getGroupColor(taskGroup.id, taskGroup.color)}`,
+                  borderRadius: '12px'
+                } : {})
+              }}
+            >
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                 {/* Task Card (clickable area) */}
                 <div 
@@ -977,7 +986,7 @@ function TaskCard({
         gap: '12px', 
         padding: '12px 0 0 0', 
         borderRadius: '0 0 8px 8px',
-        border: taskGroup ? `3px solid ${getGroupColor(taskGroup.id, taskGroup.color)}` : '1px solid var(--tg-theme-secondary-bg-color)',
+        border: '1px solid var(--tg-theme-secondary-bg-color)',
         transition: 'all 0.2s ease'
       }}>
         {/* Thumbnail */}

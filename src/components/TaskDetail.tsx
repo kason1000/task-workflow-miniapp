@@ -570,14 +570,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       )}
 
       {/* Compact Information Section */}
-      <div 
-        className="card" 
-        style={{
-          ...(taskGroup && taskGroup.color ? {
-            border: `3px solid ${taskGroup.color}`,
-          } : {})
-        }}
-      >
+      <div className="card">
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* Created Photo Thumbnail */}
           <div
