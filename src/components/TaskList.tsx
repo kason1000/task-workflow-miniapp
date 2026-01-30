@@ -37,7 +37,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   // NEW: Group state
   const [groups, setGroups] = useState<Group[]>([]);
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
-  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false); // NEW: Hamburger menu state
   
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -50,7 +49,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
   const groupDropdownRef = useRef<HTMLDivElement>(null);
-  const hamburgerMenuRef = useRef<HTMLDivElement>(null); // NEW: Ref for hamburger menu
 
   const getFilterOrder = (): TaskStatus[] => {
     if (userRole === 'Member') {
@@ -115,20 +113,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showGroupDropdown]);
-
-  // NEW: Handle click outside for hamburger menu
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (hamburgerMenuRef.current && !hamburgerMenuRef.current.contains(event.target as Node) && showHamburgerMenu) {
-        setShowHamburgerMenu(false);
-      }
-    };
-
-    if (showHamburgerMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showHamburgerMenu]);
 
   // NEW: Fetch groups
   const fetchGroups = async () => {
@@ -483,146 +467,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   return (
     <div>
-      {/* NEW: Hamburger Menu for Tasks and Groups */}
-      <div style={{
-        position: 'sticky',
-        top: '0',
-        zIndex: 100,
-        background: 'var(--tg-theme-bg-color)',
-        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        padding: '12px 16px',
-        marginLeft: '-16px',
-        marginRight: '-16px',
-        marginBottom: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        display: 'flex',
-        alignItems: 'center'
-      }}>
-        <button
-          onClick={() => {
-            setShowHamburgerMenu(!showHamburgerMenu);
-            hapticFeedback.light();
-          }}
-          style={{
-            padding: '8px 12px',
-            fontSize: '16px',
-            background: 'var(--tg-theme-secondary-bg-color)',
-            color: 'var(--tg-theme-text-color)',
-            border: 'none',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
-            marginRight: '12px'
-          }}
-        >
-          <span>☰</span>
-          <span>Menu</span>
-        </button>
-        
-        <h2 style={{ margin: 0, fontSize: '18px' }}>Tasks</h2>
-      </div>
-      
-      {/* Hamburger Menu Modal */}
-      {showHamburgerMenu && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 1001,
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'flex-end'
-        }}
-        onClick={() => setShowHamburgerMenu(false)}
-        >
-          <div 
-            ref={hamburgerMenuRef}
-            style={{
-              width: '80%',
-              maxWidth: '300px',
-              height: '100vh',
-              background: 'var(--tg-theme-bg-color)',
-              boxShadow: '-2px 0 10px rgba(0,0,0,0.2)',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{
-              padding: '16px',
-              background: 'var(--tg-theme-secondary-bg-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Navigation</h3>
-              <button 
-                onClick={() => setShowHamburgerMenu(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  color: 'var(--tg-theme-text-color)'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-              <div
-                onClick={() => {
-                  // Navigate to Tasks (stay on current page)
-                  setShowHamburgerMenu(false);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  background: 'var(--tg-theme-secondary-bg-color)',
-                  borderBottom: '1px solid var(--tg-theme-hint-color)',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>📋</span>
-                <span>Tasks</span>
-              </div>
-              
-              <div
-                onClick={() => {
-                  // Navigate to Groups page - this would be handled by parent component
-                  // For now, just close the menu and potentially notify parent
-                  setShowHamburgerMenu(false);
-                  // This would typically call a prop function to navigate
-                  // onNavigateToGroups && onNavigateToGroups(); 
-                }}
-                style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  background: 'transparent',
-                  borderBottom: '1px solid var(--tg-theme-hint-color)',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>👥</span>
-                <span>Groups</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Fixed Filter Bar */}
       <div style={{
         position: 'sticky',
