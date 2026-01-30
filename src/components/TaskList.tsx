@@ -474,10 +474,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         zIndex: 50,
         background: 'var(--tg-theme-bg-color)',
         borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        padding: '12px 16px',
+        padding: '8px 16px',  // Reduced from 12px to minimize space
         marginLeft: '-16px',
         marginRight: '-16px',
-        marginBottom: '12px',
+        marginBottom: '8px',  // Reduced from 12px to minimize space
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -604,17 +604,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
           {/* Status Filters Row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* Scrollable Status Filters */}
+            {/* Non-scrollable Status Filters - Allow wrapping instead */}
             <div
               ref={scrollContainerRef}
               style={{
                 display: 'flex',
+                flexWrap: 'wrap',
                 gap: '8px',
-                overflowX: 'auto',
                 flex: 1,
-                scrollbarWidth: 'thin',
-                WebkitOverflowScrolling: 'touch',
-                paddingBottom: '4px'
               }}
             >
               <button
