@@ -354,7 +354,7 @@ function App() {
                   fontSize: '14px'
                 }}
               >
-                <span>☰</span>
+                <span>{showHamburgerMenu ? '✕' : '☰'}</span>
               </button>
             )}
             
@@ -449,7 +449,7 @@ function App() {
         </div>
       </div>
 
-      {/* Hamburger Menu Modal - Anchored to button position - Only one implementation */}
+      {/* Hamburger Menu Modal - Expands from button position - No title */}
       {showHamburgerMenu && (role === 'Admin' || role === 'Lead') && (
         <div style={{
           position: 'fixed',
@@ -481,15 +481,12 @@ function App() {
           >
             <div style={{
               padding: '12px',
-              background: 'var(--tg-theme-secondary-bg-color)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-end',
               borderTopLeftRadius: '8px',
-              borderTopRightRadius: '8px',
-              borderBottom: '1px solid var(--tg-theme-hint-color)'
+              borderTopRightRadius: '8px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '14px' }}>Navigation</h3>
               <button 
                 onClick={() => setShowHamburgerMenu(false)}
                 style={{
