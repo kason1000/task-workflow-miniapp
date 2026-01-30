@@ -1066,10 +1066,10 @@ function TaskCard({
               alignItems: 'center',
               gap: '4px'
             }}>
-              {task.labels.video && <span style={{ fontSize: '13px' }}>🎥</span>}  // Increased from 12px
+              {task.labels.video && <span style={{ fontSize: '13px' }}>🎥</span>}
               {task.title}
             </h3>
-            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '11px', padding: '3px 6px' }}>  // Increased from 10px and 2px 5px
+            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '11px', padding: '3px 6px' }}>
               {task.status}
             </span>
           </div>
@@ -1079,11 +1079,11 @@ function TaskCard({
             <div style={{ marginBottom: '2px' }}>
               <span style={{
                 display: 'inline-block',
-                fontSize: '10px',  // Increased from 9px
-                padding: '2px 5px',  // Increased from 1px 4px
+                fontSize: '10px',
+                padding: '2px 5px',
                 background: 'var(--tg-theme-secondary-bg-color)',
                 color: 'var(--tg-theme-hint-color)',
-                borderRadius: '4px'  // Increased from 3px
+                borderRadius: '4px'
               }}>
                 👥 {taskGroup.name}
               </span>
@@ -1095,7 +1095,7 @@ function TaskCard({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '11px',  // Increased from 10px
+              fontSize: '11px',
               color: 'var(--tg-theme-hint-color)',
               marginBottom: '1px',
               gap: '4px'
@@ -1108,17 +1108,17 @@ function TaskCard({
                   whiteSpace: 'nowrap',
                   flex: 1,
                   textAlign: 'center',
-                  fontSize: '11px'  // Increased from 10px
+                  fontSize: '11px'
                 }}>
                   👤 {doneName}
                 </span>
               )}
-              <span style={{ whiteSpace: 'nowrap', fontSize: '10px' }}>  // Increased from 9px
+              <span style={{ whiteSpace: 'nowrap', fontSize: '10px' }}>
                 {completedSets}/{task.requireSets}
               </span>
             </div>
             <div style={{
-              height: '4px',  // Increased from 3px
+              height: '4px',
               background: 'var(--tg-theme-bg-color)',
               borderRadius: '2px',
               overflow: 'hidden',
@@ -1135,7 +1135,7 @@ function TaskCard({
           <div style={{
             display: 'flex',
             gap: '4px',
-            fontSize: '10px',  // Increased from 9px
+            fontSize: '10px',
             color: 'var(--tg-theme-hint-color)',
             flexWrap: 'wrap',
             alignItems: 'center'
