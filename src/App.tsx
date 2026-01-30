@@ -384,32 +384,29 @@ function App() {
             )}
           </div>
           
-          {/* Centered Logo */}
+          {/* Centered Title */}
           <div style={{ 
             position: 'absolute',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex', 
-            flexDirection: 'row',
+            flexDirection: 'column',
             alignItems: 'center'
           }}>
-            <img 
-              src="./logos/logo.jpg" 
-              alt="Logo" 
-              style={{ 
-                width: '24px', 
-                height: '24px', 
-                marginRight: '8px',
-                verticalAlign: 'middle'
-              }}
-            />
-            <span style={{ 
+            <h1 style={{ 
               fontSize: '16px', 
+              margin: 0,
               fontWeight: '600',
-              color: 'white'
+              textAlign: 'center'
             }}>
               Task Manager
-            </span>
+            </h1>
+            <span style={{ 
+              fontSize: '9px', 
+              color: 'var(--tg-theme-hint-color)',
+              marginTop: '1px'
+            }}>
+              v1.1.0322</span>
           </div>
           
           <div style={{ 
