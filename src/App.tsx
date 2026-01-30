@@ -545,7 +545,7 @@ function App() {
         )}
       </div>
 
-      {/* Hamburger Menu Modal - Positioned after the header container but before content */}
+      {/* Hamburger Menu Modal - Popup Box Style - Positioned after the header container but before content */}
       {showHamburgerMenu && (role === 'Admin' || role === 'Lead') && (
         <div style={{
           position: 'fixed',
@@ -556,21 +556,22 @@ function App() {
           background: 'rgba(0,0,0,0.5)',
           zIndex: 1001,
           display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'flex-end'
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
         onClick={() => setShowHamburgerMenu(false)}
         >
           <div 
             ref={hamburgerMenuRef}
             style={{
-              width: '80%',
+              width: '85%',
               maxWidth: '300px',
-              height: '100vh',
               background: 'var(--tg-theme-bg-color)',
-              boxShadow: '-2px 0 10px rgba(0,0,0,0.2)',
+              borderRadius: '12px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              border: '1px solid var(--tg-theme-secondary-bg-color)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -579,7 +580,10 @@ function App() {
               background: 'var(--tg-theme-secondary-bg-color)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              borderTopLeftRadius: '12px',
+              borderTopRightRadius: '12px',
+              borderBottom: '1px solid var(--tg-theme-hint-color)'
             }}>
               <h3 style={{ margin: 0, fontSize: '16px' }}>Navigation</h3>
               <button 
@@ -596,14 +600,14 @@ function App() {
               </button>
             </div>
             
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+            <div style={{ padding: '8px 0' }}>
               <div
                 onClick={() => {
                   setView('list');
                   setShowHamburgerMenu(false);
                 }}
                 style={{
-                  padding: '12px 16px',
+                  padding: '14px 16px',
                   cursor: 'pointer',
                   background: view === 'list' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
                   borderBottom: '1px solid var(--tg-theme-hint-color)',
@@ -623,10 +627,9 @@ function App() {
                   setShowHamburgerMenu(false);
                 }}
                 style={{
-                  padding: '12px 16px',
+                  padding: '14px 16px',
                   cursor: 'pointer',
                   background: view === 'groups' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
-                  borderBottom: '1px solid var(--tg-theme-hint-color)',
                   fontSize: '14px',
                   display: 'flex',
                   alignItems: 'center',
