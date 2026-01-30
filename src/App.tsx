@@ -336,7 +336,28 @@ function App() {
           maxWidth: '600px',
           margin: '0 auto'
         }}>
-          <div style={{ minWidth: '60px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* NEW: Hamburger Menu for Admin Navigation - ONLY show for Admin or Lead */}
+            {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
+              <button
+                onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
+                style={{
+                  padding: '6px 10px',
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  color: 'var(--tg-theme-text-color)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                <span>☰</span>
+              </button>
+            )}
+            
             {view !== 'list' && view !== 'groups' && (
               <button
                 onClick={() => {
@@ -350,11 +371,12 @@ function App() {
                   }
                 }}
                 style={{ 
-                  padding: '8px 12px', 
+                  padding: '6px 10px', 
                   fontSize: '14px',
                   background: 'var(--tg-theme-button-color)',
                   color: 'var(--tg-theme-button-text-color)',
-                  border: 'none'
+                  border: 'none',
+                  borderRadius: '6px'
                 }}
               >
                 ← Back
@@ -365,29 +387,32 @@ function App() {
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column',
-            alignItems: 'center'
+            alignItems: 'center',
+            flex: 1,
+            marginLeft: '12px',
+            marginRight: '12px'
           }}>
             <h1 style={{ 
-              fontSize: '18px', 
+              fontSize: '16px', 
               margin: 0,
               fontWeight: '600'
             }}>
               Task Workflow - Clawd
             </h1>
             <span style={{ 
-              fontSize: '10px', 
+              fontSize: '9px', 
               color: 'var(--tg-theme-hint-color)',
-              marginTop: '2px'
+              marginTop: '1px'
             }}>
               v1.1.0255</span>
           </div>
           
           <div style={{ 
             textAlign: 'right',
-            minWidth: '100px'
+            minWidth: '80px'
           }}>
             <p style={{ 
-              fontSize: '13px', 
+              fontSize: '12px', 
               color: 'var(--tg-theme-text-color)',
               margin: 0,
               fontWeight: '500'
@@ -395,9 +420,9 @@ function App() {
               {user?.first_name || 'User'}
             </p>
             <span className="badge" style={{ 
-              marginTop: '2px',
-              fontSize: '11px',
-              padding: '2px 8px'
+              marginTop: '1px',
+              fontSize: '10px',
+              padding: '1px 6px'
             }}>
               {role}
             </span>
@@ -406,9 +431,9 @@ function App() {
               <button
                 onClick={handleLogout}
                 style={{
-                  marginTop: '4px',
-                  padding: '2px 8px',
-                  fontSize: '10px',
+                  marginTop: '2px',
+                  padding: '1px 6px',
+                  fontSize: '9px',
                   background: 'transparent',
                   color: 'var(--tg-theme-hint-color)',
                   border: '1px solid var(--tg-theme-hint-color)',
@@ -422,35 +447,6 @@ function App() {
             )}
           </div>
         </div>
-
-        {/* NEW: Hamburger Menu for Admin Navigation - ONLY show for Admin or Lead */}
-        {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            maxWidth: '600px',
-            margin: '12px auto 0',
-            justifyContent: 'flex-start'
-          }}>
-            <button
-              onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
-              style={{
-                padding: '8px 12px',
-                background: 'var(--tg-theme-secondary-bg-color)',
-                color: 'var(--tg-theme-text-color)',
-                border: 'none',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              <span>☰</span>
-              <span>Menu</span>
-            </button>
-          </div>
-        )}
 
         {/* Hamburger Menu Modal */}
         {showHamburgerMenu && (role === 'Admin' || role === 'Lead') && (
@@ -548,6 +544,102 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Hamburger Menu Modal - Positioned after the header container but before content */}
+      {showHamburgerMenu && (role === 'Admin' || role === 'Lead') && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 1001,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'flex-end'
+        }}
+        onClick={() => setShowHamburgerMenu(false)}
+        >
+          <div 
+            ref={hamburgerMenuRef}
+            style={{
+              width: '80%',
+              maxWidth: '300px',
+              height: '100vh',
+              background: 'var(--tg-theme-bg-color)',
+              boxShadow: '-2px 0 10px rgba(0,0,0,0.2)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              padding: '16px',
+              background: 'var(--tg-theme-secondary-bg-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Navigation</h3>
+              <button 
+                onClick={() => setShowHamburgerMenu(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  color: 'var(--tg-theme-text-color)'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+              <div
+                onClick={() => {
+                  setView('list');
+                  setShowHamburgerMenu(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  background: view === 'list' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                  borderBottom: '1px solid var(--tg-theme-hint-color)',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>📋</span>
+                <span>Tasks</span>
+              </div>
+              
+              <div
+                onClick={() => {
+                  handleGroupsClick();
+                  setShowHamburgerMenu(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  background: view === 'groups' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                  borderBottom: '1px solid var(--tg-theme-hint-color)',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Users size={16} />
+                <span>Groups</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ 
