@@ -525,7 +525,7 @@ function App() {
 
       {/* Content */}
       <div style={{ 
-        paddingTop: '50px'   // Reduced from 60px to minimize space
+        paddingTop: '48px'   // Fine-tuned to reduce empty space
       }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
