@@ -410,8 +410,10 @@ function App() {
           </div>
           
           <div style={{ 
+            marginLeft: 'auto',  /* Push to the right */
             textAlign: 'right',
-            minWidth: '80px'
+            minWidth: '80px',
+            flex: '0 0 auto'  /* Ensure it doesn't shrink */
           }}>
             <p style={{ 
               fontSize: '12px', 
