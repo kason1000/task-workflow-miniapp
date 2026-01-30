@@ -331,10 +331,10 @@ function App() {
       }}>
         <div style={{ 
           display: 'flex', 
-          justifyContent: 'space-between', 
           alignItems: 'center',
           maxWidth: '600px',
-          margin: '0 auto'
+          margin: '0 auto',
+          position: 'relative'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {/* NEW: Hamburger Menu for Admin Navigation - ONLY show for Admin or Lead */}
@@ -384,20 +384,20 @@ function App() {
             )}
           </div>
           
+          {/* Centered Title */}
           <div style={{ 
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
             display: 'flex', 
             flexDirection: 'column',
-            alignItems: 'center',
-            flex: 1,
-            marginLeft: '12px',
-            marginRight: '12px'
+            alignItems: 'center'
           }}>
             <h1 style={{ 
               fontSize: '16px', 
               margin: 0,
               fontWeight: '600',
-              textAlign: 'center',
-              width: '100%'
+              textAlign: 'center'
             }}>
               Task Manager
             </h1>
@@ -406,7 +406,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '1px'
             }}>
-              v1.1.0255</span>
+              v1.1.0313</span>
           </div>
           
           <div style={{ 
