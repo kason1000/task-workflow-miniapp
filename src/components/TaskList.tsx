@@ -1060,8 +1060,12 @@ function TaskCard({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              margin: 0
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
             }}>
+              {task.labels.video && <span style={{ fontSize: '12px' }}>🎥</span>}
               {task.title}
             </h3>
             <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '10px', padding: '2px 5px' }}>
@@ -1135,7 +1139,6 @@ function TaskCard({
             flexWrap: 'wrap',
             alignItems: 'center'
           }}>
-            {task.labels.video && <span>🎥</span>}
             {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
               <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
             )}
