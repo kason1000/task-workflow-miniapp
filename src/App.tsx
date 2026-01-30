@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { initTelegramWebApp, getTelegramUser } from './utils/telegram';
 import { api } from './services/api';
 import { Task, Group } from './types';
@@ -25,6 +25,8 @@ function App() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false); // State for hamburger menu
+  const hamburgerMenuRef = useRef<HTMLDivElement>(null); // Ref for hamburger menu
 
   useEffect(() => {
     console.log('Initializing app...');
@@ -263,6 +265,20 @@ function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Handle click outside for hamburger menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (hamburgerMenuRef.current && !hamburgerMenuRef.current.contains(event.target as Node)) {
+        setShowHamburgerMenu(false);
+      }
+    };
+
+    if (showHamburgerMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showHamburgerMenu]);
+
   // Show loading screen
   if (loading) {
     return (
@@ -363,7 +379,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '2px'
             }}>
-              v1.1.0251</span>
+              v1.1.0253</span>
           </div>
           
           <div style={{ 
@@ -407,7 +423,7 @@ function App() {
           </div>
         </div>
 
-        {/* NEW: Navigation Tabs - ONLY show for Admin or Lead */}
+        {/* NEW: Hamburger Menu for Admin Navigation - ONLY show for Admin or Lead */}
         {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
           <div style={{
             display: 'flex',
@@ -417,38 +433,118 @@ function App() {
             justifyContent: 'center'
           }}>
             <button
-              onClick={() => setView('list')}
+              onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
               style={{
-                flex: 1,
-                padding: '8px',
-                background: view === 'list' ? 'var(--tg-theme-button-color)' : 'transparent',
-                color: view === 'list' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                border: view === 'list' ? 'none' : '1px solid var(--tg-theme-hint-color)',
-                fontSize: '14px',
-                borderRadius: '8px'
-              }}
-            >
-              📋 Tasks
-            </button>
-            <button
-              onClick={handleGroupsClick}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: view === 'groups' ? 'var(--tg-theme-button-color)' : 'transparent',
-                color: view === 'groups' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                border: view === 'groups' ? 'none' : '1px solid var(--tg-theme-hint-color)',
-                fontSize: '14px',
+                padding: '8px 12px',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                color: 'var(--tg-theme-text-color)',
+                border: 'none',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
+                gap: '6px',
+                cursor: 'pointer'
               }}
             >
-              <Users size={16} />
-              Groups
+              <span>☰</span>
+              <span>Menu</span>
             </button>
+          </div>
+        )}
+
+        {/* Hamburger Menu Modal */}
+        {showHamburgerMenu && (role === 'Admin' || role === 'Lead') && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 1001,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-end'
+          }}
+          onClick={() => setShowHamburgerMenu(false)}
+          >
+            <div 
+              ref={hamburgerMenuRef}
+              style={{
+                width: '80%',
+                maxWidth: '300px',
+                height: '100vh',
+                background: 'var(--tg-theme-bg-color)',
+                boxShadow: '-2px 0 10px rgba(0,0,0,0.2)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{
+                padding: '16px',
+                background: 'var(--tg-theme-secondary-bg-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '16px' }}>Navigation</h3>
+                <button 
+                  onClick={() => setShowHamburgerMenu(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    color: 'var(--tg-theme-text-color)'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+                <div
+                  onClick={() => {
+                    setView('list');
+                    setShowHamburgerMenu(false);
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    background: view === 'list' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                    borderBottom: '1px solid var(--tg-theme-hint-color)',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>📋</span>
+                  <span>Tasks</span>
+                </div>
+                
+                <div
+                  onClick={() => {
+                    handleGroupsClick();
+                    setShowHamburgerMenu(false);
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    background: view === 'groups' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                    borderBottom: '1px solid var(--tg-theme-hint-color)',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Users size={16} />
+                  <span>Groups</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
