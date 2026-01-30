@@ -1050,10 +1050,10 @@ function TaskCard({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            marginBottom: '8px'
+            marginBottom: '6px'  // Reduced margin
           }}>
             <h3 style={{
-              fontSize: '14px',
+              fontSize: '16px',  // Increased from 14px
               fontWeight: '600',
               flex: 1,
               marginRight: '8px',
@@ -1064,33 +1064,33 @@ function TaskCard({
             }}>
               {task.title}
             </h3>
-            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '10px', padding: '2px 5px' }}>
+            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '11px', padding: '3px 6px' }}>  // Increased from 10px and 2px 5px
               {task.status}
             </span>
           </div>
 
           {/* NEW: Group Badge */}
           {taskGroup && (
-            <div style={{ marginBottom: '4px' }}>
+            <div style={{ marginBottom: '2px' }}>  // Reduced margin
               <span style={{
                 display: 'inline-block',
-                fontSize: '10px',
-                padding: '1px 4px',
+                fontSize: '11px',  // Increased from 10px
+                padding: '2px 5px',  // Increased from 1px 4px
                 background: 'var(--tg-theme-secondary-bg-color)',
                 color: 'var(--tg-theme-hint-color)',
-                borderRadius: '3px'
+                borderRadius: '4px'  // Slightly increased
               }}>
                 👥 {taskGroup.name}
               </span>
             </div>
           )}
 
-          <div style={{ marginBottom: '4px' }}>
+          <div style={{ marginBottom: '3px' }}>  // Reduced margin
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '11px',
+              fontSize: '12px',  // Increased from 11px
               color: 'var(--tg-theme-hint-color)',
               marginBottom: '2px',
               gap: '4px'
@@ -1102,17 +1102,18 @@ function TaskCard({
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   flex: 1,
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  fontSize: '12px'  // Increased font size
                 }}>
                   👤 {doneName}
                 </span>
               )}
-              <span style={{ whiteSpace: 'nowrap', fontSize: '10px' }}>
+              <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>  // Increased from 10px
                 {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
               </span>
             </div>
             <div style={{
-              height: '4px',
+              height: '5px',  // Increased from 4px
               background: 'var(--tg-theme-bg-color)',
               borderRadius: '2px',
               overflow: 'hidden',
@@ -1129,14 +1130,16 @@ function TaskCard({
           <div style={{
             display: 'flex',
             gap: '6px',
-            fontSize: '10px',
+            fontSize: '11px',  // Increased from 10px
             color: 'var(--tg-theme-hint-color)',
             flexWrap: 'wrap',
             alignItems: 'center'
           }}>
             {task.labels.video && <span>🎥</span>}
             {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-              <span style={{ fontSize: '9px' }}>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+              <span style={{ fontSize: '10px' }}>  // Increased from 9px
+                📅 {new Date(task.lastModifiedAt).toLocaleDateString()}
+              </span>
             )}
           </div>
         </div>
