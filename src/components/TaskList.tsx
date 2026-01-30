@@ -808,7 +808,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     flex: 1, 
                     cursor: 'pointer',
                     minWidth: 0,
-                    borderLeft: '4px solid var(--tg-theme-button-color)', // Bold left border for notes-style
+                    borderLeft: task.groupId ? `4px solid ${getGroupColor(task.groupId, groups.find(g => g.id === task.groupId)?.color)}` : '4px solid transparent', // Group color left border
                     paddingLeft: '8px',
                     borderRadius: '0 8px 8px 0' // Rounded corners on right side only
                   }}
