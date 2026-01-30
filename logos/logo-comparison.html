@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo Comparison - Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .logos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .logo-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .logo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        .logo-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #333;
+        }
+        .logo-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .logo-container {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Manager Logo Variations - Comparison</h1>
+    
+    <div class="logos-grid">
+        <!-- Original version -->
+        <div class="logo-card">
+            <div class="logo-title">Original Version</div>
+            <div class="logo-subtitle">Basic eye-camera design</div>
+            <div class="logo-container">
+                <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circle (eye shape) -->
+  <ellipse cx="100" cy="100" rx="80" ry="60" fill="#3b82f6"/>
+  
+  <!-- Inner lens/aperture -->
+  <circle cx="100" cy="100" r="40" fill="white"/>
+  
+  <!-- Aperture blades (camera effect) -->
+  <polygon points="100,60 105,70 115,70 100,85 85,70 95,70" fill="#1e40af"/>
+  
+  <!-- Center dot (pupil) -->
+  <circle cx="100" cy="100" r="10" fill="#1e40af"/>
+  
+  <!-- Reflection highlight -->
+  <circle cx="85" cy="85" r="6" fill="white" opacity="0.7"/>
+  
+  <!-- Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">TASK MGR</text>
+</svg>
+            </div>
+        </div>
+        
+        <!-- Refined version -->
+        <div class="logo-card">
+            <div class="logo-title">Refined Version</div>
+            <div class="logo-subtitle">Improved eye shape and aperture</div>
+            <div class="logo-container">
+                <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer eye shape -->
+  <path d="M30,100 C30,60 70,40 100,40 C130,40 170,60 170,100 C170,140 130,160 100,160 C70,160 30,140 30,100 Z" fill="#3b82f6"/>
+  
+  <!-- Inner white circle -->
+  <circle cx="100" cy="100" r="45" fill="white"/>
+  
+  <!-- Aperture shape (hexagonal) -->
+  <polygon points="100,65 115,75 115,95 100,105 85,95 85,75" fill="#1e40af"/>
+  
+  <!-- Center lens -->
+  <circle cx="100" cy="85" r="12" fill="#3b82f6"/>
+  
+  <!-- Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">TASK MGR</text>
+</svg>
+            </div>
+        </div>
+        
+        <!-- Camera Eye Logo -->
+        <div class="logo-card">
+            <div class="logo-title">Camera Eye Logo</div>
+            <div class="logo-subtitle">Most detailed eye-camera design</div>
+            <div class="logo-container">
+                <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer eye shape -->
+  <path d="M40,100 C40,70 70,50 100,50 C130,50 160,70 160,100 C160,130 130,150 100,150 C70,150 40,130 40,100 Z" fill="#3b82f6"/>
+  
+  <!-- Inner iris -->
+  <circle cx="100" cy="100" r="35" fill="white"/>
+  
+  <!-- Aperture blades -->
+  <polygon points="100,70 110,75 120,85 120,100 110,110 100,115 90,110 80,100 80,85 90,75" fill="#1e40af"/>
+  
+  <!-- Center lens -->
+  <circle cx="100" cy="100" r="15" fill="#3b82f6"/>
+  
+  <!-- Center pupil -->
+  <circle cx="100" cy="100" r="7" fill="white"/>
+  
+  <!-- Reflection highlights -->
+  <circle cx="90" cy="90" r="3" fill="white" opacity="0.8"/>
+  <circle cx="105" cy="88" r="2" fill="white" opacity="0.6"/>
+  
+  <!-- Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">TASK MGR</text>
+</svg>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px; color: #666; font-size: 14px;">
+        <p><strong>Select your preferred logo variation:</strong> Hover over any logo to see it highlighted</p>
+    </div>
+</body>
+</html>

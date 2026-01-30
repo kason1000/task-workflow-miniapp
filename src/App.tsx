@@ -384,7 +384,7 @@ function App() {
             )}
           </div>
           
-          {/* Centered Title */}
+          {/* Centered Logo */}
           <div style={{ 
             position: 'absolute',
             left: '50%',
@@ -393,20 +393,29 @@ function App() {
             flexDirection: 'column',
             alignItems: 'center'
           }}>
-            <h1 style={{ 
-              fontSize: '16px', 
-              margin: 0,
+            <div style={{ 
+              width: '40px', 
+              height: '40px',
+              marginBottom: '4px'
+            }}>
+              <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+                <path d="M40,100 C40,70 70,50 100,50 C130,50 160,70 160,100 C160,130 130,150 100,150 C70,150 40,130 40,100 Z" fill="white"/>
+                <circle cx="100" cy="100" r="35" fill="#3b82f6"/>
+                <polygon points="100,70 110,75 120,85 120,100 110,110 100,115 90,110 80,100 80,85 90,75" fill="white"/>
+                <circle cx="100" cy="100" r="15" fill="#1e40af"/>
+                <circle cx="100" cy="100" r="7" fill="white"/>
+                <circle cx="90" cy="90" r="3" fill="white" opacity="0.8"/>
+                <circle cx="105" cy="88" r="2" fill="white" opacity="0.6"/>
+              </svg>
+            </div>
+            <span style={{ 
+              fontSize: '14px', 
               fontWeight: '600',
-              textAlign: 'center'
+              textAlign: 'center',
+              color: 'white'
             }}>
               Task Manager
-            </h1>
-            <span style={{ 
-              fontSize: '9px', 
-              color: 'var(--tg-theme-hint-color)',
-              marginTop: '1px'
-            }}>
-              v1.1.0313</span>
+            </span>
           </div>
           
           <div style={{ 

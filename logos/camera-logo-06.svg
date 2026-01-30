@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern minimal background -->
+  <rect width="200" height="200" fill="#06b6d4"/>
+  
+  <!-- Photo grid -->
+  <rect x="40" y="40" width="120" height="120" fill="white"/>
+  
+  <!-- Photos -->
+  <circle cx="70" cy="70" r="15" fill="#06b6d4"/>
+  <rect x="110" y="65" width="30" height="20" fill="#06b6d4"/>
+  <rect x="70" y="110" width="40" height="25" fill="#06b6d4"/>
+  <circle cx="130" cy="120" r="12" fill="#06b6d4"/>
+  
+  <!-- Share icon -->
+  <circle cx="150" cy="50" r="12" fill="white"/>
+  <circle cx="155" cy="45" r="4" fill="#06b6d4"/>
+  
+  <!-- Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">TASK MGR</text>
+</svg>

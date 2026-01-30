@@ -1,0 +1,18 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern minimal background -->
+  <rect width="200" height="200" fill="#6366f1"/>
+  
+  <!-- Photo collage -->
+  <rect x="30" y="40" width="140" height="120" fill="white"/>
+  
+  <!-- Photos in grid -->
+  <rect x="45" y="55" width="50" height="50" fill="#6366f1"/>
+  <rect x="105" y="55" width="50" height="50" fill="#6366f1"/>
+  <rect x="45" y="115" width="110" height="30" fill="#6366f1"/>
+  
+  <!-- Upload arrow -->
+  <polygon points="150,120 160,120 160,110 170,120 160,130 160,125 150,125" fill="white"/>
+  
+  <!-- Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">TASK MGR</text>
+</svg>

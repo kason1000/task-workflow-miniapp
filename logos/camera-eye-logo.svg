@@ -1,0 +1,23 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer eye shape -->
+  <path d="M40,100 C40,70 70,50 100,50 C130,50 160,70 160,100 C160,130 130,150 100,150 C70,150 40,130 40,100 Z" fill="#3b82f6"/>
+  
+  <!-- Inner iris -->
+  <circle cx="100" cy="100" r="35" fill="white"/>
+  
+  <!-- Aperture blades -->
+  <polygon points="100,70 110,75 120,85 120,100 110,110 100,115 90,110 80,100 80,85 90,75" fill="#1e40af"/>
+  
+  <!-- Center lens -->
+  <circle cx="100" cy="100" r="15" fill="#3b82f6"/>
+  
+  <!-- Center pupil -->
+  <circle cx="100" cy="100" r="7" fill="white"/>
+  
+  <!-- Reflection highlights -->
+  <circle cx="90" cy="90" r="3" fill="white" opacity="0.8"/>
+  <circle cx="105" cy="88" r="2" fill="white" opacity="0.6"/>
+  
+  <!-- Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="white" font-weight="bold">TASK MGR</text>
+</svg>
