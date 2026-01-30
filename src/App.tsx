@@ -525,9 +525,7 @@ function App() {
 
       {/* Content */}
       <div style={{ 
-        paddingTop: (view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead')
-          ? '120px'  // Extra padding when tabs are visible
-          : '60px'   // Normal padding
+        paddingTop: '60px'  // Consistent padding to account for fixed header only
       }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
