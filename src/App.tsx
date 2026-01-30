@@ -379,7 +379,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '2px'
             }}>
-              v1.1.0253</span>
+              v1.1.0255</span>
           </div>
           
           <div style={{ 
@@ -430,7 +430,7 @@ function App() {
             gap: '8px',
             maxWidth: '600px',
             margin: '12px auto 0',
-            justifyContent: 'center'
+            justifyContent: 'flex-start'
           }}>
             <button
               onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
