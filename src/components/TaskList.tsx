@@ -102,16 +102,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   // NEW: Click outside to close dropdown
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (groupDropdownRef.current && !groupDropdownRef.current.contains(event.target as Node)) {
-        setShowGroupDropdown(false);
-      }
-    };
-
-    if (showGroupDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
+    // For the hamburger menu, we handle closing via the modal overlay
+    // The useEffect for click outside is no longer needed since we use the overlay
   }, [showGroupDropdown]);
 
   // NEW: Fetch groups
