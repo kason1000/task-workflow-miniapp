@@ -395,9 +395,11 @@ function App() {
             <h1 style={{ 
               fontSize: '16px', 
               margin: 0,
-              fontWeight: '600'
+              fontWeight: '600',
+              textAlign: 'center',
+              width: '100%'
             }}>
-              Task Workflow - Clawd
+              Task Manager
             </h1>
             <span style={{ 
               fontSize: '9px', 
