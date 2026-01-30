@@ -525,7 +525,7 @@ function App() {
 
       {/* Content */}
       <div style={{ 
-        paddingTop: '60px'  // Consistent padding to account for fixed header only
+        paddingTop: '60px'   // Standard padding to account for fixed header
       }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
