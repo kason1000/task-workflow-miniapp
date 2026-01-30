@@ -446,7 +446,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   if (loading) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: '40px 20px', marginTop: '20px' }}>
+      <div className="card" style={{ textAlign: 'center', padding: '20px 20px', marginTop: '20px' }}>
         <p>Loading tasks...</p>
       </div>
     );
