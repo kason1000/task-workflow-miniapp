@@ -971,9 +971,9 @@ function TaskCard({
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{ 
         display: 'flex', 
-        gap: '8px', 
-        padding: '4px 0 0 0', 
-        borderRadius: '0 0 8px 8px'
+        gap: '6px', 
+        padding: '2px 0 0 0', 
+        borderRadius: '0 0 6px 6px'
       }}>
         {/* Thumbnail */}
         <div
@@ -1053,10 +1053,10 @@ function TaskCard({
             marginBottom: '8px'
           }}>
             <h3 style={{
-              fontSize: '16px',
+              fontSize: '14px',
               fontWeight: '600',
               flex: 1,
-              marginRight: '12px',
+              marginRight: '8px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -1064,36 +1064,36 @@ function TaskCard({
             }}>
               {task.title}
             </h3>
-            <span className={`badge ${statusColors[task.status]}`}>
+            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '10px', padding: '2px 5px' }}>
               {task.status}
             </span>
           </div>
 
           {/* NEW: Group Badge */}
           {taskGroup && (
-            <div style={{ marginBottom: '8px' }}>
+            <div style={{ marginBottom: '4px' }}>
               <span style={{
                 display: 'inline-block',
-                fontSize: '11px',
-                padding: '2px 6px',
+                fontSize: '10px',
+                padding: '1px 4px',
                 background: 'var(--tg-theme-secondary-bg-color)',
                 color: 'var(--tg-theme-hint-color)',
-                borderRadius: '4px'
+                borderRadius: '3px'
               }}>
                 👥 {taskGroup.name}
               </span>
             </div>
           )}
 
-          <div style={{ marginBottom: '8px' }}>
+          <div style={{ marginBottom: '4px' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '12px',
+              fontSize: '11px',
               color: 'var(--tg-theme-hint-color)',
-              marginBottom: '4px',
-              gap: '8px'
+              marginBottom: '2px',
+              gap: '4px'
             }}>
               <span>Progress</span>
               {doneName && task.status !== 'New' && task.status !== 'Received' && (
@@ -1107,14 +1107,14 @@ function TaskCard({
                   👤 {doneName}
                 </span>
               )}
-              <span style={{ whiteSpace: 'nowrap' }}>
+              <span style={{ whiteSpace: 'nowrap', fontSize: '10px' }}>
                 {completedSets}/{task.requireSets} set{task.requireSets !== 1 ? 's' : ''}
               </span>
             </div>
             <div style={{
-              height: '6px',
+              height: '4px',
               background: 'var(--tg-theme-bg-color)',
-              borderRadius: '3px',
+              borderRadius: '2px',
               overflow: 'hidden',
             }}>
               <div style={{
@@ -1128,15 +1128,15 @@ function TaskCard({
 
           <div style={{
             display: 'flex',
-            gap: '12px',
-            fontSize: '12px',
+            gap: '6px',
+            fontSize: '10px',
             color: 'var(--tg-theme-hint-color)',
             flexWrap: 'wrap',
             alignItems: 'center'
           }}>
             {task.labels.video && <span>🎥</span>}
             {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-              <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+              <span style={{ fontSize: '9px' }}>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
             )}
           </div>
         </div>
