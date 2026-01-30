@@ -449,7 +449,7 @@ function App() {
         </div>
       </div>
 
-      {/* Hamburger Menu Modal - Expands from button position - No title */}
+      {/* Hamburger Menu Modal - Expands from button position - No title area */}
       {showHamburgerMenu && (role === 'Admin' || role === 'Lead') && (
         <div style={{
           position: 'fixed',
@@ -479,28 +479,6 @@ function App() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{
-              padding: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              borderTopLeftRadius: '8px',
-              borderTopRightRadius: '8px'
-            }}>
-              <button 
-                onClick={() => setShowHamburgerMenu(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  color: 'var(--tg-theme-text-color)'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            
             <div style={{ padding: '4px 0' }}>
               <div
                 onClick={() => {
