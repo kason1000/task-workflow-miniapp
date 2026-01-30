@@ -807,10 +807,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   style={{ 
                     flex: 1, 
                     cursor: 'pointer',
-                    minWidth: 0,
-                    borderLeft: task.groupId ? `4px solid ${getGroupColor(task.groupId, groups.find(g => g.id === task.groupId)?.color)}` : '4px solid transparent', // Group color left border
-                    paddingLeft: '8px',
-                    borderRadius: '0 8px 8px 0' // Rounded corners on right side only
+                    minWidth: 0
                   }}
                 >
                   <TaskCard
