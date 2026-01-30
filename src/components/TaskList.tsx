@@ -799,7 +799,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                 } : {})
               }}
             >
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'stretch' }}>
                 {/* Task Card (clickable area) */}
                 <div 
                   onClick={() => handleTaskClick(task)} 
@@ -823,14 +823,14 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   onClick={(e) => handleSendToChat(task.id, e)}
                   disabled={sending[task.id]}
                   style={{
-                    width: '60px',
-                    padding: '8px 4px',
-                    fontSize: '11px',
+                    width: '50px',
+                    padding: '4px 2px',
+                    fontSize: '10px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '4px',
+                    gap: '2px',
                     background: sending[task.id] 
                       ? 'var(--tg-theme-secondary-bg-color)' 
                       : 'var(--tg-theme-button-color)',
@@ -841,16 +841,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     lineHeight: '1.2',
                     whiteSpace: 'normal',
                     textAlign: 'center',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     border: 'none',
                     cursor: sending[task.id] ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <span style={{ fontSize: '24px' }}>
+                  <span style={{ fontSize: '20px' }}>
                     {sending[task.id] ? '⏳' : '💬'}
                   </span>
-                  <span style={{ fontSize: '10px', fontWeight: '500' }}>
-                    {sending[task.id] ? 'Sending' : 'Send'}
+                  <span style={{ fontSize: '9px', fontWeight: '500' }}>
+                    {sending[task.id] ? 'S' : 'Snd'}
                   </span>
                 </button>
               </div>
@@ -971,8 +971,8 @@ function TaskCard({
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{ 
         display: 'flex', 
-        gap: '12px', 
-        padding: '12px 0 0 0', 
+        gap: '8px', 
+        padding: '4px 0 0 0', 
         borderRadius: '0 0 8px 8px'
       }}>
         {/* Thumbnail */}
@@ -980,10 +980,10 @@ function TaskCard({
           ref={thumbnailRef}
           onClick={handleClick}
           style={{
-            width: '80px',
-            height: '80px',
-            minWidth: '80px',
-            borderRadius: '8px',
+            width: '60px',
+            height: '60px',
+            minWidth: '60px',
+            borderRadius: '6px',
             overflow: 'hidden',
             background: thumbnailUrl && !imageError
               ? 'var(--tg-theme-secondary-bg-color)'
@@ -991,8 +991,8 @@ function TaskCard({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '32px',
-            border: '2px solid var(--tg-theme-secondary-bg-color)',
+            fontSize: '24px',
+            border: '1px solid var(--tg-theme-secondary-bg-color)',
             cursor: thumbnailUrl ? 'pointer' : 'default',
             position: 'relative',
             transition: 'transform 0.2s, border-color 0.2s'
