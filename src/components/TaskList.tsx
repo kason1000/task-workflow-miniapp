@@ -102,8 +102,16 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   // NEW: Click outside to close dropdown
   useEffect(() => {
-    // For the hamburger menu, we handle closing via the modal overlay
-    // The useEffect for click outside is no longer needed since we use the overlay
+    const handleClickOutside = (event: MouseEvent) => {
+      if (groupDropdownRef.current && !groupDropdownRef.current.contains(event.target as Node)) {
+        setShowGroupDropdown(false);
+      }
+    };
+
+    if (showGroupDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
   }, [showGroupDropdown]);
 
   // NEW: Fetch groups
@@ -475,150 +483,86 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           {/* NEW: Group Filter Dropdown */}
           {groups.length > 0 && (
-            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Hamburger Menu Button */}
+            <div style={{ marginBottom: '8px', position: 'relative' }} ref={groupDropdownRef}>
               <button
                 onClick={() => {
                   setShowGroupDropdown(!showGroupDropdown);
                   hapticFeedback.light();
                 }}
                 style={{
-                  padding: '8px 12px',
+                  width: '100%',
+                  padding: '10px 12px',
                   fontSize: '14px',
-                  background: 'var(--tg-theme-secondary-bg-color)',
-                  color: 'var(--tg-theme-text-color)',
+                  background: filter.groupId 
+                    ? 'var(--tg-theme-button-color)' 
+                    : 'var(--tg-theme-secondary-bg-color)',
+                  color: filter.groupId
+                    ? 'var(--tg-theme-button-text-color)'
+                    : 'var(--tg-theme-text-color)',
                   border: 'none',
                   borderRadius: '8px',
                   display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '6px',
                   cursor: 'pointer'
                 }}
               >
-                <span>☰</span>
-                <span>Groups</span>
-              </button>
-              
-              {/* Current Selection Display */}
-              <div style={{
-                flex: 1,
-                padding: '8px 12px',
-                background: filter.groupId 
-                  ? 'var(--tg-theme-button-color)' 
-                  : 'var(--tg-theme-secondary-bg-color)',
-                color: filter.groupId
-                  ? 'var(--tg-theme-button-text-color)'
-                  : 'var(--tg-theme-text-color)',
-                borderRadius: '8px',
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                {selectedGroup ? (
-                  <>
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '4px',
-                      backgroundColor: selectedGroup.color || '#3b82f6', // Default color if none set
-                      border: '1px solid var(--tg-theme-hint-color)'
-                    }} />
-                    <span>👥 {selectedGroup.name}</span>
-                  </>
-                ) : (
-                  <span>👥 All Groups</span>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Hamburger Menu Modal */}
-          {showGroupDropdown && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'flex-end'
-            }}
-            onClick={() => setShowGroupDropdown(false)}
-            >
-              <div 
-                style={{
-                  width: '80%',
-                  maxWidth: '300px',
-                  height: '100vh',
-                  background: 'var(--tg-theme-bg-color)',
-                  boxShadow: '-2px 0 10px rgba(0,0,0,0.2)',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{
-                  padding: '16px',
-                  background: 'var(--tg-theme-secondary-bg-color)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <h3 style={{ margin: 0, fontSize: '16px' }}>Groups</h3>
-                  <button 
-                    onClick={() => setShowGroupDropdown(false)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '18px',
-                      cursor: 'pointer',
-                      color: 'var(--tg-theme-text-color)'
-                    }}
-                  >
-                    ✕
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {selectedGroup ? (
+                    <>
+                      <div style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '4px',
+                        backgroundColor: selectedGroup.color || '#3b82f6', // Default color if none set
+                        border: '1px solid var(--tg-theme-hint-color)'
+                      }} />
+                      <span>👥 {selectedGroup.name}</span>
+                    </>
+                  ) : (
+                    <span>👥 All Groups</span>
+                  )}
                 </div>
-                
-                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+                <span style={{ fontSize: '12px' }}>
+                  {showGroupDropdown ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showGroupDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  background: 'var(--tg-theme-bg-color)',
+                  border: '1px solid var(--tg-theme-hint-color)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  zIndex: 100
+                }}>
                   <div
-                    onClick={() => {
-                      handleGroupFilter(undefined);
-                      setShowGroupDropdown(false);
-                    }}
+                    onClick={() => handleGroupFilter(undefined)}
                     style={{
-                      padding: '12px 16px',
+                      padding: '10px 12px',
                       cursor: 'pointer',
                       background: !filter.groupId ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
                       borderBottom: '1px solid var(--tg-theme-hint-color)',
-                      fontSize: '14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
+                      fontSize: '14px'
                     }}
                   >
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '4px',
-                      backgroundColor: '#3b82f6',
-                      border: '1px solid var(--tg-theme-hint-color)'
-                    }} />
-                    <span>All Groups</span>
+                    All Groups
                   </div>
                   
                   {groups.map(group => (
                     <div
                       key={group.id}
-                      onClick={() => {
-                        handleGroupFilter(group.id);
-                        setShowGroupDropdown(false);
-                      }}
+                      onClick={() => handleGroupFilter(group.id)}
                       style={{
-                        padding: '12px 16px',
+                        padding: '10px 12px',
                         cursor: 'pointer',
                         background: filter.groupId === group.id 
                           ? 'var(--tg-theme-secondary-bg-color)' 
@@ -654,7 +598,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
