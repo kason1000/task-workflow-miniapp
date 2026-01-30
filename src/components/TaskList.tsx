@@ -738,7 +738,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
       {/* Task Count */}
       <div style={{ 
-        padding: '0 0 12px 0', 
+        padding: '0 0 6px 0', 
         color: 'var(--tg-theme-hint-color)', 
         fontSize: '14px',
         display: 'flex',
