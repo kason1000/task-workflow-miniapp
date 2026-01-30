@@ -1050,10 +1050,10 @@ function TaskCard({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            marginBottom: '4px'  // Reduced margin
+            marginBottom: '4px'
           }}>
             <h3 style={{
-              fontSize: '14px',  // Back to original size
+              fontSize: '14px',
               fontWeight: '600',
               flex: 1,
               marginRight: '8px',
@@ -1071,10 +1071,10 @@ function TaskCard({
 
           {/* NEW: Group Badge */}
           {taskGroup && (
-            <div style={{ marginBottom: '2px' }}>  // Reduced margin
+            <div style={{ marginBottom: '2px' }}>
               <span style={{
                 display: 'inline-block',
-                fontSize: '9px',  // Smaller font for group badge
+                fontSize: '9px',
                 padding: '1px 4px',
                 background: 'var(--tg-theme-secondary-bg-color)',
                 color: 'var(--tg-theme-hint-color)',
@@ -1085,14 +1085,14 @@ function TaskCard({
             </div>
           )}
 
-          <div style={{ marginBottom: '2px' }}>  // Reduced margin
+          <div style={{ marginBottom: '2px' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '10px',  // Slightly smaller
+              fontSize: '10px',
               color: 'var(--tg-theme-hint-color)',
-              marginBottom: '1px',  // Reduced margin
+              marginBottom: '1px',
               gap: '4px'
             }}>
               <span>Progress</span>
@@ -1103,17 +1103,17 @@ function TaskCard({
                   whiteSpace: 'nowrap',
                   flex: 1,
                   textAlign: 'center',
-                  fontSize: '10px'  // Consistent size
+                  fontSize: '10px'
                 }}>
                   👤 {doneName}
                 </span>
               )}
-              <span style={{ whiteSpace: 'nowrap', fontSize: '9px' }}>  // Smaller font
+              <span style={{ whiteSpace: 'nowrap', fontSize: '9px' }}>
                 {completedSets}/{task.requireSets}
               </span>
             </div>
             <div style={{
-              height: '3px',  // Smaller progress bar
+              height: '3px',
               background: 'var(--tg-theme-bg-color)',
               borderRadius: '2px',
               overflow: 'hidden',
@@ -1129,8 +1129,8 @@ function TaskCard({
 
           <div style={{
             display: 'flex',
-            gap: '4px',  // Smaller gap
-            fontSize: '9px',  // Smaller font
+            gap: '4px',
+            fontSize: '9px',
             color: 'var(--tg-theme-hint-color)',
             flexWrap: 'wrap',
             alignItems: 'center'
