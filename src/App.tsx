@@ -529,7 +529,7 @@ function App() {
 
       {/* Content */}
       <div style={{ 
-        paddingTop: view === 'detail' || view === 'share' || view === 'groupDetail' || view === 'createGroup' ? '60px' : '42px'   // More padding for detail views
+        paddingTop: view === 'detail' || view === 'share' || view === 'groupDetail' || view === 'createGroup' || view === 'groups' ? '60px' : '42px'   // More padding for detail views
       }}>
         {view === 'list' && (
           <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
