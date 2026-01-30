@@ -390,28 +390,22 @@ function App() {
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex', 
-            flexDirection: 'column',
+            flexDirection: 'row',
             alignItems: 'center'
           }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px',
-              marginBottom: '4px'
-            }}>
-              <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-                <path d="M40,100 C40,70 70,50 100,50 C130,50 160,70 160,100 C160,130 130,150 100,150 C70,150 40,130 40,100 Z" fill="#3b82f6"/>
-                <circle cx="100" cy="100" r="35" fill="white"/>
-                <polygon points="100,70 110,75 120,85 120,100 110,110 100,115 90,110 80,100 80,85 90,75" fill="#1e40af"/>
-                <circle cx="100" cy="100" r="15" fill="#3b82f6"/>
-                <circle cx="100" cy="100" r="7" fill="#1e40af"/>
-                <circle cx="90" cy="90" r="3" fill="white" opacity="0.8"/>
-                <circle cx="105" cy="88" r="2" fill="white" opacity="0.6"/>
-              </svg>
-            </div>
+            <img 
+              src="./logos/logo.jpg" 
+              alt="Logo" 
+              style={{ 
+                width: '24px', 
+                height: '24px', 
+                marginRight: '8px',
+                verticalAlign: 'middle'
+              }}
+            />
             <span style={{ 
-              fontSize: '14px', 
+              fontSize: '16px', 
               fontWeight: '600',
-              textAlign: 'center',
               color: 'white'
             }}>
               Task Manager
