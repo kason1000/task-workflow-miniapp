@@ -883,6 +883,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           allPhotos={allPhotos}
           currentPhotoIndex={currentPhotoIndex}
           setCurrentPhotoIndex={setCurrentPhotoIndex}
+          setFullscreenImage={setFullscreenImage}
+          setCurrentFullscreenTaskId={setCurrentFullscreenTaskId}
         />
       )}
 
@@ -1165,6 +1167,8 @@ function ImageViewer({
   allPhotos, // All photos for navigation
   currentPhotoIndex, // Current photo index
   setCurrentPhotoIndex, // Setter for current photo index
+  setFullscreenImage, // Setter for fullscreen image
+  setCurrentFullscreenTaskId, // Setter for current fullscreen task ID
 }: {
   imageUrl: string;
   thumbnailRect: DOMRect | null;
@@ -1179,6 +1183,8 @@ function ImageViewer({
   allPhotos: Array<{url: string, taskId: string, taskIndex: number}>; // All photos for navigation
   currentPhotoIndex: number; // Current photo index
   setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>; // Setter for current photo index
+  setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>; // Setter for fullscreen image
+  setCurrentFullscreenTaskId: React.Dispatch<React.SetStateAction<string | null>>; // Setter for current fullscreen task ID
 }) {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -1464,7 +1470,7 @@ function ImageViewer({
         }}
       />
 
-      {/* Navigation and action buttons at the bottom - arranged with nav buttons on far sides */}
+      {/* Navigation and action buttons at the bottom - arranged with round nav buttons on far sides */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
@@ -1481,24 +1487,25 @@ function ImageViewer({
         <button
           onClick={goToPreviousPhoto}
           style={{
-            width: '40px',
-            height: '40px',
+            width: '50px',
+            height: '50px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.2)',
+            background: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '20px',
             color: 'white',
             cursor: 'pointer',
-            border: 'none',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
             backdropFilter: 'blur(4px)',
             flexShrink: 0,
             boxSizing: 'border-box',
-            outline: 'none'
+            outline: 'none',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
           }}
         >
-          &lt;
+          ⬅️
         </button>
         
         <button
@@ -1533,24 +1540,25 @@ function ImageViewer({
         <button
           onClick={goToNextPhoto}
           style={{
-            width: '40px',
-            height: '40px',
+            width: '50px',
+            height: '50px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.2)',
+            background: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '20px',
             color: 'white',
             cursor: 'pointer',
-            border: 'none',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
             backdropFilter: 'blur(4px)',
             flexShrink: 0,
             boxSizing: 'border-box',
-            outline: 'none'
+            outline: 'none',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
           }}
         >
-          &gt;
+          ➡️
         </button>
       </div>
     </div>
