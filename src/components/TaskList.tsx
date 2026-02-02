@@ -1505,7 +1505,7 @@ function ImageViewer({
             boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
           }}
         >
-          ⬅️
+          {'<'}
         </button>
         
         <button
@@ -1558,7 +1558,7 @@ function ImageViewer({
             boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
           }}
         >
-          ➡️
+          {'>'}
         </button>
       </div>
     </div>
