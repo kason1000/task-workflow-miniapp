@@ -162,12 +162,18 @@ Examples:
 - `1.1.0131`
 - `1.1.0132`
 
-Version files:
+Single source of truth:
 
 - `VERSION`
-- `package.json`
 
-Important note: these two files should stay in sync. If they drift, the next successful deploy should realign them because the version script updates both.
+Generated from `VERSION` during version sync/deploy:
+
+- `package.json`
+- `package-lock.json`
+- `public/version.json`
+- `index.html`
+
+The app UI reads the runtime version from `public/version.json`, so the displayed version and deployed version now come from the same source.
 
 ## Package Scripts
 
@@ -180,7 +186,7 @@ Important note: these two files should stay in sync. If they drift, the next suc
 ## Deployment Scripts
 
 - `deploy-production.sh`: full production deploy helper
-- `scripts/version-manager.js`: updates `VERSION` and `package.json`
+- `scripts/version-manager.js`: canonical version manager; updates all generated version artifacts from `VERSION`
 - `scripts/update-version.cjs`: version update helper used by `npm run deploy`
 
 ## Operational Notes

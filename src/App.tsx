@@ -11,6 +11,7 @@ import { GroupList } from './components/Grouplist';
 import { GroupDetail } from './components/GroupDetail';
 import { CreateGroup } from './components/CreateGroup';
 import { config } from './config';
+import { getAppVersion, getAppVersionSync } from './utils/version';
 import { Users } from 'lucide-react';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
@@ -26,6 +27,7 @@ function App() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false); // State for hamburger menu
+  const [appVersion, setAppVersion] = useState(getAppVersionSync());
   const hamburgerMenuRef = useRef<HTMLDivElement>(null); // Ref for hamburger menu
 
   useEffect(() => {
@@ -85,6 +87,10 @@ function App() {
       setError(error.message);
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    getAppVersion().then(setAppVersion).catch(() => setAppVersion('unknown'));
   }, []);
 
   const validateSession = async (sessionToken: string, storedUserId: string, storedRole: string) => {
@@ -406,7 +412,7 @@ function App() {
               color: 'var(--tg-theme-hint-color)',
               marginTop: '1px'
             }}>
-              v1.1.0322</span>
+              v{appVersion}</span>
           </div>
           
           <div style={{ 
