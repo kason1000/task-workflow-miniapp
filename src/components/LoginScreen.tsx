@@ -1,20 +1,22 @@
 import { useState } from 'react';
 import { Lock } from 'lucide-react';
+import { useLocale } from '../i18n/LocaleContext';
 
 interface LoginScreenProps {
   onLoginSuccess: (sessionToken: string, role: string, userId: number) => void;
 }
 
 export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+  const { t } = useLocale();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (code.length !== 4) {
-      setError('Code must be 4 digits');
+      setError(t('login.codeTooShort'));
       return;
     }
 
@@ -31,17 +33,14 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error?.message || 'Invalid code');
+        throw new Error(data.error?.message || t('login.invalidCode'));
       }
 
-      // Store session token in sessionStorage (cleared on browser close)
       sessionStorage.setItem('auth_token', data.data.sessionToken);
       sessionStorage.setItem('user_role', data.data.role);
       sessionStorage.setItem('user_id', data.data.userId);
 
-      // Pass all 3 parameters: sessionToken, role, userId
       onLoginSuccess(data.data.sessionToken, data.data.role, data.data.userId);
-
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -60,28 +59,28 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     }}>
       <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <Lock size={48} style={{ 
-            color: 'var(--tg-theme-button-color)', 
-            marginBottom: '16px' 
+          <Lock size={48} style={{
+            color: 'var(--tg-theme-button-color)',
+            marginBottom: '16px'
           }} />
-          <h2>Browser Login</h2>
-          <p style={{ 
-            color: 'var(--tg-theme-hint-color)', 
+          <h2>{t('login.header')}</h2>
+          <p style={{
+            color: 'var(--tg-theme-hint-color)',
             fontSize: '14px',
             marginTop: '8px'
           }}>
-            Get your login code from the Telegram bot. - Clawd
+            {t('login.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
+            <label style={{
+              display: 'block',
               marginBottom: '8px',
               fontWeight: '500'
             }}>
-              Enter 4-digit code
+              {t('login.enterCode')}
             </label>
             <input
               type="text"
@@ -125,7 +124,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             disabled={loading || code.length !== 4}
             style={{ width: '100%' }}
           >
-            {loading ? 'Verifying...' : 'Login'}
+            {loading ? t('login.verifying') : t('login.loginButton')}
           </button>
         </form>
 
@@ -137,12 +136,12 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           fontSize: '13px',
           color: 'var(--tg-theme-hint-color)'
         }}>
-          <strong>How to get code:</strong>
+          <strong>{t('login.howToTitle')}</strong>
           <ol style={{ marginTop: '8px', paddingLeft: '20px' }}>
-            <li>Open the bot in Telegram</li>
-            <li>Send <code>/getcode</code></li>
-            <li>Copy the 4-digit code</li>
-            <li>Enter it here</li>
+            <li>{t('login.howTo1')}</li>
+            <li>{t('login.howTo2')}</li>
+            <li>{t('login.howTo3')}</li>
+            <li>{t('login.howTo4')}</li>
           </ol>
         </div>
       </div>

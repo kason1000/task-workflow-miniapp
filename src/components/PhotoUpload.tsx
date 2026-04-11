@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Camera, X } from 'lucide-react';
+import { useLocale } from '../i18n/LocaleContext';
 
 interface PhotoUploadProps {
   photos: string[];
@@ -9,11 +10,11 @@ interface PhotoUploadProps {
 }
 
 export function PhotoUpload({ photos, onPhotosChange, required, disabled }: PhotoUploadProps) {
+  const { t } = useLocale();
   const [inputValue, setInputValue] = useState('');
 
   const handleAddPhoto = () => {
     if (!inputValue.trim()) return;
-    
     onPhotosChange([...photos, inputValue.trim()]);
     setInputValue('');
   };
@@ -33,21 +34,22 @@ export function PhotoUpload({ photos, onPhotosChange, required, disabled }: Phot
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '8px' 
+        marginBottom: '8px'
       }}>
         <label style={{ fontWeight: '500' }}>
-          📷 Photos {isComplete ? '✓' : `(${photos.length}/${required})`}
+          {isComplete
+            ? t('photoUpload.labelComplete')
+            : t('photoUpload.labelProgress', { current: photos.length, required })}
         </label>
         {isComplete && (
-          <span style={{ color: '#10b981', fontSize: '14px' }}>Complete</span>
+          <span style={{ color: '#10b981', fontSize: '14px' }}>{t('photoUpload.completeText')}</span>
         )}
       </div>
 
-      {/* Photo List */}
       {photos.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
           {photos.map((photo, index) => (
@@ -64,9 +66,9 @@ export function PhotoUpload({ photos, onPhotosChange, required, disabled }: Phot
                 fontSize: '14px',
               }}
             >
-              <span style={{ 
-                flex: 1, 
-                overflow: 'hidden', 
+              <span style={{
+                flex: 1,
+                overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 marginRight: '8px'
@@ -90,12 +92,11 @@ export function PhotoUpload({ photos, onPhotosChange, required, disabled }: Phot
         </div>
       )}
 
-      {/* Add Photo Input */}
       <div style={{ display: 'flex', gap: '8px' }}>
         <input
           type="text"
           className="input"
-          placeholder="Paste photo file_id from bot"
+          placeholder={t('photoUpload.placeholder')}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
@@ -111,12 +112,12 @@ export function PhotoUpload({ photos, onPhotosChange, required, disabled }: Phot
         </button>
       </div>
 
-      <p style={{ 
-        fontSize: '12px', 
-        color: 'var(--tg-theme-hint-color)', 
-        marginTop: '6px' 
+      <p style={{
+        fontSize: '12px',
+        color: 'var(--tg-theme-hint-color)',
+        marginTop: '6px'
       }}>
-        💡 Send photos to the bot, then paste the file_id here
+        {t('photoUpload.hint')}
       </p>
     </div>
   );

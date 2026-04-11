@@ -13,10 +13,12 @@ import { CreateGroup } from './components/CreateGroup';
 import { config } from './config';
 import { getAppVersion, getAppVersionSync } from './utils/version';
 import { Users } from 'lucide-react';
+import { useLocale } from './i18n/LocaleContext';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
 
 function App() {
+  const { t, setLocale } = useLocale();
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -157,16 +159,19 @@ function App() {
       const roleData = await api.getMyRole();
       console.log('Role data:', roleData);
       setRole(roleData.role);
+      if (roleData.locale === 'en' || roleData.locale === 'zh') {
+        setLocale(roleData.locale);
+      }
       setAuthenticated(true);
     } catch (error: any) {
       console.error('Failed to fetch role:', error);
-      
+
       // Check if error is role-related (403/401)
       if (error.message.includes('role') || error.message.includes('auth') || error.message.includes('403') || error.message.includes('401')) {
         console.warn('User has no role assigned');
         setAuthenticated(false);
         sessionStorage.clear();
-        setError('You do not have access to this app. Please contact the administrator to get a role assigned.');
+        setError(t('app.noAccess'));
       } else {
         setError(error.message);
       }
@@ -209,7 +214,7 @@ function App() {
       window.history.pushState({}, '', `?taskId=${task.id}`);
     } catch (error: any) {
       console.error('Failed to fetch task:', error);
-      alert('Failed to load task: ' + error.message);
+      alert(t('app.loadTaskFailed', { error: error.message }));
     }
   };
 
@@ -290,7 +295,7 @@ function App() {
     return (
       <div className="container">
         <div className="card">
-          <p style={{ textAlign: 'center', padding: '40px' }}>Loading...</p>
+          <p style={{ textAlign: 'center', padding: '40px' }}>{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -306,14 +311,14 @@ function App() {
     return (
       <div className="container">
         <div className="card">
-          <h2 style={{ color: '#ef4444' }}>Access Denied</h2>
+          <h2 style={{ color: '#ef4444' }}>{t('app.accessDenied')}</h2>
           <p>{error}</p>
           {!window.Telegram?.WebApp?.initData && (
-            <button 
+            <button
               onClick={handleLogout}
               style={{ marginTop: '16px' }}
             >
-              Back to Login
+              {t('app.backToLogin')}
             </button>
           )}
         </div>
@@ -385,7 +390,7 @@ function App() {
                   borderRadius: '6px'
                 }}
               >
-                ← Back
+                {t('common.back')}
               </button>
             )}
           </div>
@@ -399,13 +404,13 @@ function App() {
             flexDirection: 'column',
             alignItems: 'center'
           }}>
-            <h1 style={{ 
-              fontSize: '16px', 
+            <h1 style={{
+              fontSize: '16px',
               margin: 0,
               fontWeight: '600',
               textAlign: 'center'
             }}>
-              Task Manager
+              {t('app.taskManager')}
             </h1>
             <span style={{ 
               fontSize: '9px', 
@@ -427,14 +432,14 @@ function App() {
               margin: 0,
               fontWeight: '500'
             }}>
-              {user?.first_name || 'User'}
+              {user?.first_name || t('common.userLabel')}
             </p>
-            <span className="badge" style={{ 
+            <span className="badge" style={{
               marginTop: '1px',
               fontSize: '10px',
               padding: '1px 6px'
             }}>
-              {role}
+              {role ? t(`roles.${role}`) : ''}
             </span>
             {/* Logout button for browser sessions */}
             {!window.Telegram?.WebApp?.initData && (
@@ -452,7 +457,7 @@ function App() {
                   width: '100%'
                 }}
               >
-                Logout
+                {t('app.logout')}
               </button>
             )}
           </div>
@@ -507,9 +512,9 @@ function App() {
                 }}
               >
                 <span>📋</span>
-                <span>Tasks</span>
+                <span>{t('app.menuTasks')}</span>
               </div>
-              
+
               <div
                 onClick={() => {
                   handleGroupsClick();
@@ -526,7 +531,7 @@ function App() {
                 }}
               >
                 <Users size={16} />
-                <span>Groups</span>
+                <span>{t('app.menuGroups')}</span>
               </div>
             </div>
           </div>

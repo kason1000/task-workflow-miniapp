@@ -56,6 +56,15 @@ export const getTelegramUser = () => {
   return window.Telegram!.WebApp.initDataUnsafe.user;
 };
 
+export const getTelegramLanguageCode = (): string | undefined => {
+  if (!isTelegram()) return undefined;
+  try {
+    return window.Telegram!.WebApp.initDataUnsafe?.user?.language_code;
+  } catch {
+    return undefined;
+  }
+};
+
 export const showAlert = (message: string) => {
   if (!isTelegram()) {
     alert(message);

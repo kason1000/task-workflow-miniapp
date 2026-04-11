@@ -3,6 +3,7 @@ import { Task, TaskStatus, Group } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
+import { useLocale } from '../i18n/LocaleContext';
 
 const statusColors: Record<TaskStatus, string> = {
   New: 'badge-new',
@@ -18,6 +19,7 @@ interface TaskListProps {
 }
 
 export function TaskList({ onTaskClick }: TaskListProps) {
+  const { t, formatDate } = useLocale();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -371,13 +373,12 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           WebApp.close();
         }, 300);
       } else {
-        // In browser mode, just show success and reset button
-        showAlert('✅ Task sent to chat!');
+        showAlert(t('taskList.sendToChatSuccess'));
         setSending(prev => ({ ...prev, [taskId]: false }));
       }
     } catch (error: any) {
       console.error('Failed to send task:', error);
-      showAlert('❌ Failed to send task: ' + error.message);
+      showAlert(t('taskList.sendToChatFailed', { error: error.message }));
       hapticFeedback.error();
       // Always reset button state on error
       setSending(prev => ({ ...prev, [taskId]: false }));
@@ -447,7 +448,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   if (loading) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '20px 20px', marginTop: '20px' }}>
-        <p>Loading tasks...</p>
+        <p>{t('taskList.loading')}</p>
       </div>
     );
   }
@@ -455,8 +456,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   if (error) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-        <p style={{ color: '#ef4444', marginBottom: '12px' }}>Error: {error}</p>
-        <button onClick={handleRefresh}>Retry</button>
+        <p style={{ color: '#ef4444', marginBottom: '12px' }}>{t('taskList.errorPrefix', { error })}</p>
+        <button onClick={handleRefresh}>{t('common.retry')}</button>
       </div>
     );
   }
@@ -514,13 +515,13 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                         width: '12px',
                         height: '12px',
                         borderRadius: '4px',
-                        backgroundColor: selectedGroup.color || '#3b82f6', // Default color if none set
+                        backgroundColor: selectedGroup.color || '#3b82f6',
                         border: '1px solid var(--tg-theme-hint-color)'
                       }} />
-                      <span>👥 {selectedGroup.name}</span>
+                      <span>{t('taskList.groupLabel', { name: selectedGroup.name })}</span>
                     </>
                   ) : (
-                    <span>👥 All Groups</span>
+                    <span>{t('taskList.allGroups')}</span>
                   )}
                 </div>
                 <span style={{ fontSize: '12px' }}>
@@ -554,7 +555,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                       fontSize: '14px'
                     }}
                   >
-                    All Groups
+                    {t('taskList.allGroups')}
                   </div>
                   
                   {groups.map(group => (
@@ -592,7 +593,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                           color: 'var(--tg-theme-button-text-color)',
                           borderRadius: '3px'
                         }}>
-                          DEFAULT
+                          {t('taskList.groupBadgeDefault')}
                         </span>
                       )}
                     </div>
@@ -635,7 +636,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   borderRadius: '8px'
                 }}
               >
-                📋 All
+                {t('taskList.filterAll')}
               </button>
 
               {userRole === 'Viewer' && (
@@ -657,7 +658,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     borderRadius: '8px'
                   }}
                 >
-                  🔄 In Progress
+                  {t('taskList.filterInProgress')}
                 </button>
               )}
 
@@ -681,7 +682,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     borderRadius: '8px'
                   }}
                 >
-                  {status}
+                  {t(`statusLabels.${status}`)}
                 </button>
               ))}
             </div>
@@ -710,7 +711,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     border: 'none',
                     borderRadius: '8px'
                   }}
-                  title={filter.showArchived ? 'Show Active' : 'Show Archived'}
+                  title={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
                 >
                   🗃️
                 </button>
@@ -727,7 +728,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                   border: 'none',
                   borderRadius: '8px'
                 }}
-                title="Refresh"
+                title={t('taskList.refreshTitle')}
               >
                 🔄
               </button>
@@ -748,7 +749,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         gap: '8px'
       }}>
         <span>
-          {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
+          {tasks.length === 1 ? t('taskList.foundOne') : t('taskList.found', { count: tasks.length })}
         </span>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {filter.groupId && selectedGroup && (
@@ -758,7 +759,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               borderRadius: '4px',
               fontSize: '12px'
             }}>
-              👥 {selectedGroup.name}
+              {t('taskList.groupLabel', { name: selectedGroup.name })}
             </span>
           )}
           {filter.showArchived && (
@@ -768,7 +769,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               borderRadius: '4px',
               fontSize: '12px'
             }}>
-              🗃️ Archived
+              {t('taskList.filterArchivedBadge')}
             </span>
           )}
         </div>
@@ -781,7 +782,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             {filter.showArchived ? '🗃️' : '📋'}
           </p>
           <p style={{ color: 'var(--tg-theme-hint-color)' }}>
-            {filter.showArchived ? 'No archived tasks' : 'No tasks found'}
+            {filter.showArchived ? t('taskList.noArchivedTasks') : t('taskList.noTasks')}
           </p>
         </div>
       )}
@@ -816,6 +817,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     userNames={userNames}
                     groups={groups}
                     onThumbnailClick={(taskObj, url, rect, e) => handleThumbnailClick(taskObj, url, rect, e)}
+                    t={t}
+                    formatDate={formatDate}
                   />
                 </div>
 
@@ -851,7 +854,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     {sending[task.id] ? '⏳' : '💬'}
                   </span>
                   <span style={{ fontSize: '9px', fontWeight: '500' }}>
-                    {sending[task.id] ? 'Send' : 'Send'}
+                    {t('taskList.sendButton')}
                   </span>
                 </button>
               </div>
@@ -861,7 +864,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
           {/* Loading indicator for "Load More" */}
           {loadingMore && (
             <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
-              <p>Loading more tasks...</p>
+              <p>{t('taskList.loadingMore')}</p>
             </div>
           )}
         </div>
@@ -935,18 +938,22 @@ const getGroupColor = (groupId: string, configuredColor?: string) => {
 };
 
 // TaskCard component with group badge and colored bar
-function TaskCard({ 
-  task, 
+function TaskCard({
+  task,
   thumbnailUrl,
   userNames,
   groups,
-  onThumbnailClick
-}: { 
-  task: Task; 
+  onThumbnailClick,
+  t,
+  formatDate,
+}: {
+  task: Task;
   thumbnailUrl?: string;
   userNames: Record<number, string>;
   groups: Group[];
   onThumbnailClick: (task: Task, url: string, rect: DOMRect, e: React.MouseEvent) => void;
+  t: (key: string, params?: Record<string, string | number | boolean>) => string;
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 }) {
   const thumbnailRef = useRef<HTMLDivElement>(null);
 
@@ -960,7 +967,7 @@ function TaskCard({
   }).length;
 
   const progress = (completedSets / task.requireSets) * 100;
-  const doneName = task.doneBy ? (userNames[task.doneBy] || `User ${task.doneBy}`) : null;
+  const doneName = task.doneBy ? (userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })) : null;
   const taskGroup = groups.find(g => g.id === task.groupId);
 
   const handleClick = (e: React.MouseEvent) => {
@@ -1072,7 +1079,7 @@ function TaskCard({
               {task.title}
             </h3>
             <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '12px', padding: '4px 7px' }}>
-              {task.status}
+              {t(`statusLabels.${task.status}`)}
             </span>
           </div>
 
@@ -1102,9 +1109,9 @@ function TaskCard({
               marginBottom: '1px',
               gap: '4px'
             }}>
-              <span>Progress</span>
+              <span>{t('taskList.progress')}</span>
               {doneName && task.status !== 'New' && task.status !== 'Received' && (
-                <span style={{ 
+                <span style={{
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -1112,7 +1119,7 @@ function TaskCard({
                   textAlign: 'center',
                   fontSize: '12px'
                 }}>
-                  👤 {doneName}
+                  {t('taskList.doneBy', { name: doneName })}
                 </span>
               )}
               <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
@@ -1143,7 +1150,7 @@ function TaskCard({
             alignItems: 'center'
           }}>
             {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-              <span>📅 {new Date(task.lastModifiedAt).toLocaleDateString()}</span>
+              <span>📅 {formatDate(task.lastModifiedAt)}</span>
             )}
           </div>
         </div>
@@ -1186,6 +1193,9 @@ function ImageViewer({
   setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>; // Setter for fullscreen image
   setCurrentFullscreenTaskId: React.Dispatch<React.SetStateAction<string | null>>; // Setter for current fullscreen task ID
 }) {
+  const { t } = useLocale();
+  const sendingLabel = t('taskList.sendingLabel');
+  const sendLabel = t('taskList.sendToChatAction');
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -1517,15 +1527,15 @@ function ImageViewer({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: sending[currentTask.id] 
-              ? 'rgba(107, 114, 128, 0.9)' // gray when sending
-              : 'rgba(36, 129, 204, 0.9)', // blue when ready
+            background: sending[currentTask.id]
+              ? 'rgba(107, 114, 128, 0.9)'
+              : 'rgba(36, 129, 204, 0.9)',
             color: 'white',
             border: 'none',
             borderRadius: '24px',
             cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
             backdropFilter: 'blur(4px)',
-            margin: '0 20px', // Add margin to prevent touching side buttons
+            margin: '0 20px',
             flexShrink: 0
           }}
         >
@@ -1533,7 +1543,7 @@ function ImageViewer({
             {sending[currentTask.id] ? '⏳' : '💬'}
           </span>
           <span>
-            {sending[currentTask.id] ? 'Sending...' : 'Send to Chat'}
+            {sending[currentTask.id] ? sendingLabel : sendLabel}
           </span>
         </button>
         

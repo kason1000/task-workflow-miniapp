@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { Group } from '../types';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import { Users, Plus, ChevronRight } from 'lucide-react';
+import { useLocale } from '../i18n/LocaleContext';
 
 interface GroupListProps {
   userRole: string;
@@ -11,6 +12,7 @@ interface GroupListProps {
 }
 
 export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListProps) {
+  const { t } = useLocale();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,16 +25,16 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
     try {
       setLoading(true);
       setError(null);
-      
-      const data = userRole === 'Admin' 
+
+      const data = userRole === 'Admin'
         ? await api.getGroups()
         : await api.getMyLedGroups();
-      
+
       setGroups(data.groups || []);
     } catch (error: any) {
       console.error('Failed to fetch groups:', error);
       setError(error.message);
-      showAlert('❌ Failed to load groups: ' + error.message);
+      showAlert(t('groupList.loadFailed', { error: error.message }));
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,7 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>Loading groups...</div>
+        <div>{t('groupList.loading')}</div>
       </div>
     );
   }
@@ -62,14 +64,13 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
         <div style={{ color: '#ef4444', marginBottom: '12px' }}>
           ❌ {error}
         </div>
-        <button onClick={fetchGroups}>Retry</button>
+        <button onClick={fetchGroups}>{t('common.retry')}</button>
       </div>
     );
   }
 
   return (
     <div>
-      {/* Header */}
       <div className="card" style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -77,7 +78,7 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
       }}>
         <h2 style={{ margin: 0 }}>
           <Users size={24} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
-          Groups
+          {t('groupList.title')}
         </h2>
         {userRole === 'Admin' && (
           <button
@@ -90,21 +91,20 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
             }}
           >
             <Plus size={18} />
-            Create
+            {t('groupList.create')}
           </button>
         )}
       </div>
 
-      {/* Group List */}
       {groups.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <Users size={48} style={{ color: 'var(--tg-theme-hint-color)', marginBottom: '16px' }} />
           <div style={{ color: 'var(--tg-theme-hint-color)' }}>
-            No groups yet
+            {t('groupList.empty')}
           </div>
           {userRole === 'Admin' && (
             <button onClick={handleCreateClick} style={{ marginTop: '16px' }}>
-              Create First Group
+              {t('groupList.createFirst')}
             </button>
           )}
         </div>
@@ -129,12 +129,11 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                {/* Group Color Indicator */}
                 <div style={{
                   width: '16px',
                   height: '16px',
                   borderRadius: '4px',
-                  backgroundColor: group.color || '#3b82f6', // Default color if none set
+                  backgroundColor: group.color || '#3b82f6',
                   border: '1px solid var(--tg-theme-hint-color)'
                 }} />
                 {group.name}
@@ -146,7 +145,7 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
                     color: 'var(--tg-theme-button-text-color)',
                     borderRadius: '4px'
                   }}>
-                    DEFAULT
+                    {t('groupList.defaultBadge')}
                   </span>
                 )}
               </div>
@@ -156,9 +155,17 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
                 display: 'flex',
                 gap: '12px'
               }}>
-                <span>👑 {group.leadUserIds.length} lead{group.leadUserIds.length !== 1 ? 's' : ''}</span>
-                <span>👥 {group.members.length} member{group.members.length !== 1 ? 's' : ''}</span>
-                {group.telegramChatId && <span>💬 Linked</span>}
+                <span>
+                  {group.leadUserIds.length === 1
+                    ? t('groupList.leadCount', { count: group.leadUserIds.length })
+                    : t('groupList.leadCountPlural', { count: group.leadUserIds.length })}
+                </span>
+                <span>
+                  {group.members.length === 1
+                    ? t('groupList.memberCount', { count: group.members.length })
+                    : t('groupList.memberCountPlural', { count: group.members.length })}
+                </span>
+                {group.telegramChatId && <span>{t('groupList.linked')}</span>}
               </div>
             </div>
             <ChevronRight size={20} style={{ color: 'var(--tg-theme-hint-color)' }} />

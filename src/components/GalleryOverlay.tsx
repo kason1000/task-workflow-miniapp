@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { Share2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
+import { useLocale } from '../i18n/LocaleContext';
 
 interface GalleryOverlayProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export function GalleryOverlay({
   onTaskUpdated,
   userRole
 }: GalleryOverlayProps) {
+  const { t, formatDate } = useLocale();
   const [currentSetIndex, setCurrentSetIndex] = useState(initialSetIndex);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(initialMediaIndex);
   const [imageScale, setImageScale] = useState(1);
@@ -357,7 +359,7 @@ export function GalleryOverlay({
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
-        showAlert(`Failed to share: ${error.message}`);
+        showAlert(t('gallery.shareFailed', { error: error.message }));
       }
     } finally {
       setActionLoading(false);
@@ -366,31 +368,34 @@ export function GalleryOverlay({
 
   const handleDeleteCurrentMedia = async () => {
     if (!currentMedia) return;
-    
+
     const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
     if (isCreatedPhoto) {
-      showAlert('❌ Cannot delete the task creation photo');
+      showAlert(t('gallery.deleteCreatedPhotoBlocked'));
       return;
     }
-    
-    const mediaType = currentMedia.type === 'photo' ? 'photo' : 'video';
-    const confirmed = await showConfirm(`Delete this ${mediaType}?`);
+
+    const confirmed = await showConfirm(
+      currentMedia.type === 'photo'
+        ? t('gallery.deleteMediaConfirmPhoto')
+        : t('gallery.deleteMediaConfirmVideo')
+    );
     if (!confirmed) return;
-    
+
     setActionLoading(true);
     hapticFeedback.medium();
-    
+
     try {
       await api.deleteUpload(task.id, currentMedia.fileId);
       hapticFeedback.success();
       onTaskUpdated();
-      
+
       setTimeout(() => {
         handleClose();
       }, 300);
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Failed to delete: ${error.message}`);
+      showAlert(t('gallery.deleteFailed', { error: error.message }));
     } finally {
       setActionLoading(false);
     }
@@ -399,13 +404,13 @@ export function GalleryOverlay({
   const handleDeleteCurrentSet = async () => {
     const set = task.sets[currentSetIndex];
     const setMediaCount = (set.photos?.length || 0) + (set.video ? 1 : 0);
-    
+
     if (setMediaCount === 0) {
-      showAlert('❌ Set is empty');
+      showAlert(t('gallery.deleteSetEmpty'));
       return;
     }
-    
-    const confirmed = await showConfirm(`Delete all ${setMediaCount} media from Set ${currentSetIndex + 1}?`);
+
+    const confirmed = await showConfirm(t('gallery.deleteSetConfirm', { count: setMediaCount, setIndex: currentSetIndex + 1 }));
     if (!confirmed) return;
     
     setActionLoading(true);
@@ -435,7 +440,7 @@ export function GalleryOverlay({
       }, 300);
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Failed to delete set: ${error.message}`);
+      showAlert(t('gallery.deleteSetFailed', { error: error.message }));
     } finally {
       setActionLoading(false);
     }
@@ -443,9 +448,9 @@ export function GalleryOverlay({
 
   const getUploaderName = (userId: number): string => {
     if (WebApp.initDataUnsafe?.user?.id === userId) {
-      return WebApp.initDataUnsafe.user.first_name || `User ${userId}`;
+      return WebApp.initDataUnsafe.user.first_name || t('common.userFallback', { id: userId });
     }
-    return `User ${userId}`;
+    return t('common.userFallback', { id: userId });
   };
 
   if (!isOpen) return null;
@@ -664,7 +669,7 @@ export function GalleryOverlay({
             borderRadius: '14px',
             backdropFilter: 'blur(8px)'
           }}>
-            Pinch to zoom • Swipe down to close
+            {t('gallery.pinchHint')}
           </div>
         )}
       </div>
@@ -686,15 +691,15 @@ export function GalleryOverlay({
         overflow: 'hidden',
         flexShrink: 0
       }}>
-        <span style={{ fontWeight: '600' }}>Set {currentSetIndex + 1}/{task.sets.length}</span>
+        <span style={{ fontWeight: '600' }}>{t('gallery.setHeader', { current: currentSetIndex + 1, total: task.sets.length })}</span>
         <span style={{ color: '#888' }}>•</span>
-        <span>{currentMedia.type === 'photo' ? `Photo ${(currentMedia.photoIndex ?? 0) + 1}` : 'Video'}</span>
+        <span>{currentMedia.type === 'photo' ? t('gallery.photoLabel', { index: (currentMedia.photoIndex ?? 0) + 1 }) : t('gallery.videoLabel')}</span>
         <span style={{ color: '#888' }}>•</span>
         <span style={{ color: '#aaa' }}>{getUploaderName(currentMedia.uploadedBy)}</span>
         {currentMedia.uploadedAt && (
           <>
             <span style={{ color: '#888' }}>•</span>
-            <span style={{ color: '#aaa' }}>{new Date(currentMedia.uploadedAt).toLocaleDateString()}</span>
+            <span style={{ color: '#aaa' }}>{formatDate(currentMedia.uploadedAt)}</span>
           </>
         )}
       </div>
@@ -955,7 +960,7 @@ export function GalleryOverlay({
             }}
           >
             {actionLoading ? '⏳' : <Share2 size={18} />}
-            {actionLoading ? 'Loading...' : `Set ${currentSetIndex + 1}`}
+            {actionLoading ? t('gallery.shareLoading') : t('gallery.shareSet', { index: currentSetIndex + 1 })}
           </button>
           
           {canDelete && (
@@ -975,11 +980,11 @@ export function GalleryOverlay({
                   minWidth: '48px',
                   cursor: actionLoading ? 'not-allowed' : 'pointer'
                 }}
-                title="Delete current media"
+                title={t('gallery.deleteMediaTitle')}
               >
                 <Trash2 size={18} />
               </button>
-              
+
               <button
                 onClick={handleDeleteCurrentSet}
                 disabled={actionLoading}
@@ -997,10 +1002,10 @@ export function GalleryOverlay({
                   fontWeight: '500',
                   cursor: actionLoading ? 'not-allowed' : 'pointer'
                 }}
-                title="Delete entire set"
+                title={t('gallery.deleteSetTitle')}
               >
                 <Trash2 size={16} />
-                Set
+                {t('gallery.deleteSetButton')}
               </button>
             </>
           )}

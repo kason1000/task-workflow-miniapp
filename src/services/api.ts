@@ -160,7 +160,7 @@ class ApiService {
 
   // Roles
   async getMyRole() {
-    return this.request<{ userId: number; role: string }>('/roles/me');
+    return this.request<{ userId: number; role: string; locale?: 'en' | 'zh' }>('/roles/me');
   }
 
   async getAllRoles() {

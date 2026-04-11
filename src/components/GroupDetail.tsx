@@ -3,21 +3,21 @@ import { api } from '../services/api';
 import { Group } from '../types';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { Users, Trash2, Link as LinkIcon, Crown, User, Eye, Palette } from 'lucide-react';
+import { useLocale } from '../i18n/LocaleContext';
 
-// Modern color palette for groups
 const GROUP_COLORS = [
-  '#3b82f6', // blue-500
-  '#ef4444', // red-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#8b5cf6', // violet-500
-  '#ec4899', // pink-500
-  '#06b6d4', // cyan-500
-  '#84cc16', // lime-500
-  '#f97316', // orange-500
-  '#6366f1', // indigo-500
-  '#14b8a6', // teal-500
-  '#f43f5e', // rose-500
+  '#3b82f6',
+  '#ef4444',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#06b6d4',
+  '#84cc16',
+  '#f97316',
+  '#6366f1',
+  '#14b8a6',
+  '#f43f5e',
 ];
 
 interface GroupDetailProps {
@@ -28,11 +28,12 @@ interface GroupDetailProps {
 }
 
 export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: GroupDetailProps) {
+  const { t, formatDate } = useLocale();
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [editingColor, setEditingColor] = useState(false); // NEW: State for color editing
+  const [editingColor, setEditingColor] = useState(false);
 
   useEffect(() => {
     fetchGroup();
@@ -47,13 +48,12 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
     } catch (error: any) {
       console.error('Failed to fetch group:', error);
       setError(error.message);
-      showAlert('❌ Failed to load group: ' + error.message);
+      showAlert(t('groupDetail.loadFailed', { error: error.message }));
     } finally {
       setLoading(false);
     }
   };
 
-  // NEW: Function to update group color
   const updateGroupColor = async (newColor: string) => {
     if (!group) return;
 
@@ -63,10 +63,10 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
       setGroup(updatedGroup);
       setEditingColor(false);
       hapticFeedback.success();
-      showAlert('✅ Group color updated!');
+      showAlert(t('groupDetail.colorUpdateSuccess'));
     } catch (error: any) {
       console.error('Failed to update group color:', error);
-      showAlert('❌ Failed to update color: ' + error.message);
+      showAlert(t('groupDetail.colorUpdateFailed', { error: error.message }));
       hapticFeedback.error();
     } finally {
       setActionLoading(false);
@@ -76,9 +76,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   const handleDeleteGroup = async () => {
     if (!group) return;
 
-    const confirmed = await showConfirm(
-      `Delete "${group.name}"?\n\nThis action cannot be undone.`
-    );
+    const confirmed = await showConfirm(t('groupDetail.deleteConfirm', { name: group.name }));
 
     if (!confirmed) return;
 
@@ -86,11 +84,11 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
       setActionLoading(true);
       await api.deleteGroup(groupId);
       hapticFeedback.success();
-      showAlert('✅ Group deleted');
+      showAlert(t('groupDetail.deleteSuccess'));
       onGroupDeleted();
     } catch (error: any) {
       console.error('Failed to delete group:', error);
-      showAlert('❌ ' + error.message);
+      showAlert(t('groupDetail.deleteFailed', { error: error.message }));
       hapticFeedback.error();
     } finally {
       setActionLoading(false);
@@ -98,7 +96,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   };
 
   const handleRemoveMember = async (userId: number) => {
-    const confirmed = await showConfirm('Remove this member from the group?');
+    const confirmed = await showConfirm(t('groupDetail.removeMemberConfirm'));
     if (!confirmed) return;
 
     try {
@@ -107,7 +105,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
       hapticFeedback.success();
       await fetchGroup();
     } catch (error: any) {
-      showAlert('❌ ' + error.message);
+      showAlert(t('groupDetail.removeMemberFailed', { error: error.message }));
       hapticFeedback.error();
     } finally {
       setActionLoading(false);
@@ -130,7 +128,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div>Loading group...</div>
+        <div>{t('groupDetail.loading')}</div>
       </div>
     );
   }
@@ -139,9 +137,9 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <div style={{ color: '#ef4444', marginBottom: '12px' }}>
-          ❌ {error || 'Group not found'}
+          ❌ {error || t('groupDetail.notFound')}
         </div>
-        <button onClick={onBack}>← Back</button>
+        <button onClick={onBack}>{t('common.back')}</button>
       </div>
     );
   }
@@ -152,14 +150,13 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
 
   return (
     <div>
-      {/* Header */}
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
           <div style={{
             width: '32px',
             height: '32px',
             borderRadius: '8px',
-            backgroundColor: group.color || '#3b82f6', // Default to blue if no color set
+            backgroundColor: group.color || '#3b82f6',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -168,15 +165,15 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
           </div>
           <div style={{ flex: 1 }}>
             <h2 style={{ margin: 0, marginBottom: '4px' }}>{group.name}</h2>
-            <div style={{ 
-              fontSize: '13px', 
+            <div style={{
+              fontSize: '13px',
               color: 'var(--tg-theme-hint-color)',
               display: 'flex',
               gap: '12px',
               flexWrap: 'wrap',
               alignItems: 'center'
             }}>
-              <span>ID: {group.id}</span>
+              <span>{t('groupDetail.idLabel', { id: group.id })}</span>
               {group.isDefault && (
                 <span style={{
                   background: 'var(--tg-theme-button-color)',
@@ -185,19 +182,18 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                   borderRadius: '4px',
                   fontSize: '11px'
                 }}>
-                  DEFAULT
+                  {t('groupDetail.defaultBadge')}
                 </span>
               )}
-              
-              {/* Color Display/Edit */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: '4px',
                 marginTop: '4px'
               }}>
-                <span style={{ fontSize: '10px' }}>COLOR:</span>
-                <div 
+                <span style={{ fontSize: '10px' }}>{t('groupDetail.colorLabel')}</span>
+                <div
                   style={{
                     width: '16px',
                     height: '16px',
@@ -220,7 +216,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                       cursor: 'pointer'
                     }}
                   >
-                    {editingColor ? 'Cancel' : 'Edit'}
+                    {editingColor ? t('groupDetail.cancelEditColor') : t('groupDetail.editColor')}
                   </button>
                 )}
               </div>
@@ -228,7 +224,6 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
           </div>
         </div>
 
-        {/* Color Editor */}
         {editingColor && canManage && (
           <div style={{
             marginTop: '12px',
@@ -236,18 +231,18 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
             background: 'var(--tg-theme-secondary-bg-color)',
             borderRadius: '8px'
           }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginBottom: '8px' 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '8px'
             }}>
               <Palette size={16} style={{ marginRight: '6px' }} />
-              <h4 style={{ margin: 0, fontSize: '14px' }}>Choose Group Color</h4>
+              <h4 style={{ margin: 0, fontSize: '14px' }}>{t('groupDetail.chooseColor')}</h4>
             </div>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(30px, 1fr))', 
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(30px, 1fr))',
               gap: '8px',
               marginBottom: '8px'
             }}>
@@ -261,8 +256,8 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                     width: '30px',
                     height: '30px',
                     borderRadius: '50%',
-                    border: group.color === colorOption 
-                      ? '3px solid var(--tg-theme-text-color)' 
+                    border: group.color === colorOption
+                      ? '3px solid var(--tg-theme-text-color)'
                       : '2px solid var(--tg-theme-hint-color)',
                     background: colorOption,
                     cursor: 'pointer',
@@ -273,8 +268,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                 />
               ))}
             </div>
-            
-            {/* Current Color Preview */}
+
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -283,7 +277,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
               background: 'var(--tg-theme-bg-color)',
               borderRadius: '6px'
             }}>
-              <div 
+              <div
                 style={{
                   width: '20px',
                   height: '20px',
@@ -293,13 +287,12 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                 }}
               />
               <span style={{ fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
-                Current: {group.color || '#3b82f6'}
+                {t('groupDetail.currentColor', { color: group.color || '#3b82f6' })}
               </span>
             </div>
           </div>
         )}
 
-        {/* Stats */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
@@ -314,7 +307,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
               {group.leadUserIds.length}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>
-              Lead{group.leadUserIds.length !== 1 ? 's' : ''}
+              {group.leadUserIds.length === 1 ? t('groupDetail.leadLabel') : t('groupDetail.leadLabelPlural')}
             </div>
           </div>
           <div>
@@ -322,12 +315,11 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
               {group.members.length}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>
-              Total Members
+              {t('groupDetail.totalMembers')}
             </div>
           </div>
         </div>
 
-        {/* Telegram Link Status */}
         {group.telegramChatId && (
           <div style={{
             marginTop: '12px',
@@ -341,25 +333,24 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
             gap: '8px'
           }}>
             <LinkIcon size={16} />
-            <span>Linked to Telegram group</span>
+            <span>{t('groupDetail.linkedToTelegram')}</span>
           </div>
         )}
       </div>
 
-      {/* Members List */}
       <div className="card">
         <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Users size={20} />
-          Members ({group.members.length})
+          {t('groupDetail.membersTitle', { count: group.members.length })}
         </h3>
 
         {group.members.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
+          <div style={{
+            textAlign: 'center',
             padding: '20px',
             color: 'var(--tg-theme-hint-color)'
           }}>
-            No members yet
+            {t('groupDetail.noMembers')}
           </div>
         ) : (
           <div>
@@ -377,15 +368,15 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: '8px',
                     marginBottom: '4px'
                   }}>
                     {getRoleIcon(member.role)}
                     <span style={{ fontWeight: '500' }}>
-                      User {member.userId}
+                      {t('groupDetail.memberLabel', { id: member.userId })}
                     </span>
                     <span style={{
                       fontSize: '12px',
@@ -394,14 +385,14 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                       borderRadius: '4px',
                       color: 'var(--tg-theme-hint-color)'
                     }}>
-                      {member.role}
+                      {t(`roles.${member.role}`)}
                     </span>
                   </div>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: 'var(--tg-theme-hint-color)' 
+                  <div style={{
+                    fontSize: '12px',
+                    color: 'var(--tg-theme-hint-color)'
                   }}>
-                    Joined {new Date(member.joinedAt).toLocaleDateString()}
+                    {t('groupDetail.memberJoined', { date: formatDate(member.joinedAt) })}
                   </div>
                 </div>
 
@@ -425,11 +416,10 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
         )}
       </div>
 
-      {/* Actions */}
       {canManage && (
         <div className="card">
-          <h3 style={{ marginBottom: '16px' }}>Actions</h3>
-          
+          <h3 style={{ marginBottom: '16px' }}>{t('groupDetail.actionsTitle')}</h3>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {!group.isDefault && (
               <button
@@ -445,7 +435,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                 }}
               >
                 <Trash2 size={18} />
-                Delete Group
+                {t('groupDetail.deleteGroup')}
               </button>
             )}
           </div>

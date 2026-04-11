@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
+import { useLocale } from '../i18n/LocaleContext';
 
 // Helper function to get group color (use configured color if available, otherwise generate)
 const getGroupColor = (groupId: string, configuredColor?: string) => {
@@ -40,6 +41,7 @@ const statusColors: Record<TaskStatus, string> = {
 };
 
 export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
+  const { t, formatDate } = useLocale();
   const [loading, setLoading] = useState(false);
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
@@ -237,7 +239,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const handleDeleteSelected = async () => {
     if (selectedMedia.size === 0) return;
 
-    const confirmed = await showConfirm(`Delete ${selectedMedia.size} selected media?`);
+    const confirmed = await showConfirm(t('taskDetail.deleteSelectedConfirm', { count: selectedMedia.size }));
     if (!confirmed) return;
 
     setLoading(true);
@@ -249,13 +251,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       );
       await Promise.all(deletePromises);
       hapticFeedback.success();
-      showAlert(`✅ ${selectedMedia.size} media deleted`);
+      showAlert(t('taskDetail.deleteSelectedSuccess', { count: selectedMedia.size }));
       setSelectedMedia(new Set());
       setSelectionMode(false);
       onTaskUpdated();
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Error: ${error.message}`);
+      showAlert(t('common.errorGeneric', { error: error.message }));
     } finally {
       setLoading(false);
     }
@@ -366,7 +368,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
-        showAlert(`Failed to share: ${error.message}`);
+        showAlert(t('taskDetail.shareFailed', { error: error.message }));
       }
     } finally {
       setLoading(false);
@@ -423,35 +425,30 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   };
 
   const handleTransition = async (to: TaskStatus) => {
-    const confirmed = await showConfirm(`Transition task to ${to}?`);
+    const statusLabel = t(`statusLabels.${to}`);
+    const confirmed = await showConfirm(t('taskDetail.transitionConfirm', { status: statusLabel }));
     if (!confirmed) return;
 
     setLoading(true);
     hapticFeedback.medium();
 
     try {
-      console.log(`Attempting transition: ${task.status} -> ${to}`);
-      console.log('Task ID:', task.id);
-      console.log('User Role:', userRole);
-
       await api.transitionTask(task.id, to);
 
       hapticFeedback.success();
-      showAlert(`✅ Task transitioned to ${to}`);
+      showAlert(t('taskDetail.transitionSuccess', { status: statusLabel }));
       onTaskUpdated();
     } catch (error: any) {
       console.error('Transition error:', error);
-      console.error('Error details:', error.message);
-
       hapticFeedback.error();
-      showAlert(`❌ ${error.message || 'Failed to transition task'}`);
+      showAlert(t('taskDetail.transitionFailed', { error: error.message || t('taskDetail.transitionFailedGeneric') }));
     } finally {
       setLoading(false);
     }
   };
 
   const handleArchive = async () => {
-    const confirmed = await showConfirm('Archive this task?');
+    const confirmed = await showConfirm(t('taskDetail.archiveConfirm'));
     if (!confirmed) return;
 
     setLoading(true);
@@ -460,18 +457,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     try {
       await api.archiveTask(task.id);
       hapticFeedback.success();
-      showAlert('Task archived');
+      showAlert(t('taskDetail.archiveSuccess'));
       onTaskUpdated();
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Error: ${error.message}`);
+      showAlert(t('common.errorGeneric', { error: error.message }));
     } finally {
       setLoading(false);
     }
   };
 
   const handleRestore = async () => {
-    const confirmed = await showConfirm('Restore this task?');
+    const confirmed = await showConfirm(t('taskDetail.restoreConfirm'));
     if (!confirmed) return;
 
     setLoading(true);
@@ -480,18 +477,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     try {
       await api.restoreTask(task.id);
       hapticFeedback.success();
-      showAlert('Task restored');
+      showAlert(t('taskDetail.restoreSuccess'));
       onTaskUpdated();
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Error: ${error.message}`);
+      showAlert(t('common.errorGeneric', { error: error.message }));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    const confirmed = await showConfirm('⚠️ Permanently delete this task? This cannot be undone!');
+    const confirmed = await showConfirm(t('taskDetail.deleteConfirm'));
     if (!confirmed) return;
 
     setLoading(true);
@@ -500,11 +497,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     try {
       await api.deleteTask(task.id);
       hapticFeedback.success();
-      showAlert('Task deleted');
+      showAlert(t('taskDetail.deleteSuccess'));
       onBack();
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Error: ${error.message}`);
+      showAlert(t('common.errorGeneric', { error: error.message }));
     } finally {
       setLoading(false);
     }
@@ -524,14 +521,12 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           WebApp.close();
         }, 300);
       } else {
-        // In browser mode, show success and reset
-        showAlert('✅ Task sent to chat!');
+        showAlert(t('taskDetail.sendToChatSuccess'));
         setLoading(false);
       }
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Failed to send: ${error.message}`);
-      // Always reset loading state on error
+      showAlert(t('taskDetail.sendFailed', { error: error.message }));
       setLoading(false);
     }
   };
@@ -548,7 +543,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       if (set.video) uploaderIds.add(set.video.by);
     });
 
-    return Array.from(uploaderIds).map(id => userNames[id] || `User ${id}`);
+    return Array.from(uploaderIds).map(id => userNames[id] || t('common.userFallback', { id }));
   };
 
   const isArchived = task.status === 'Archived';
@@ -619,7 +614,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 📋 {task.title}
               </h3>
               <span className={`badge ${statusColors[task.status]}`}>
-                {task.status}
+                {t(`statusLabels.${task.status}`)}
               </span>
             </div>
 
@@ -658,24 +653,27 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               gap: '4px'
             }}>
               <div>
-                👤 {WebApp.initDataUnsafe?.user?.id === task.createdBy
-                  ? (WebApp.initDataUnsafe.user.first_name || `User ${task.createdBy}`)
-                  : `User ${task.createdBy}`}
-                {' • '}
-                📅 {new Date(task.createdAt).toLocaleDateString()}
+                {t('taskDetail.createdBy', {
+                  name: WebApp.initDataUnsafe?.user?.id === task.createdBy
+                    ? (WebApp.initDataUnsafe.user.first_name || t('common.userFallback', { id: task.createdBy }))
+                    : t('common.userFallback', { id: task.createdBy }),
+                  date: formatDate(task.createdAt),
+                })}
               </div>
 
               {task.doneBy && (
                 <div>
-                  ✅ Submitted by {WebApp.initDataUnsafe?.user?.id === task.doneBy
-                    ? (WebApp.initDataUnsafe.user.first_name || `User ${task.doneBy}`)
-                    : `User ${task.doneBy}`}
+                  {t('taskDetail.submittedBy', {
+                    name: WebApp.initDataUnsafe?.user?.id === task.doneBy
+                      ? (WebApp.initDataUnsafe.user.first_name || t('common.userFallback', { id: task.doneBy }))
+                      : t('common.userFallback', { id: task.doneBy }),
+                  })}
                 </div>
               )}
 
               {totalMedia > 0 && getUploaders().length > 0 && (
                 <div>
-                  📤 Uploaded by: {getUploaders().join(', ')}
+                  {t('taskDetail.uploadedBy', { names: getUploaders().join(', ') })}
                 </div>
               )}
             </div>
@@ -724,9 +722,17 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 alignItems: 'center',
                 flexWrap: 'wrap'
               }}>
-                <span>👑 {taskGroup.leadUserIds.length} lead{taskGroup.leadUserIds.length !== 1 ? 's' : ''}</span>
-                <span>👥 {taskGroup.members.length} member{taskGroup.members.length !== 1 ? 's' : ''}</span>
-                {taskGroup.telegramChatId && <span>💬 Linked</span>}
+                <span>
+                  {taskGroup.leadUserIds.length === 1
+                    ? t('taskDetail.groupLeadCount', { count: taskGroup.leadUserIds.length })
+                    : t('taskDetail.groupLeadCountPlural', { count: taskGroup.leadUserIds.length })}
+                </span>
+                <span>
+                  {taskGroup.members.length === 1
+                    ? t('taskDetail.groupMemberCount', { count: taskGroup.members.length })
+                    : t('taskDetail.groupMemberCountPlural', { count: taskGroup.members.length })}
+                </span>
+                {taskGroup.telegramChatId && <span>{t('taskDetail.groupLinkedBadge')}</span>}
                 {taskGroup.isDefault && (
                   <span style={{
                     background: 'var(--tg-theme-button-color)',
@@ -735,7 +741,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     borderRadius: '3px',
                     fontSize: '10px'
                   }}>
-                    DEFAULT
+                    {t('taskDetail.groupDefaultBadge')}
                   </span>
                 )}
               </div>
@@ -764,7 +770,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
             <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
-              Processing...
+              {t('taskDetail.processing')}
             </div>
           </div>
         )}
@@ -776,9 +782,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           marginBottom: '8px'
         }}>
           <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '16px', margin: 0, marginBottom: '4px' }}>Progress</h3>
+            <h3 style={{ fontSize: '16px', margin: 0, marginBottom: '4px' }}>{t('taskDetail.progress')}</h3>
             <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>{task.completedSets}/{task.requireSets} sets</span>
+              <span>{t('taskDetail.setsProgress', { done: task.completedSets, total: task.requireSets })}</span>
               <div style={{
                 flex: 1,
                 height: '4px',
@@ -817,7 +823,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   flexShrink: 0
                 }}
               >
-                {selectionMode ? '✕ Cancel' : '☑️ Select'}
+                {selectionMode ? t('taskDetail.selectCancel') : t('taskDetail.selectStart')}
               </button>
             )}
 
@@ -869,7 +875,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   } catch (error: any) {
                     if (error.name !== 'AbortError') {
                       hapticFeedback.error();
-                      showAlert(`Failed to share: ${error.message}`);
+                      showAlert(t('taskDetail.shareFailed', { error: error.message }));
                     }
                   } finally {
                     setLoading(false);
@@ -905,7 +911,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             alignItems: 'center'
           }}>
             <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>
-              {selectedMedia.size} selected
+              {t('taskDetail.selectedCount', { count: selectedMedia.size })}
             </span>
             <button
               onClick={handleDeleteSelected}
@@ -921,7 +927,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 fontWeight: '600'
               }}
             >
-              🗑️ Delete Selected
+              {t('taskDetail.deleteSelected')}
             </button>
           </div>
         )}
@@ -983,7 +989,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   marginBottom: '12px'
                 }}>
                   <div style={{ fontSize: '13px', fontWeight: '600' }}>
-                    Set {setIndex + 1}
+                    {t('taskDetail.set', { index: setIndex + 1 })}
                   </div>
 
                   {fileCount > 0 && !selectionMode && (
@@ -1165,17 +1171,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               fontSize: '15px'
             }}
           >
-            💬 Send to Chat
+            {t('taskDetail.sendToChat')}
           </button>
 
-          {/* Status Transitions */}
           {task.status === 'New' && canTransition('Received') && (
             <button
               onClick={() => handleTransition('Received')}
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)' }}
             >
-              📦 Receive
+              {t('taskDetail.receive')}
             </button>
           )}
 
@@ -1185,7 +1190,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
             >
-              ↩️ Move to New
+              {t('taskDetail.moveToNew')}
             </button>
           )}
 
@@ -1195,7 +1200,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
             >
-              ✅ Submit
+              {t('taskDetail.submit')}
             </button>
           )}
 
@@ -1205,7 +1210,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
             >
-              🔄 Redo
+              {t('taskDetail.redo')}
             </button>
           )}
 
@@ -1215,7 +1220,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
             >
-              ✅ Complete
+              {t('taskDetail.complete')}
             </button>
           )}
 
@@ -1226,7 +1231,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 disabled={loading}
                 style={{ flex: '1 1 calc(50% - 4px)', background: '#6b7280' }}
               >
-                🗃️ Archive
+                {t('taskDetail.archive')}
               </button>
             )
           }
@@ -1237,7 +1242,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#3b82f6' }}
             >
-              📤 Restore
+              {t('taskDetail.restore')}
             </button>
           )}
 
@@ -1247,7 +1252,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               disabled={loading}
               style={{ flex: '1 1 calc(50% - 4px)', background: '#ef4444', fontSize: '13px' }}
             >
-              🗑️ Delete
+              {t('taskDetail.delete')}
             </button>
           )}
         </div>

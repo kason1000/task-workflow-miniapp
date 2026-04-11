@@ -2,21 +2,21 @@ import { useState } from 'react';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import { Users, Plus, X } from 'lucide-react';
+import { useLocale } from '../i18n/LocaleContext';
 
-// Modern color palette for groups
 const GROUP_COLORS = [
-  '#3b82f6', // blue-500
-  '#ef4444', // red-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#8b5cf6', // violet-500
-  '#ec4899', // pink-500
-  '#06b6d4', // cyan-500
-  '#84cc16', // lime-500
-  '#f97316', // orange-500
-  '#6366f1', // indigo-500
-  '#14b8a6', // teal-500
-  '#f43f5e', // rose-500
+  '#3b82f6',
+  '#ef4444',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#06b6d4',
+  '#84cc16',
+  '#f97316',
+  '#6366f1',
+  '#14b8a6',
+  '#f43f5e',
 ];
 
 interface CreateGroupProps {
@@ -25,27 +25,28 @@ interface CreateGroupProps {
 }
 
 export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
+  const { t } = useLocale();
   const [groupName, setGroupName] = useState('');
   const [leadUserIds, setLeadUserIds] = useState<number[]>([]);
   const [leadInput, setLeadInput] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
-  const [color, setColor] = useState(GROUP_COLORS[0]); // Default to first color
+  const [color, setColor] = useState(GROUP_COLORS[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleAddLead = () => {
     const userId = parseInt(leadInput.trim());
-    
+
     if (isNaN(userId)) {
-      setError('Invalid user ID');
+      setError(t('createGroup.invalidUserId'));
       return;
     }
-    
+
     if (leadUserIds.includes(userId)) {
-      setError('User already added as lead');
+      setError(t('createGroup.leadAlreadyAdded'));
       return;
     }
-    
+
     setLeadUserIds([...leadUserIds, userId]);
     setLeadInput('');
     setError(null);
@@ -59,36 +60,35 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!groupName.trim()) {
-      setError('Group name is required');
+      setError(t('createGroup.nameRequired'));
       return;
     }
-    
+
     setLoading(true);
     setError(null);
     hapticFeedback.medium();
-    
+
     try {
       const chatId = telegramChatId.trim() ? parseInt(telegramChatId) : undefined;
-      
+
       if (telegramChatId.trim() && isNaN(chatId!)) {
-        setError('Invalid Telegram chat ID');
+        setError(t('createGroup.invalidChatId'));
         setLoading(false);
         return;
       }
-      
+
       await api.createGroup(
         groupName.trim(),
         leadUserIds.length > 0 ? leadUserIds : undefined,
         chatId,
-        color  // NEW: Pass color when creating group
+        color
       );
-      
+
       hapticFeedback.success();
-      showAlert('✅ Group created successfully!');
+      showAlert(t('createGroup.success'));
       onGroupCreated();
-      
     } catch (error: any) {
       console.error('Failed to create group:', error);
       setError(error.message);
@@ -103,7 +103,7 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
       <div className="card">
         <h2 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Users size={24} />
-          Create New Group
+          {t('createGroup.title')}
         </h2>
 
         {error && (
@@ -120,20 +120,19 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Group Name */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
+            <label style={{
+              display: 'block',
               marginBottom: '8px',
               fontWeight: '500'
             }}>
-              Group Name *
+              {t('createGroup.nameLabel')}
             </label>
             <input
               type="text"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              placeholder="e.g., Marketing Team"
+              placeholder={t('createGroup.namePlaceholder')}
               disabled={loading}
               style={{
                 width: '100%',
@@ -148,17 +147,15 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
             />
           </div>
 
-          {/* Group Leads */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
+            <label style={{
+              display: 'block',
               marginBottom: '8px',
               fontWeight: '500'
             }}>
-              Group Leads (Optional)
+              {t('createGroup.leadsLabel')}
             </label>
-            
-            {/* Existing leads */}
+
             {leadUserIds.length > 0 && (
               <div style={{ marginBottom: '8px' }}>
                 {leadUserIds.map(userId => (
@@ -174,7 +171,7 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                       marginBottom: '6px'
                     }}
                   >
-                    <span>User {userId}</span>
+                    <span>{t('common.userFallback', { id: userId })}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveLead(userId)}
@@ -192,15 +189,14 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                 ))}
               </div>
             )}
-            
-            {/* Add lead input */}
+
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
                 inputMode="numeric"
                 value={leadInput}
                 onChange={(e) => setLeadInput(e.target.value.replace(/\D/g, ''))}
-                placeholder="User ID"
+                placeholder={t('createGroup.leadsPlaceholder')}
                 disabled={loading}
                 style={{
                   flex: 1,
@@ -221,29 +217,27 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                 <Plus size={20} />
               </button>
             </div>
-            <p style={{ 
-              fontSize: '12px', 
-              color: 'var(--tg-theme-hint-color)', 
-              marginTop: '6px' 
+            <p style={{
+              fontSize: '12px',
+              color: 'var(--tg-theme-hint-color)',
+              marginTop: '6px'
             }}>
-              Add Telegram user IDs of group leads
+              {t('createGroup.leadsHint')}
             </p>
           </div>
 
-          {/* Group Color */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
+            <label style={{
+              display: 'block',
               marginBottom: '8px',
               fontWeight: '500'
             }}>
-              Group Color
+              {t('createGroup.colorLabel')}
             </label>
-            
-            {/* Color Picker */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(30px, 1fr))', 
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(30px, 1fr))',
               gap: '8px',
               marginBottom: '8px'
             }}>
@@ -259,8 +253,8 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                     width: '30px',
                     height: '30px',
                     borderRadius: '50%',
-                    border: color === colorOption 
-                      ? '3px solid var(--tg-theme-text-color)' 
+                    border: color === colorOption
+                      ? '3px solid var(--tg-theme-text-color)'
                       : '2px solid var(--tg-theme-hint-color)',
                     background: colorOption,
                     cursor: 'pointer',
@@ -271,8 +265,7 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                 />
               ))}
             </div>
-            
-            {/* Selected Color Preview */}
+
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -281,7 +274,7 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
               background: 'var(--tg-theme-secondary-bg-color)',
               borderRadius: '6px'
             }}>
-              <div 
+              <div
                 style={{
                   width: '20px',
                   height: '20px',
@@ -291,26 +284,25 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                 }}
               />
               <span style={{ fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
-                Selected: {color}
+                {t('createGroup.colorSelected', { color })}
               </span>
             </div>
           </div>
 
-          {/* Telegram Chat ID */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ 
-              display: 'block', 
+            <label style={{
+              display: 'block',
               marginBottom: '8px',
               fontWeight: '500'
             }}>
-              Telegram Group Chat ID (Optional)
+              {t('createGroup.chatIdLabel')}
             </label>
             <input
               type="text"
               inputMode="numeric"
               value={telegramChatId}
               onChange={(e) => setTelegramChatId(e.target.value.replace(/[^\d-]/g, ''))}
-              placeholder="e.g., -1001234567890"
+              placeholder={t('createGroup.chatIdPlaceholder')}
               disabled={loading}
               style={{
                 width: '100%',
@@ -322,22 +314,21 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                 color: 'var(--tg-theme-text-color)'
               }}
             />
-            <p style={{ 
-              fontSize: '12px', 
-              color: 'var(--tg-theme-hint-color)', 
-              marginTop: '6px' 
+            <p style={{
+              fontSize: '12px',
+              color: 'var(--tg-theme-hint-color)',
+              marginTop: '6px'
             }}>
-              Link this group to a Telegram group chat (use /groupinfo in the chat to get ID)
+              {t('createGroup.chatIdHint')}
             </p>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading || !groupName.trim()}
             style={{ width: '100%', marginTop: '8px' }}
           >
-            {loading ? 'Creating...' : 'Create Group'}
+            {loading ? t('createGroup.submitting') : t('createGroup.submit')}
           </button>
         </form>
       </div>

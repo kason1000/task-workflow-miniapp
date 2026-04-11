@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Video, X } from 'lucide-react';
+import { useLocale } from '../i18n/LocaleContext';
 
 interface VideoUploadProps {
   video: string | null;
@@ -9,11 +10,11 @@ interface VideoUploadProps {
 }
 
 export function VideoUpload({ video, onVideoChange, required, disabled }: VideoUploadProps) {
+  const { t } = useLocale();
   const [inputValue, setInputValue] = useState('');
 
   const handleAddVideo = () => {
     if (!inputValue.trim()) return;
-    
     onVideoChange(inputValue.trim());
     setInputValue('');
   };
@@ -30,24 +31,26 @@ export function VideoUpload({ video, onVideoChange, required, disabled }: VideoU
   };
 
   const isComplete = !required || !!video;
+  const label = isComplete
+    ? t('videoUpload.labelComplete')
+    : required
+    ? t('videoUpload.labelRequired')
+    : t('videoUpload.labelOptional');
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '8px' 
+        marginBottom: '8px'
       }}>
-        <label style={{ fontWeight: '500' }}>
-          🎥 Video {required ? (isComplete ? '✓' : '(Required)') : '(Optional)'}
-        </label>
+        <label style={{ fontWeight: '500' }}>{label}</label>
         {isComplete && (
-          <span style={{ color: '#10b981', fontSize: '14px' }}>Complete</span>
+          <span style={{ color: '#10b981', fontSize: '14px' }}>{t('videoUpload.completeText')}</span>
         )}
       </div>
 
-      {/* Video Display */}
       {video && (
         <div
           style={{
@@ -61,9 +64,9 @@ export function VideoUpload({ video, onVideoChange, required, disabled }: VideoU
             fontSize: '14px',
           }}
         >
-          <span style={{ 
-            flex: 1, 
-            overflow: 'hidden', 
+          <span style={{
+            flex: 1,
+            overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             marginRight: '8px'
@@ -85,13 +88,12 @@ export function VideoUpload({ video, onVideoChange, required, disabled }: VideoU
         </div>
       )}
 
-      {/* Add Video Input */}
       {!video && (
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
             className="input"
-            placeholder="Paste video file_id from bot"
+            placeholder={t('videoUpload.placeholder')}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -108,12 +110,12 @@ export function VideoUpload({ video, onVideoChange, required, disabled }: VideoU
         </div>
       )}
 
-      <p style={{ 
-        fontSize: '12px', 
-        color: 'var(--tg-theme-hint-color)', 
-        marginTop: '6px' 
+      <p style={{
+        fontSize: '12px',
+        color: 'var(--tg-theme-hint-color)',
+        marginTop: '6px'
       }}>
-        💡 Send a video to the bot, then paste the file_id here
+        {t('videoUpload.hint')}
       </p>
     </div>
   );

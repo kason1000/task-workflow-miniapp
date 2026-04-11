@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Task } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
+import { useLocale } from '../i18n/LocaleContext';
 
 interface ShareScreenProps {
   taskId: string;
@@ -9,6 +10,7 @@ interface ShareScreenProps {
 }
 
 export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
+  const { t } = useLocale();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
@@ -22,7 +24,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
       const data = await api.getTask(taskId);
       setTask(data);
     } catch (error: any) {
-      showAlert(`Failed to load task: ${error.message}`);
+      showAlert(t('share.loadFailed', { error: error.message }));
     } finally {
       setLoading(false);
     }
@@ -116,7 +118,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
       console.error('❌ Share failed:', error);
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
-        showAlert(`Failed to share: ${error.message}`);
+        showAlert(t('share.shareFailed', { error: error.message }));
       } else {
         console.log('ℹ️ Share cancelled by user');
       }
@@ -186,7 +188,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
       console.error('❌ Share failed:', error);
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
-        showAlert(`Failed to share: ${error.message}`);
+        showAlert(t('share.shareFailed', { error: error.message }));
       }
     } finally {
       setSharing(false);
@@ -197,7 +199,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-        <div>Loading task...</div>
+        <div>{t('share.loading')}</div>
       </div>
     );
   }
@@ -206,9 +208,9 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
-        <div>Task not found</div>
+        <div>{t('share.taskNotFound')}</div>
         <button onClick={onBack} style={{ marginTop: '16px' }}>
-          ← Back
+          {t('common.back')}
         </button>
       </div>
     );
@@ -219,9 +221,9 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
     <div>
       <div className="card">
         <button onClick={onBack} style={{ marginBottom: '12px' }}>
-          ← Back
+          {t('common.back')}
         </button>
-        <h2 style={{ marginBottom: '8px' }}>Share Files</h2>
+        <h2 style={{ marginBottom: '8px' }}>{t('share.title')}</h2>
         <div style={{ color: 'var(--tg-theme-hint-color)', fontSize: '14px' }}>
           {task.title}
         </div>
@@ -237,12 +239,12 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
         return (
           <div key={index} className="card">
             <h3 style={{ marginBottom: '12px', fontSize: '16px' }}>
-              📦 Set {index + 1}
+              {t('share.setHeader', { index: index + 1 })}
             </h3>
             <div style={{ fontSize: '14px', color: 'var(--tg-theme-hint-color)', marginBottom: '12px' }}>
-              {photoCount > 0 && `📸 ${photoCount} photo${photoCount > 1 ? 's' : ''}`}
+              {photoCount > 0 && (photoCount === 1 ? t('share.setDesc', { count: photoCount }) : t('share.setDescPlural', { count: photoCount }))}
               {photoCount > 0 && hasVideo && ' • '}
-              {hasVideo && '🎥 1 video'}
+              {hasVideo && t('share.videoOne')}
             </div>
             <button
               onClick={() => shareSet(index)}
@@ -252,7 +254,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
                 background: 'var(--tg-theme-button-color)'
               }}
             >
-              {sharing ? '⏳ Preparing...' : `📤 Share Set ${index + 1} (${fileCount} files)`}
+              {sharing ? t('share.preparingLabel') : t('share.shareSetButton', { index: index + 1, count: fileCount })}
             </button>
           </div>
         );
@@ -269,7 +271,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
               color: 'white'
             }}
           >
-            {sharing ? '⏳ Preparing...' : '📤 Share All Sets'}
+            {sharing ? t('share.preparingLabel') : t('share.shareAllButton')}
           </button>
         </div>
       )}
