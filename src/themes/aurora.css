@@ -1,0 +1,278 @@
+/*
+ * AURORA THEME — Vibrant Gradient Experience
+ * Inspired by: Northern lights, glassmorphism, modern creative tools (Figma, Linear)
+ * Font: Outfit (modern geometric) + Space Mono (techy monospace)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+[data-theme="aurora"] {
+  /* Core palette — deep space with vibrant accents */
+  --tg-theme-bg-color: #0f0f1a;
+  --tg-theme-text-color: #f0eef5;
+  --tg-theme-hint-color: #6b6b8a;
+  --tg-theme-link-color: #7c6cf0;
+  --tg-theme-button-color: #7c6cf0;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #1a1a2e;
+
+  /* Extended aurora palette */
+  --aurora-violet: #7c6cf0;
+  --aurora-pink: #e84393;
+  --aurora-cyan: #00cec9;
+  --aurora-green: #00b894;
+  --aurora-orange: #f39c12;
+  --aurora-surface: rgba(255, 255, 255, 0.04);
+  --aurora-surface-hover: rgba(255, 255, 255, 0.08);
+  --aurora-border: rgba(255, 255, 255, 0.08);
+  --aurora-glow-violet: rgba(124, 108, 240, 0.15);
+  --aurora-glow-pink: rgba(232, 67, 147, 0.15);
+  --aurora-glass: rgba(255, 255, 255, 0.05);
+  --aurora-glass-border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="aurora"] body {
+  font-family: 'Outfit', -apple-system, sans-serif;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+/* Animated aurora gradient background */
+[data-theme="aurora"] #root::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 20% 50%, rgba(124, 108, 240, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(232, 67, 147, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(0, 206, 201, 0.05) 0%, transparent 50%);
+  animation: aurora-drift 20s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes aurora-drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(2%, -1%) rotate(1deg); }
+  66% { transform: translate(-1%, 2%) rotate(-1deg); }
+  100% { transform: translate(1%, -2%) rotate(0.5deg); }
+}
+
+/* Cards — glassmorphism */
+[data-theme="aurora"] .card {
+  background: var(--aurora-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--aurora-glass-border);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="aurora"] .card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(124, 108, 240, 0.2), transparent 50%, rgba(232, 67, 147, 0.1));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+[data-theme="aurora"] .card:hover {
+  background: var(--aurora-surface-hover);
+  border-color: rgba(124, 108, 240, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(124, 108, 240, 0.1), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Buttons — gradient with glow */
+[data-theme="aurora"] button {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--aurora-violet), #9b59b6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+[data-theme="aurora"] button:hover:not(:disabled) {
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px var(--aurora-glow-violet);
+}
+
+[data-theme="aurora"] button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Status badges — vibrant with glow */
+[data-theme="aurora"] .badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 8px;
+  padding: 3px 10px;
+  position: relative;
+}
+
+[data-theme="aurora"] .badge-new {
+  background: rgba(124, 108, 240, 0.2);
+  color: #a694ff;
+  box-shadow: 0 0 12px rgba(124, 108, 240, 0.15);
+}
+[data-theme="aurora"] .badge-received {
+  background: rgba(243, 156, 18, 0.2);
+  color: #f5b940;
+  box-shadow: 0 0 12px rgba(243, 156, 18, 0.15);
+}
+[data-theme="aurora"] .badge-submitted {
+  background: rgba(232, 67, 147, 0.2);
+  color: #f06eac;
+  box-shadow: 0 0 12px rgba(232, 67, 147, 0.15);
+}
+[data-theme="aurora"] .badge-redo {
+  background: rgba(255, 71, 87, 0.2);
+  color: #ff6b7a;
+  box-shadow: 0 0 12px rgba(255, 71, 87, 0.15);
+}
+[data-theme="aurora"] .badge-completed {
+  background: rgba(0, 206, 201, 0.2);
+  color: #4fd1c5;
+  box-shadow: 0 0 12px rgba(0, 206, 201, 0.15);
+}
+[data-theme="aurora"] .badge-archived {
+  background: rgba(107, 107, 138, 0.2);
+  color: #8a8aa0;
+}
+
+/* Progress bar — gradient fill */
+[data-theme="aurora"] .progress-bar-fill {
+  background: linear-gradient(90deg, var(--aurora-violet), var(--aurora-pink), var(--aurora-cyan)) !important;
+  background-size: 200% 100%;
+  animation: aurora-progress 3s ease infinite;
+}
+
+@keyframes aurora-progress {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Text */
+[data-theme="aurora"] .text-muted {
+  color: var(--tg-theme-hint-color);
+}
+
+/* Inputs — frosted glass */
+[data-theme="aurora"] input,
+[data-theme="aurora"] textarea,
+[data-theme="aurora"] select {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--aurora-border);
+  color: var(--tg-theme-text-color);
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="aurora"] input:focus,
+[data-theme="aurora"] textarea:focus {
+  border-color: var(--aurora-violet);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--aurora-glow-violet);
+}
+
+/* Scrollbar */
+[data-theme="aurora"] ::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-theme="aurora"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="aurora"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--aurora-violet), var(--aurora-pink));
+  border-radius: 3px;
+}
+
+/* Filter bar buttons */
+[data-theme="aurora"] .btn-sm {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  border-radius: 10px;
+}
+
+/* Ghost button — frosted */
+[data-theme="aurora"] .btn-ghost {
+  background: var(--aurora-glass);
+  color: var(--tg-theme-hint-color);
+  border: 1px solid var(--aurora-border);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="aurora"] .btn-ghost:hover:not(:disabled) {
+  border-color: var(--aurora-violet);
+  color: var(--aurora-violet);
+  background: var(--aurora-glow-violet);
+}
+
+/* Danger */
+[data-theme="aurora"] .btn-danger {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+/* Success */
+[data-theme="aurora"] .btn-success {
+  background: linear-gradient(135deg, var(--aurora-green), var(--aurora-cyan));
+  color: #0f0f1a;
+}
+
+/* Images — glowing borders */
+[data-theme="aurora"] img {
+  border-radius: 8px;
+}
+
+/* Gallery overlay */
+[data-theme="aurora"] .viewer-backdrop {
+  background: rgba(15, 15, 26, 0.97);
+  backdrop-filter: blur(20px);
+}
+
+/* Monospace accents */
+[data-theme="aurora"] .task-count,
+[data-theme="aurora"] .version-text {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--tg-theme-hint-color);
+}
+
+/* Skeleton shimmer — aurora colors */
+@keyframes aurora-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+[data-theme="aurora"] .skeleton {
+  background: linear-gradient(90deg, rgba(124,108,240,0.05), rgba(232,67,147,0.08), rgba(124,108,240,0.05));
+  background-size: 200% 100%;
+  animation: aurora-shimmer 2s ease-in-out infinite;
+}
+
+/* Header gradient line */
+[data-theme="aurora"] .container > div:first-child {
+  border-bottom-color: transparent !important;
+  box-shadow: 0 1px 0 0 rgba(124, 108, 240, 0.2);
+}

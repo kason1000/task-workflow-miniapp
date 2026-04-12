@@ -15,11 +15,15 @@ import { getAppVersion, getAppVersionSync } from './utils/version';
 import { Users } from 'lucide-react';
 import { useLocale } from './i18n/LocaleContext';
 import { hapticFeedback } from './utils/telegram';
+import { ThemeSwitcher } from './components/ThemeSwitcher';
+import { useTheme } from './contexts/ThemeContext';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
 
 function App() {
   const { t, setLocale } = useLocale();
+  const { theme } = useTheme();
+  const [showThemeSwitcher, setShowThemeSwitcher] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -509,8 +513,26 @@ function App() {
             }}>
               v{appVersion}</span>
           </div>
-          
-          <div style={{ 
+
+          {/* Theme switcher button */}
+          <button
+            onClick={() => { setShowThemeSwitcher(true); hapticFeedback.light(); }}
+            aria-label="Change theme"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: '4px 8px',
+              fontSize: '16px',
+              cursor: 'pointer',
+              opacity: 0.7,
+              marginLeft: '4px',
+              minWidth: 'auto',
+            }}
+          >
+            🎨
+          </button>
+
+          <div style={{
             marginLeft: 'auto',  /* Push to the right */
             textAlign: 'right',
             minWidth: '80px',
@@ -681,6 +703,11 @@ function App() {
           />
         )}
       </div>
+
+      {/* Theme Switcher Modal */}
+      {showThemeSwitcher && (
+        <ThemeSwitcher onClose={() => setShowThemeSwitcher(false)} />
+      )}
     </div>
   );
 }
