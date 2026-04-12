@@ -72,10 +72,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [allTaskPhotos, setAllTaskPhotos] = useState<string[]>([]); // All photos for navigation in this task
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0); // Current photo index in the task
+  const [allTaskPhotos, setAllTaskPhotos] = useState<string[]>([]);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
+  const [viewerMode, setViewerMode] = useState<'title' | 'media' | null>(null);
 
   // NEW: Group state
   const [taskGroup, setTaskGroup] = useState<Group | null>(null);
@@ -211,43 +211,46 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   };
 
   const handleCreatedPhotoClick = () => {
-    if (task.createdPhoto) {
-      const thumbnailUrl = mediaCache[task.createdPhoto.file_id];
-      if (thumbnailUrl && thumbnailRef.current) {
-        const allPhotos = buildAllTaskPhotos();
+    if (!task.createdPhoto) return;
+    const url = mediaCache[task.createdPhoto.file_id];
+    if (!url) return;
+    hapticFeedback.medium();
+    setFullscreenImage(url);
+    setAllTaskPhotos([url]);
+    setCurrentPhotoIndex(0);
+    setViewerMode('title');
+    setIsAnimating(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => setIsAnimating(true)));
+  };
 
-        const rect = thumbnailRef.current.getBoundingClientRect();
-        hapticFeedback.medium();
-        setThumbnailRect(rect);
-        setFullscreenImage(thumbnailUrl);
-        setAllTaskPhotos(allPhotos);
+  const handleMediaClick = (setIndex: number, mediaIndex: number) => {
+    const allMedia = buildAllTaskPhotos();
+    if (allMedia.length === 0) return;
 
-        // Find the index of the clicked photo in the allPhotos array
-        const photoIndex = allPhotos.indexOf(thumbnailUrl);
-        if (photoIndex !== -1) {
-          setCurrentPhotoIndex(photoIndex);
-        }
-
-        setIsAnimating(true);
-
-        // End animation after transition
-        setTimeout(() => {
-          setIsAnimating(false);
-        }, 400);
-      }
+    // Calculate global index
+    let globalIdx = task.createdPhoto && mediaCache[task.createdPhoto.file_id] ? 1 : 0;
+    for (let i = 0; i < setIndex; i++) {
+      const s = task.sets[i];
+      if (s) { globalIdx += (s.photos?.length || 0) + (s.video ? 1 : 0); }
     }
+    globalIdx += mediaIndex;
+
+    hapticFeedback.medium();
+    setFullscreenImage(allMedia[globalIdx] || allMedia[0]);
+    setAllTaskPhotos(allMedia);
+    setCurrentPhotoIndex(globalIdx < allMedia.length ? globalIdx : 0);
+    setViewerMode('media');
+    setIsAnimating(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => setIsAnimating(true)));
   };
 
   const closeFullscreen = () => {
     hapticFeedback.light();
-    setIsAnimating(true);
-
-    // Wait for animation then close
+    setIsAnimating(false);
     setTimeout(() => {
       setFullscreenImage(null);
-      setThumbnailRect(null);
-      setIsAnimating(false);
-    }, 400);
+      setViewerMode(null);
+    }, 300);
   };
 
   // Handle batch delete
@@ -1006,7 +1009,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                                   toggleMediaSelection(media.fileId);
                                 }
                               } else {
-                                handleOpenGallery(setIndex, media.mediaIndex);
+                                handleMediaClick(setIndex, media.mediaIndex);
                               }
                             }}
                             style={{
@@ -1212,404 +1215,300 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       </div>
 
       {/* Fullscreen Image Viewer */}
-      {fullscreenImage && (
-        <ImageViewer
+      {fullscreenImage && viewerMode && (
+        <DetailImageViewer
           imageUrl={fullscreenImage}
-          thumbnailRect={thumbnailRect}
           isAnimating={isAnimating}
-          isClosing={isAnimating && !fullscreenImage}  /* Only true when actually closing */
           onClose={closeFullscreen}
-          allTaskPhotos={allTaskPhotos}
+          allPhotos={allTaskPhotos}
           currentPhotoIndex={currentPhotoIndex}
           setCurrentPhotoIndex={setCurrentPhotoIndex}
           setFullscreenImage={setFullscreenImage}
+          mode={viewerMode}
+          task={task}
+          userRole={userRole}
+          onTaskUpdated={onTaskUpdated}
+          onSendToChat={handleSendToChat}
+          sending={loading}
         />
       )}
-
-      {/* Gallery Overlay Modal */}
-      <GalleryOverlay
-        isOpen={galleryOpen}
-        task={task}
-        mediaCache={mediaCache}
-        initialSetIndex={galleryInitialSet}
-        initialMediaIndex={galleryInitialMedia}
-        onClose={() => setGalleryOpen(false)}
-        onTaskUpdated={onTaskUpdated}
-        userRole={userRole}
-      />
     </div>
   );
 }
 
-// ImageViewer component with navigation
-function ImageViewer({
-  imageUrl,
-  thumbnailRect,
-  isAnimating,
-  isClosing,
-  onClose,
-  allTaskPhotos,
-  currentPhotoIndex,
-  setCurrentPhotoIndex,
-  setFullscreenImage
+function DetailImageViewer({
+  imageUrl, isAnimating, onClose, allPhotos, currentPhotoIndex,
+  setCurrentPhotoIndex, setFullscreenImage, mode, task, userRole,
+  onTaskUpdated, onSendToChat, sending,
 }: {
   imageUrl: string;
-  thumbnailRect: DOMRect | null;
   isAnimating: boolean;
-  isClosing: boolean;
   onClose: () => void;
-  allTaskPhotos: string[];
+  allPhotos: string[];
   currentPhotoIndex: number;
   setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>;
   setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>;
+  mode: 'title' | 'media';
+  task: Task;
+  userRole: string;
+  onTaskUpdated: () => void;
+  onSendToChat: () => void;
+  sending: boolean;
 }) {
+  const { t } = useLocale();
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [disableTransition, setDisableTransition] = useState(false);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastTouchDistance = useRef<number | null>(null);
+  const bottomPanelRef = useRef<HTMLDivElement>(null);
+  const thumbStripRef = useRef<HTMLDivElement>(null);
+
+  const gestureRef = useRef({
+    scale: 1, posX: 0, posY: 0, startDistance: 0, startScale: 1,
+    startMidX: 0, startMidY: 0, startPosX: 0, startPosY: 0,
+    isPinching: false, isPanning: false, isSwiping: false,
+    panStartX: 0, panStartY: 0, swipeStartX: 0, swipeStartY: 0,
+    swipeDeltaX: 0, moved: false, lastTap: 0,
+  });
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasMultiple = allPhotos.length > 1;
 
   useEffect(() => {
     const img = new Image();
-    img.onload = () => {
-      setImageDimensions({ width: img.width, height: img.height });
-      setIsImageLoaded(true);
-    };
+    img.onload = () => { setImageDimensions({ width: img.width, height: img.height }); setIsImageLoaded(true); };
     img.src = imageUrl;
   }, [imageUrl]);
 
   useEffect(() => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-    setIsImageLoaded(false);
+    gestureRef.current = { ...gestureRef.current, scale: 1, posX: 0, posY: 0 };
+    setScale(1); setPosition({ x: 0, y: 0 }); setIsImageLoaded(false); setDisableTransition(true);
+    if (imageRef.current) { imageRef.current.style.transition = 'none'; imageRef.current.style.transform = 'translate(-50%, -50%) scale(1)'; imageRef.current.style.opacity = '1'; }
+    requestAnimationFrame(() => setDisableTransition(false));
   }, [imageUrl]);
 
-  const getFittedDimensions = () => {
-    if (!imageDimensions || !containerRef.current) {
-      return { width: 0, height: 0 };
-    }
-
-    const containerWidth = window.innerWidth;
-    const containerHeight = window.innerHeight;
-    const imageAspect = imageDimensions.width / imageDimensions.height;
-    const containerAspect = containerWidth / containerHeight;
-
-    let width, height;
-
-    if (imageAspect > containerAspect) {
-      width = containerWidth;
-      height = containerWidth / imageAspect;
-    } else {
-      height = containerHeight;
-      width = containerHeight * imageAspect;
-    }
-
-    return { width, height };
+  const applyTransform = () => {
+    if (!imageRef.current) return;
+    const g = gestureRef.current;
+    imageRef.current.style.transition = 'none';
+    imageRef.current.style.transform = `translate(calc(-50% + ${g.posX}px), calc(-50% + ${g.posY}px)) scale(${g.scale})`;
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      lastTouchDistance.current = distance;
-    } else if (e.touches.length === 1 && scale > 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.touches[0].clientX - position.x,
-        y: e.touches[0].clientY - position.y
-      });
-    }
+  const animateToRest = (s: number, x: number, y: number) => {
+    if (!imageRef.current) return;
+    Object.assign(gestureRef.current, { scale: s, posX: x, posY: y });
+    imageRef.current.style.transition = 'transform 0.3s cubic-bezier(0.2, 0, 0, 1)';
+    imageRef.current.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${s})`;
+    setScale(s); setPosition({ x, y });
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
-      e.preventDefault();
+  // Native touch listeners
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const isUI = (e: TouchEvent) => bottomPanelRef.current?.contains(e.target as Node);
 
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-
-      const scaleChange = distance / lastTouchDistance.current;
-      const newScale = Math.min(Math.max(scale * scaleChange, 1), 4);
-
-      setScale(newScale);
-      lastTouchDistance.current = distance;
-
-      if (newScale === 1) {
-        setPosition({ x: 0, y: 0 });
+    const onStart = (e: TouchEvent) => {
+      if (isUI(e)) return;
+      const g = gestureRef.current;
+      g.moved = false; g.isSwiping = false; g.swipeDeltaX = 0;
+      if (e.touches.length === 2) {
+        e.preventDefault(); g.isPinching = true;
+        const dx = e.touches[1].clientX - e.touches[0].clientX, dy = e.touches[1].clientY - e.touches[0].clientY;
+        g.startDistance = Math.hypot(dx, dy); g.startScale = g.scale;
+        g.startMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        g.startMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        g.startPosX = g.posX; g.startPosY = g.posY;
+      } else if (e.touches.length === 1) {
+        g.swipeStartX = e.touches[0].clientX; g.swipeStartY = e.touches[0].clientY;
+        if (g.scale > 1) { g.isPanning = true; g.panStartX = e.touches[0].clientX - g.posX; g.panStartY = e.touches[0].clientY - g.posY; }
       }
-    } else if (e.touches.length === 1 && isDragging && scale > 1) {
-      e.preventDefault();
-      const newX = e.touches[0].clientX - dragStart.x;
-      const newY = e.touches[0].clientY - dragStart.y;
-      setPosition({ x: newX, y: newY });
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (isUI(e)) return;
+      const g = gestureRef.current; g.moved = true;
+      if (e.touches.length === 2 && g.isPinching) {
+        e.preventDefault();
+        const dist = Math.hypot(e.touches[1].clientX - e.touches[0].clientX, e.touches[1].clientY - e.touches[0].clientY);
+        const ns = Math.min(Math.max(g.startScale * (dist / g.startDistance), 0.5), 5);
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2, my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const sd = ns / g.startScale;
+        g.posX = g.startPosX * sd + (mx - g.startMidX); g.posY = g.startPosY * sd + (my - g.startMidY);
+        g.scale = ns; applyTransform();
+      } else if (e.touches.length === 1 && g.scale <= 1 && !g.isPinching && hasMultiple) {
+        const dx = e.touches[0].clientX - g.swipeStartX, dy = e.touches[0].clientY - g.swipeStartY;
+        if (!g.isSwiping && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) g.isSwiping = true;
+        if (g.isSwiping) {
+          e.preventDefault(); g.swipeDeltaX = dx;
+          if (imageRef.current) {
+            const p = Math.min(Math.abs(dx) / window.innerWidth, 1);
+            imageRef.current.style.transition = 'none';
+            imageRef.current.style.transform = `translate(calc(-50% + ${dx}px), -50%) scale(${1 - p * 0.08})`;
+          }
+        }
+      } else if (e.touches.length === 1 && g.isPanning && g.scale > 1) {
+        e.preventDefault(); g.posX = e.touches[0].clientX - g.panStartX; g.posY = e.touches[0].clientY - g.panStartY; applyTransform();
+      }
+    };
+
+    const goNext = () => {
+      if (!hasMultiple) return;
+      let i = currentPhotoIndex + 1;
+      if (i >= allPhotos.length) i = 0;
+      setCurrentPhotoIndex(i); setFullscreenImage(allPhotos[i]);
+    };
+    const goPrev = () => {
+      if (!hasMultiple) return;
+      let i = currentPhotoIndex - 1;
+      if (i < 0) i = allPhotos.length - 1;
+      setCurrentPhotoIndex(i); setFullscreenImage(allPhotos[i]);
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      if (isUI(e)) return;
+      const g = gestureRef.current;
+      if (g.isPinching) { g.isPinching = false; if (g.scale < 1) animateToRest(1, 0, 0); else { setScale(g.scale); setPosition({ x: g.posX, y: g.posY }); } return; }
+      if (g.isSwiping) {
+        g.isSwiping = false;
+        const th = window.innerWidth * 0.15, dir = g.swipeDeltaX < 0 ? 1 : -1;
+        if (imageRef.current) {
+          if (Math.abs(g.swipeDeltaX) > th && hasMultiple) {
+            const ex = dir * -window.innerWidth;
+            imageRef.current.style.transition = 'transform 0.25s cubic-bezier(0.2,0,0,1), opacity 0.15s ease';
+            imageRef.current.style.transform = `translate(calc(-50% + ${ex}px), -50%) scale(0.9)`; imageRef.current.style.opacity = '0';
+            setTimeout(() => { if (dir === 1) goNext(); else goPrev(); }, 200);
+          } else {
+            imageRef.current.style.transition = 'transform 0.35s cubic-bezier(0.2,0,0,1)';
+            imageRef.current.style.transform = 'translate(-50%, -50%) scale(1)'; imageRef.current.style.opacity = '1';
+          }
+        }
+        g.swipeDeltaX = 0; return;
+      }
+      if (g.isPanning) { g.isPanning = false; if (g.moved) { setPosition({ x: g.posX, y: g.posY }); return; } }
+      if (!g.moved && e.changedTouches.length === 1) {
+        const now = Date.now(), dt = now - g.lastTap; g.lastTap = now;
+        if (dt < 300 && dt > 0) {
+          if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
+          if (g.scale > 1) animateToRest(1, 0, 0); else animateToRest(2.5, 0, 0);
+        } else {
+          if (tapTimer.current) clearTimeout(tapTimer.current);
+          tapTimer.current = setTimeout(() => { if (gestureRef.current.scale <= 1) onClose(); tapTimer.current = null; }, 280);
+        }
+      }
+      g.moved = false;
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchmove', onMove); el.removeEventListener('touchend', onEnd); };
+  }, [onClose, currentPhotoIndex, allPhotos.length]);
+
+  // Scroll active thumbnail into view
+  useEffect(() => {
+    if (thumbStripRef.current && hasMultiple) {
+      const a = thumbStripRef.current.querySelector('[data-active="true"]') as HTMLElement;
+      if (a) a.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
+  }, [currentPhotoIndex]);
+
+  const bottomH = hasMultiple ? 210 : 120;
+  const areaH = window.innerHeight - bottomH;
+  const imgCenterY = areaH / 2;
+  const fitForArea = () => {
+    if (!imageDimensions) return null;
+    const w = window.innerWidth, h = areaH - 20;
+    const aspect = imageDimensions.width / imageDimensions.height;
+    if (aspect > w / h) return { width: w, height: w / aspect };
+    return { width: h * aspect, height: h };
   };
+  const fitted = isImageLoaded ? fitForArea() : null;
+  const isVisible = isAnimating;
 
-  const handleTouchEnd = () => {
-    lastTouchDistance.current = null;
-    setIsDragging(false);
-  };
+  const goNextLocal = () => { if (!hasMultiple) return; let i = currentPhotoIndex + 1; if (i >= allPhotos.length) i = 0; setCurrentPhotoIndex(i); setFullscreenImage(allPhotos[i]); };
+  const goPrevLocal = () => { if (!hasMultiple) return; let i = currentPhotoIndex - 1; if (i < 0) i = allPhotos.length - 1; setCurrentPhotoIndex(i); setFullscreenImage(allPhotos[i]); };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.min(Math.max(scale * delta, 1), 4);
-    setScale(newScale);
-
-    if (newScale === 1) {
-      setPosition({ x: 0, y: 0 });
-    }
-  };
-
-  const lastTap = useRef<number>(0);
-  const handleDoubleClick = () => {
-    if (scale > 1) {
-      setScale(1);
-      setPosition({ x: 0, y: 0 });
-    } else {
-      setScale(2);
-    }
-  };
-
-  const handleTap = () => {
-    const now = Date.now();
-    const timeSince = now - lastTap.current;
-
-    if (timeSince < 300 && timeSince > 0) {
-      handleDoubleClick();
-    }
-
-    lastTap.current = now;
-  };
-
-  // NEW: Simple and reliable navigation functions
-  const goToPreviousPhoto = () => {
-    hapticFeedback.light();
-
-    // Check if we have photos to navigate
-    if (allTaskPhotos.length === 0) return;
-
-    // Calculate new index with wrap-around to the end
-    let newIndex = currentPhotoIndex - 1;
-    if (newIndex < 0) {
-      newIndex = allTaskPhotos.length - 1; // Loop to last photo
-    }
-
-    // Update both index and image
-    setCurrentPhotoIndex(newIndex);
-    setFullscreenImage(allTaskPhotos[newIndex]);
-  };
-
-  const goToNextPhoto = () => {
-    hapticFeedback.light();
-
-    // Check if we have photos to navigate
-    if (allTaskPhotos.length === 0) return;
-
-    // Calculate new index with wrap-around to the beginning
-    let newIndex = currentPhotoIndex + 1;
-    if (newIndex >= allTaskPhotos.length) {
-      newIndex = 0; // Loop to first photo
-    }
-
-    // Update both index and image
-    setCurrentPhotoIndex(newIndex);
-    setFullscreenImage(allTaskPhotos[newIndex]);
-  };
-
-  const getAnimationStyle = () => {
-    if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
-      return {};
-    }
-
-    const fittedDimensions = getFittedDimensions();
-
-    if (isAnimating && !isClosing) {
-      return {
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        top: `${thumbnailRect.top}px`,
-        left: `${thumbnailRect.left}px`,
-        borderRadius: '8px',
-        objectFit: 'cover' as const
-      };
-    } else if (isAnimating && isClosing) {
-      return {
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        top: `${thumbnailRect.top}px`,
-        left: `${thumbnailRect.left}px`,
-        borderRadius: '8px',
-        objectFit: 'cover' as const
-      };
-    } else {
-      return {
-        width: `${fittedDimensions.width}px`,
-        height: `${fittedDimensions.height}px`,
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        borderRadius: '0px',
-        objectFit: 'contain' as const
-      };
-    }
-  };
-
-  const animationStyle = getAnimationStyle();
 
   return (
-    <div
-      ref={containerRef}
-      onClick={(e) => {
-        if (e.target === containerRef.current && scale === 1) {
-          onClose();
-        }
-      }}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.95)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'background 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        cursor: scale > 1 ? 'move' : 'pointer',
-        overflow: 'hidden'
-      }}
-      onWheel={handleWheel}
-    >
-      <div
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          background: 'rgba(255, 255, 255, 0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '24px',
-          color: 'white',
-          cursor: 'pointer',
-          zIndex: 10000,
-          opacity: isClosing ? 0 : 1,
-          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}
-      >
-        ✕
+    <div ref={containerRef} style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: isVisible ? 'rgba(0,0,0,0.97)' : 'rgba(0,0,0,0)',
+      zIndex: 9999, transition: 'background 0.3s ease',
+      overflow: 'hidden', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
+    }}>
+      {/* Top bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10001,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: 'max(14px, env(safe-area-inset-top)) 16px 8px',
+        opacity: isVisible ? 1 : 0, transition: 'opacity 0.25s ease',
+        transitionDelay: isVisible ? '0.1s' : '0s',
+      }}>
+        {hasMultiple && (
+          <span style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            {currentPhotoIndex + 1} / {allPhotos.length}
+          </span>
+        )}
+        {!hasMultiple && <span />}
+        <div onClick={(e) => { e.stopPropagation(); onClose(); }} onTouchEnd={(e) => e.stopPropagation()}
+          style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', padding: 0 }}
+        >✕</div>
       </div>
 
-      <img
-        ref={imageRef}
-        src={imageUrl}
-        alt="Fullscreen view"
-        onClick={handleTap}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          position: 'absolute',
-          transform: scale > 1 ? `translate(${position.x / scale}px, ${position.y / scale}px) scale(${scale})` : animationStyle.transform,
-          transition: isAnimating || (scale === 1 && position.x === 0 && position.y === 0)
-            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-            : 'none',
-          touchAction: 'none',
-          userSelect: 'none',
-          WebKitUserSelect: 'none',
-          pointerEvents: scale > 1 ? 'auto' : 'none',
-          transformOrigin: 'center center',
-          ...animationStyle
-        }}
-      />
+      {/* Image */}
+      <img ref={imageRef} src={imageUrl} alt="" draggable={false} style={{
+        position: 'absolute', left: '50%', top: `${imgCenterY}px`,
+        width: fitted ? `${fitted.width}px` : 'auto', height: fitted ? `${fitted.height}px` : 'auto',
+        maxWidth: fitted ? undefined : '100%', maxHeight: fitted ? undefined : `${areaH - 20}px`,
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})` : 'translate(-50%, calc(-50% + 20px)) scale(0.92)',
+        transition: disableTransition ? 'none' : 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        transformOrigin: 'center center', objectFit: 'contain', touchAction: 'none', pointerEvents: 'none',
+      }} />
 
-      {/* Navigation and action buttons at the bottom - arranged with nav buttons on far sides */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: 0,
-        right: 0,
-        zIndex: 10000,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 20px',
-        opacity: isClosing ? 0 : 1,
-        transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+      {/* Bottom panel */}
+      <div ref={bottomPanelRef} style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
+        background: 'rgba(0,0,0,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)',
+        opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+        transition: 'opacity 0.25s ease, transform 0.25s ease', transitionDelay: isVisible ? '0.08s' : '0s',
       }}>
-        <button
-          onClick={goToPreviousPhoto}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            color: 'white',
-            cursor: 'pointer',
-            border: 'none',
-            backdropFilter: 'blur(4px)',
-            flexShrink: 0
-          }}
-        >
-          {'<'}
-        </button>
+        {/* Thumbnail row (media mode only) */}
+        {hasMultiple && (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '8px 6px 6px', gap: '4px' }}>
+            <button onClick={(e) => { e.stopPropagation(); goPrevLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
+              style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
+            >‹</button>
+            <div ref={thumbStripRef} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
+              style={{ display: 'flex', gap: '3px', overflowX: 'auto', flex: 1, scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+            >
+              {allPhotos.map((url, idx) => {
+                const isActive = idx === currentPhotoIndex;
+                return (
+                  <div key={idx} data-active={isActive} onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(idx); setFullscreenImage(url); }}
+                    style={{ width: '64px', height: '64px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', border: isActive ? '2px solid white' : '2px solid transparent', opacity: isActive ? 1 : 0.4, cursor: 'pointer', transition: 'opacity 0.15s ease, border-color 0.15s ease' }}
+                  >
+                    <img src={url} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); goNextLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
+              style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
+            >›</button>
+          </div>
+        )}
 
-        <span style={{
-          color: 'white',
-          fontSize: '14px',
-          padding: '8px 12px',
-          background: 'rgba(0, 0, 0, 0.5)',
-          borderRadius: '20px',
-          backdropFilter: 'blur(4px)',
-          margin: '0 20px', // Add margin to prevent touching side buttons
-          flexShrink: 0
-        }}>
-          {currentPhotoIndex + 1}/{allTaskPhotos.length}
-        </span>
-
-        <button
-          onClick={goToNextPhoto}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            color: 'white',
-            cursor: 'pointer',
-            border: 'none',
-            backdropFilter: 'blur(4px)',
-            flexShrink: 0
-          }}
-        >
-          {'>'}
-        </button>
+        {/* Action buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: hasMultiple ? '4px 14px' : '12px 14px', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))' }}>
+          <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
+            style={{ flex: 1, height: '44px', fontSize: '14px', background: sending ? 'rgba(107,114,128,0.6)' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', border: sending ? '1px solid rgba(255,255,255,0.08)' : 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : '0 2px 8px rgba(37,99,235,0.25)' }}
+          >{sending ? '⏳' : '💬'} {t('taskDetail.sendToChat')}</button>
+        </div>
       </div>
     </div>
   );
