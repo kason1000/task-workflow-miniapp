@@ -1108,6 +1108,7 @@ function ImageViewer({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [disableTransition, setDisableTransition] = useState(false);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1153,12 +1154,14 @@ function ImageViewer({
     setScale(1);
     setPosition({ x: 0, y: 0 });
     setIsImageLoaded(false);
-    // Reset any inline styles left by gesture system so React takes over
+    // Snap to center instantly (no transition) so the new image doesn't slide in
+    setDisableTransition(true);
     if (imageRef.current) {
-      imageRef.current.style.transition = '';
-      imageRef.current.style.transform = '';
-      imageRef.current.style.opacity = '';
+      imageRef.current.style.transition = 'none';
+      imageRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
+      imageRef.current.style.opacity = '1';
     }
+    requestAnimationFrame(() => setDisableTransition(false));
   }, [imageUrl]);
 
   const applyTransform = () => {
@@ -1485,7 +1488,7 @@ function ImageViewer({
           transform: isVisible
             ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`
             : 'translate(-50%, calc(-50% + 20px)) scale(0.92)',
-          transition: scale === 1 ? 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+          transition: disableTransition ? 'none' : 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           transformOrigin: 'center center',
           objectFit: 'contain', touchAction: 'none', pointerEvents: 'none',
         }}
