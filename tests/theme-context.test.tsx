@@ -27,9 +27,9 @@ describe('ThemeContext', () => {
     expect(screen.getByTestId('theme').textContent).toBe('classic');
   });
 
-  it('has 3 themes available', () => {
+  it('has 5 themes available', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('count').textContent).toBe('3');
+    expect(screen.getByTestId('count').textContent).toBe('5');
   });
 
   it('switches to noir theme', () => {

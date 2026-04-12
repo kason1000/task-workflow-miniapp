@@ -1,25 +1,39 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-export type ThemeId = 'classic' | 'noir' | 'aurora';
+export type ThemeId = 'classic' | 'noir' | 'aurora' | 'mosaic' | 'command';
+
+interface ThemeInfo {
+  id: ThemeId;
+  name: string;
+  description: string;
+  /** If true, this theme has its own layout components (not just CSS) */
+  hasCustomLayout: boolean;
+}
 
 interface ThemeContextValue {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
-  themes: { id: ThemeId; name: string; description: string }[];
+  themes: ThemeInfo[];
+  /** Whether current theme has a completely custom layout */
+  isCustomLayout: boolean;
 }
 
 const STORAGE_KEY = 'app_theme';
 
-const THEMES: ThemeContextValue['themes'] = [
-  { id: 'classic', name: 'Classic', description: 'Original Telegram theme' },
-  { id: 'noir', name: 'Noir', description: 'Dark cinematic interface' },
-  { id: 'aurora', name: 'Aurora', description: 'Vibrant gradient experience' },
+const THEMES: ThemeInfo[] = [
+  { id: 'classic', name: 'Classic', description: 'Original Telegram theme', hasCustomLayout: false },
+  { id: 'noir', name: 'Noir', description: 'Dark cinematic interface', hasCustomLayout: false },
+  { id: 'aurora', name: 'Aurora', description: 'Vibrant gradient experience', hasCustomLayout: false },
+  { id: 'mosaic', name: 'Mosaic', description: 'Photo-first editorial gallery', hasCustomLayout: true },
+  { id: 'command', name: 'Command', description: 'Retro terminal dashboard', hasCustomLayout: true },
 ];
+
+const VALID_THEMES = THEMES.map(t => t.id);
 
 function readStoredTheme(): ThemeId {
   try {
     const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored === 'classic' || stored === 'noir' || stored === 'aurora') return stored;
+    if (stored && VALID_THEMES.includes(stored as ThemeId)) return stored as ThemeId;
   } catch {}
   return 'classic';
 }
@@ -34,15 +48,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try { sessionStorage.setItem(STORAGE_KEY, next); } catch {}
   }, []);
 
-  // Apply theme class to document root
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     return () => document.documentElement.removeAttribute('data-theme');
   }, [theme]);
 
+  const isCustomLayout = THEMES.find(t => t.id === theme)?.hasCustomLayout ?? false;
+
   const value = useMemo<ThemeContextValue>(() => ({
-    theme, setTheme, themes: THEMES,
-  }), [theme, setTheme]);
+    theme, setTheme, themes: THEMES, isCustomLayout,
+  }), [theme, setTheme, isCustomLayout]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

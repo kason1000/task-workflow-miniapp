@@ -9,6 +9,8 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import './index.css';
 import './themes/noir.css';
 import './themes/aurora.css';
+import './designs/mosaic/mosaic.css';
+import './designs/command/command.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

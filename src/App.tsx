@@ -17,6 +17,8 @@ import { useLocale } from './i18n/LocaleContext';
 import { hapticFeedback } from './utils/telegram';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { useTheme } from './contexts/ThemeContext';
+import { MosaicLayout } from './designs/mosaic/MosaicLayout';
+import { CommandLayout } from './designs/command/CommandLayout';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
 
@@ -357,7 +359,35 @@ function App() {
     );
   }
 
-  // Main app content
+  // Custom layout designs — completely different UI
+  if (theme === 'mosaic' || theme === 'command') {
+    const LayoutComponent = theme === 'mosaic' ? MosaicLayout : CommandLayout;
+    return (
+      <>
+        <LayoutComponent
+          view={view}
+          role={role}
+          user={user}
+          appVersion={appVersion}
+          groups={groups}
+          selectedGroupId={selectedGroupId}
+          selectedTask={selectedTask}
+          refreshKey={refreshKey}
+          onTaskClick={handleTaskClick}
+          onBack={handleBackToList}
+          onTaskUpdated={handleTaskUpdated}
+          onGroupsClick={handleGroupsClick}
+          onLogout={handleLogout}
+          onThemeClick={() => setShowThemeSwitcher(true)}
+        />
+        {showThemeSwitcher && (
+          <ThemeSwitcher onClose={() => setShowThemeSwitcher(false)} />
+        )}
+      </>
+    );
+  }
+
+  // Classic app content (classic, noir, aurora CSS themes)
   return (
     <div className="container">
       {/* Fixed Header */}

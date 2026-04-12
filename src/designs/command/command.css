@@ -1,0 +1,686 @@
+/* Command Theme — Retro Terminal Meets Modern Dashboard */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap');
+
+/* ===== Color Palette ===== */
+[data-theme="command"] {
+  --cmd-bg: #080808;
+  --cmd-surface: #0a1a0a;
+  --cmd-border: #1a2f1a;
+  --cmd-green: #39ff14;
+  --cmd-green-muted: #14a314;
+  --cmd-green-dim: #0d6b0d;
+  --cmd-amber: #ffb700;
+  --cmd-red: #ff3333;
+  --cmd-text: #14a314;
+  --cmd-text-dim: #0a5a0a;
+  --cmd-glow: 0 0 4px rgba(57, 255, 20, 0.3);
+  --cmd-glow-strong: 0 0 8px rgba(57, 255, 20, 0.5);
+
+  /* Override Telegram theme variables */
+  --tg-theme-bg-color: #080808;
+  --tg-theme-text-color: #14a314;
+  --tg-theme-hint-color: #0d6b0d;
+  --tg-theme-button-color: #39ff14;
+  --tg-theme-button-text-color: #080808;
+  --tg-theme-secondary-bg-color: #0a1a0a;
+}
+
+/* ===== Global Styles ===== */
+[data-theme="command"] body,
+[data-theme="command"] .container {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace !important;
+  background: var(--cmd-bg) !important;
+  color: var(--cmd-text) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="command"] * {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace !important;
+}
+
+/* ===== CRT Scan-line Overlay ===== */
+[data-theme="command"] .container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* Subtle screen flicker */
+@keyframes cmd-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.985; }
+  75% { opacity: 0.995; }
+}
+
+[data-theme="command"] .container {
+  animation: cmd-flicker 4s infinite;
+}
+
+/* ===== Cursor Blink ===== */
+@keyframes cmd-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+[data-theme="command"] .cmd-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1.1em;
+  background: var(--cmd-green);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cmd-cursor-blink 1s step-end infinite;
+  box-shadow: var(--cmd-glow);
+}
+
+/* ===== Typewriter Stagger Animation ===== */
+@keyframes cmd-type-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+[data-theme="command"] .cmd-row-animate {
+  animation: cmd-type-in 0.15s ease-out both;
+}
+
+/* ===== Header ===== */
+[data-theme="command"] .cmd-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--cmd-bg);
+  border-bottom: 1px solid var(--cmd-border);
+  font-size: 12px;
+  line-height: 32px;
+  background-image: radial-gradient(circle, rgba(57, 255, 20, 0.02) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+[data-theme="command"] .cmd-header .cmd-prompt {
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="command"] .cmd-header .cmd-prompt-user {
+  color: var(--cmd-amber);
+  text-shadow: 0 0 4px rgba(255, 183, 0, 0.3);
+}
+
+[data-theme="command"] .cmd-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+[data-theme="command"] .cmd-role-badge {
+  color: var(--cmd-amber);
+  font-size: 11px;
+  text-shadow: 0 0 4px rgba(255, 183, 0, 0.3);
+}
+
+[data-theme="command"] .cmd-tab-btn {
+  background: transparent;
+  border: 1px solid var(--cmd-border);
+  color: var(--cmd-green-muted);
+  font-size: 10px;
+  padding: 1px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+[data-theme="command"] .cmd-tab-btn:hover,
+[data-theme="command"] .cmd-tab-btn.active {
+  color: var(--cmd-green);
+  border-color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+}
+
+[data-theme="command"] .cmd-theme-btn {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  min-width: auto;
+}
+
+[data-theme="command"] .cmd-theme-btn:hover {
+  opacity: 1;
+}
+
+/* ===== Content Area ===== */
+[data-theme="command"] .cmd-content {
+  padding-top: 36px;
+  min-height: 100vh;
+  background: var(--cmd-bg);
+}
+
+/* ===== Task Table ===== */
+[data-theme="command"] .cmd-table-header {
+  display: grid;
+  grid-template-columns: 36px 54px 52px 1fr 64px 64px 68px;
+  gap: 4px;
+  padding: 6px 8px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cmd-green-dim);
+  border-bottom: 1px solid var(--cmd-border);
+  position: sticky;
+  top: 32px;
+  background: var(--cmd-bg);
+  z-index: 10;
+}
+
+[data-theme="command"] .cmd-table-separator {
+  border: none;
+  border-top: 1px solid var(--cmd-border);
+  margin: 0;
+}
+
+[data-theme="command"] .cmd-task-row {
+  display: grid;
+  grid-template-columns: 36px 54px 52px 1fr 64px 64px 68px;
+  gap: 4px;
+  padding: 5px 8px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--cmd-border);
+  cursor: pointer;
+  transition: background 0.1s;
+  align-items: center;
+  position: relative;
+  color: var(--cmd-text);
+}
+
+[data-theme="command"] .cmd-task-row:hover {
+  background: rgba(57, 255, 20, 0.04);
+}
+
+[data-theme="command"] .cmd-task-row:hover::before {
+  content: '>';
+  position: absolute;
+  left: 2px;
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+  font-weight: bold;
+}
+
+[data-theme="command"] .cmd-task-row .cmd-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  object-fit: cover;
+  filter: grayscale(70%) brightness(0.8) contrast(1.2);
+  border: 1px solid var(--cmd-border);
+  transition: filter 0.2s;
+}
+
+[data-theme="command"] .cmd-task-row:hover .cmd-thumb {
+  filter: grayscale(30%) brightness(1) contrast(1.1);
+}
+
+[data-theme="command"] .cmd-thumb-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--cmd-surface);
+  border: 1px solid var(--cmd-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--cmd-green-dim);
+}
+
+[data-theme="command"] .cmd-task-id {
+  color: var(--cmd-green-dim);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="command"] .cmd-task-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cmd-text);
+}
+
+[data-theme="command"] .cmd-task-group {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  color: var(--cmd-green-dim);
+}
+
+[data-theme="command"] .cmd-task-date {
+  font-size: 9px;
+  color: var(--cmd-green-dim);
+  white-space: nowrap;
+}
+
+/* ===== Status Badges (Bracketed) ===== */
+[data-theme="command"] .cmd-status {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+[data-theme="command"] .cmd-status-new {
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+}
+
+[data-theme="command"] .cmd-status-received {
+  color: #4fc3f7;
+  text-shadow: 0 0 4px rgba(79, 195, 247, 0.3);
+}
+
+[data-theme="command"] .cmd-status-submitted {
+  color: var(--cmd-amber);
+  text-shadow: 0 0 4px rgba(255, 183, 0, 0.3);
+}
+
+[data-theme="command"] .cmd-status-redo {
+  color: var(--cmd-red);
+  text-shadow: 0 0 4px rgba(255, 51, 51, 0.3);
+}
+
+[data-theme="command"] .cmd-status-completed {
+  color: #66bb6a;
+  text-shadow: 0 0 4px rgba(102, 187, 106, 0.3);
+}
+
+[data-theme="command"] .cmd-status-archived {
+  color: #616161;
+}
+
+/* ===== ASCII Progress Bar ===== */
+[data-theme="command"] .cmd-progress {
+  font-size: 9px;
+  color: var(--cmd-green-muted);
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+/* ===== Filter Controls ===== */
+[data-theme="command"] .cmd-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--cmd-border);
+  flex-wrap: wrap;
+}
+
+[data-theme="command"] .cmd-filter-label {
+  font-size: 9px;
+  color: var(--cmd-green-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 4px;
+}
+
+[data-theme="command"] .cmd-filter-btn {
+  background: transparent;
+  border: 1px solid var(--cmd-border);
+  color: var(--cmd-green-dim);
+  font-size: 9px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+[data-theme="command"] .cmd-filter-btn:hover {
+  border-color: var(--cmd-green-muted);
+  color: var(--cmd-green-muted);
+}
+
+[data-theme="command"] .cmd-filter-btn.active {
+  border-color: var(--cmd-green);
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+  background: rgba(57, 255, 20, 0.06);
+}
+
+/* ===== End-of-list & Load More ===== */
+[data-theme="command"] .cmd-end-line {
+  text-align: center;
+  padding: 12px 8px;
+  font-size: 10px;
+  color: var(--cmd-green-dim);
+  letter-spacing: 0.05em;
+}
+
+[data-theme="command"] .cmd-load-more {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--cmd-border);
+  color: var(--cmd-green-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+[data-theme="command"] .cmd-load-more:hover {
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+}
+
+/* ===== Detail View ===== */
+[data-theme="command"] .cmd-detail {
+  padding: 8px;
+}
+
+[data-theme="command"] .cmd-detail-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cmd-border);
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+[data-theme="command"] .cmd-detail-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 4px;
+  padding: 3px 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+[data-theme="command"] .cmd-detail-key {
+  color: var(--cmd-green-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+}
+
+[data-theme="command"] .cmd-detail-value {
+  color: var(--cmd-text);
+  word-break: break-word;
+}
+
+/* ===== Photo Grid (Detail) ===== */
+[data-theme="command"] .cmd-photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+[data-theme="command"] .cmd-photo-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 2px;
+  filter: grayscale(60%) brightness(0.85) contrast(1.1);
+  border: 1px solid var(--cmd-border);
+  cursor: pointer;
+  transition: filter 0.2s, border-color 0.2s;
+}
+
+[data-theme="command"] .cmd-photo-thumb:hover {
+  filter: grayscale(0%) brightness(1) contrast(1);
+  border-color: var(--cmd-green);
+}
+
+/* ===== Action Buttons (Command-Style) ===== */
+[data-theme="command"] .cmd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid var(--cmd-border);
+  margin-top: 8px;
+}
+
+[data-theme="command"] .cmd-action-btn {
+  background: transparent;
+  border: 1px solid var(--cmd-green-muted);
+  color: var(--cmd-green-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+[data-theme="command"] .cmd-action-btn:hover {
+  border-color: var(--cmd-green);
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+  background: rgba(57, 255, 20, 0.06);
+}
+
+[data-theme="command"] .cmd-action-btn.cmd-action-danger {
+  border-color: var(--cmd-red);
+  color: var(--cmd-red);
+}
+
+[data-theme="command"] .cmd-action-btn.cmd-action-danger:hover {
+  background: rgba(255, 51, 51, 0.08);
+  text-shadow: 0 0 4px rgba(255, 51, 51, 0.3);
+}
+
+[data-theme="command"] .cmd-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+[data-theme="command"] .cmd-back-btn {
+  background: transparent;
+  border: none;
+  color: var(--cmd-green-muted);
+  font-size: 11px;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: color 0.15s;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+[data-theme="command"] .cmd-back-btn:hover {
+  color: var(--cmd-green);
+  text-shadow: var(--cmd-glow);
+}
+
+/* ===== Scrollbar ===== */
+[data-theme="command"] ::-webkit-scrollbar {
+  width: 2px;
+}
+
+[data-theme="command"] ::-webkit-scrollbar-track {
+  background: var(--cmd-bg);
+}
+
+[data-theme="command"] ::-webkit-scrollbar-thumb {
+  background: var(--cmd-green-dim);
+  border-radius: 1px;
+}
+
+[data-theme="command"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--cmd-green-muted);
+}
+
+/* ===== Selection ===== */
+[data-theme="command"] ::selection {
+  background: rgba(57, 255, 20, 0.25);
+  color: var(--cmd-green);
+}
+
+/* ===== Input Fields ===== */
+[data-theme="command"] input[type="text"],
+[data-theme="command"] input[type="search"],
+[data-theme="command"] textarea {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--cmd-border) !important;
+  border-radius: 0 !important;
+  color: var(--cmd-green) !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  padding-left: 12px !important;
+  caret-color: var(--cmd-green);
+}
+
+[data-theme="command"] input[type="text"]::placeholder,
+[data-theme="command"] input[type="search"]::placeholder,
+[data-theme="command"] textarea::placeholder {
+  color: var(--cmd-green-dim) !important;
+}
+
+[data-theme="command"] input[type="text"]:focus,
+[data-theme="command"] input[type="search"]:focus,
+[data-theme="command"] textarea:focus {
+  border-bottom-color: var(--cmd-green) !important;
+  outline: none !important;
+  box-shadow: 0 1px 0 0 var(--cmd-green) !important;
+}
+
+/* ===== Cards override — remove card styling ===== */
+[data-theme="command"] .card {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid var(--cmd-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 8px !important;
+}
+
+/* ===== Badge overrides ===== */
+[data-theme="command"] .badge {
+  background: transparent !important;
+  border: 1px solid var(--cmd-green-dim) !important;
+  color: var(--cmd-green-muted) !important;
+  border-radius: 0 !important;
+  font-size: 9px !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+/* ===== Loading state ===== */
+[data-theme="command"] .cmd-loading {
+  color: var(--cmd-green-muted);
+  font-size: 11px;
+  padding: 20px 8px;
+  text-align: center;
+}
+
+@keyframes cmd-loading-dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+[data-theme="command"] .cmd-loading::after {
+  content: '...';
+  animation: cmd-loading-dots 1.2s step-end infinite;
+}
+
+/* ===== Error state ===== */
+[data-theme="command"] .cmd-error {
+  color: var(--cmd-red);
+  font-size: 11px;
+  padding: 12px 8px;
+  border: 1px solid var(--cmd-red);
+  background: rgba(255, 51, 51, 0.05);
+}
+
+/* ===== Empty state ===== */
+[data-theme="command"] .cmd-empty {
+  color: var(--cmd-green-dim);
+  font-size: 11px;
+  padding: 24px 8px;
+  text-align: center;
+}
+
+/* ===== Fullscreen Image Overlay ===== */
+[data-theme="command"] .cmd-fullscreen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+[data-theme="command"] .cmd-fullscreen-overlay img {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  filter: none;
+  border: 1px solid var(--cmd-border);
+}
+
+/* ===== Set Section in Detail ===== */
+[data-theme="command"] .cmd-set-section {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cmd-border);
+}
+
+[data-theme="command"] .cmd-set-title {
+  font-size: 10px;
+  color: var(--cmd-green-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+/* ===== Video indicator ===== */
+[data-theme="command"] .cmd-video-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 8px;
+  color: var(--cmd-green);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0 3px;
+  border-radius: 1px;
+}
