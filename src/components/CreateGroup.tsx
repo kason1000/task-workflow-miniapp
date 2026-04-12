@@ -176,6 +176,7 @@ export function CreateGroup({ onBack, onGroupCreated }: CreateGroupProps) {
                       type="button"
                       onClick={() => handleRemoveLead(userId)}
                       disabled={loading}
+                      aria-label="Close"
                       style={{
                         background: 'transparent',
                         color: '#ef4444',

@@ -6,6 +6,7 @@ import { Share2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
+import { ThumbnailStrip } from './ThumbnailStrip';
 
 interface GalleryOverlayProps {
   isOpen: boolean;
@@ -466,6 +467,11 @@ export function GalleryOverlay({
   return createPortal(
     <div
       className={`gallery-overlay ${isExiting ? 'gallery-overlay-exit-active' : 'gallery-overlay-enter-active'}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('gallery.setHeader', { current: currentSetIndex + 1, total: task.sets.length })}
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
+      tabIndex={-1}
       style={{
         position: 'fixed',
         top: 0,
@@ -491,6 +497,7 @@ export function GalleryOverlay({
       }}>
         <button
           onClick={handleClose}
+          aria-label="Close"
           style={{
             width: '36px',
             height: '36px',
@@ -541,6 +548,7 @@ export function GalleryOverlay({
                 handlePreviousMedia();
               }}
               disabled={isNavigating}
+              aria-label="Previous"
               style={{
                 position: 'absolute',
                 left: '12px',
@@ -565,7 +573,7 @@ export function GalleryOverlay({
             >
               <ChevronLeft size={36} strokeWidth={2} />
             </button>
-            
+
             <button
               onTouchStart={(e) => {
                 e.stopPropagation();
@@ -576,6 +584,7 @@ export function GalleryOverlay({
                 handleNextMedia();
               }}
               disabled={isNavigating}
+              aria-label="Next"
               style={{
                 position: 'absolute',
                 right: '12px',
@@ -736,6 +745,7 @@ export function GalleryOverlay({
                 }
                 hapticFeedback.light();
               }}
+              aria-label="Previous"
               style={{
                 position: 'absolute',
                 left: '8px',
@@ -779,6 +789,7 @@ export function GalleryOverlay({
                 }
                 hapticFeedback.light();
               }}
+              aria-label="Next"
               style={{
                 position: 'absolute',
                 right: '8px',
@@ -807,102 +818,17 @@ export function GalleryOverlay({
         )}
 
         {/* Thumbnail container */}
-        <div
-          ref={thumbnailContainerRef}
-          onTouchStart={handleThumbTouchStart}
-          onTouchMove={handleThumbTouchMove}
-          onTouchEnd={handleThumbTouchEnd}
-          style={{
-            overflowX: 'scroll',
-            overflowY: 'hidden',
-            padding: '12px 52px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            justifyContent: currentSetMedia.length <= 4 ? 'center' : 'flex-start',
-            minWidth: currentSetMedia.length > 4 ? 'max-content' : 'auto'
-          }}>
-            {currentSetMedia.map((media, idx) => {
-              const isActive = idx === currentMediaIndex;
-              const thumbnailUrl = mediaCache[media.fileId];
-              
-              return (
-                <div
-                  key={`${media.fileId}-${idx}`}
-                  onClick={() => {
-                    if (!isNavigating) {
-                      setCurrentMediaIndex(idx);
-                      hapticFeedback.light();
-                    }
-                  }}
-                  style={{
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '6px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    border: isActive
-                      ? '3px solid var(--tg-theme-button-color)'
-                      : '2px solid rgba(255,255,255,0.2)',
-                    flexShrink: 0,
-                    background: '#222',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'all 0.2s ease-out'
-                  }}
-                >
-                  {thumbnailUrl ? (
-                    <>
-                      <img
-                        src={thumbnailUrl}
-                        alt=""
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          pointerEvents: 'none',
-                          userSelect: 'none'
-                        }}
-                        draggable={false}
-                      />
-                      {media.type === 'video' && (
-                        <div style={{
-                          position: 'absolute',
-                          background: 'rgba(0,0,0,0.6)',
-                          borderRadius: '50%',
-                          width: '20px',
-                          height: '20px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '10px'
-                        }}>
-                          ▶️
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="skeleton-thumb" style={{
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #222 25%, #333 50%, #222 75%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'shimmer 1.5s infinite'
-                    }} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <ThumbnailStrip
+          currentSetMedia={currentSetMedia}
+          currentMediaIndex={currentMediaIndex}
+          mediaCache={mediaCache}
+          isNavigating={isNavigating}
+          onMediaSelect={(idx) => setCurrentMediaIndex(idx)}
+          onThumbTouchStart={handleThumbTouchStart}
+          onThumbTouchMove={handleThumbTouchMove}
+          onThumbTouchEnd={handleThumbTouchEnd}
+          thumbnailContainerRef={thumbnailContainerRef}
+        />
 
         {/* Set Dots */}
         {task.sets.length > 1 && (

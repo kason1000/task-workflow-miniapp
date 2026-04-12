@@ -145,7 +145,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   }
 
   const isAdmin = userRole === 'Admin';
-  const isGroupLead = group.leadUserIds.some(id => id.toString() === localStorage.getItem('userId'));
+  const isGroupLead = group.leadUserIds.some(id => id.toString() === sessionStorage.getItem('user_id'));
   const canManage = isAdmin || isGroupLead;
 
   return (
@@ -400,6 +400,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                   <button
                     onClick={() => handleRemoveMember(member.userId)}
                     disabled={actionLoading}
+                    aria-label="Remove member"
                     style={{
                       background: 'transparent',
                       color: '#ef4444',

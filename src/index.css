@@ -40,6 +40,16 @@ button {
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .container {
@@ -73,25 +83,69 @@ button {
   }
 }
 
-/* Update badge styles to be boxed buttons */
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: var(--tg-theme-button-color);
-  color: var(--tg-theme-button-text-color);
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  transition: opacity 0.2s;
-}
+/* ========================================
+   Utility Classes
+   ======================================== */
 
-button:hover:not(:disabled) {
-  opacity: 0.9;
-}
+/* Layout */
+.flex-row { display: flex; flex-direction: row; align-items: center; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* Gap */
+.gap-xs { gap: 4px; }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 12px; }
+.gap-lg { gap: 16px; }
+
+/* Text */
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 13px; }
+.text-md { font-size: 14px; }
+.text-lg { font-size: 16px; }
+.text-muted { color: var(--tg-theme-hint-color); }
+.text-center { text-align: center; }
+.text-bold { font-weight: 600; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Spacing / Padding */
+.p-sm { padding: 8px; }
+.p-md { padding: 12px; }
+.p-lg { padding: 16px; }
+.px-sm { padding-left: 8px; padding-right: 8px; }
+.px-md { padding-left: 12px; padding-right: 12px; }
+.py-sm { padding-top: 8px; padding-bottom: 8px; }
+.mb-sm { margin-bottom: 8px; }
+.mb-md { margin-bottom: 12px; }
+
+/* Visual */
+.rounded-sm { border-radius: 4px; }
+.rounded-md { border-radius: 8px; }
+.rounded-lg { border-radius: 12px; }
+.rounded-full { border-radius: 50%; }
+.bg-secondary { background: var(--tg-theme-secondary-bg-color); }
+.border-light { border: 1px solid rgba(0,0,0,0.1); }
+
+/* Button variants */
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-ghost { background: transparent; color: var(--tg-theme-text-color); border: 1px solid rgba(0,0,0,0.15); }
+.btn-danger { background: #ef4444; color: white; }
+.btn-success { background: #10b981; color: white; }
+
+/* Status badges */
+.badge-new { background: #3b82f6; color: white; }
+.badge-received { background: #f59e0b; color: white; }
+.badge-submitted { background: #8b5cf6; color: white; }
+.badge-redo { background: #ef4444; color: white; }
+.badge-completed { background: #10b981; color: white; }
+.badge-archived { background: #6b7280; color: white; }
+
+/* Overlay / Viewer */
+.viewer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; }
+.viewer-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: white; font-size: 24px; padding: 8px; z-index: 10000; cursor: pointer; }
+
+/* Width */
+.w-full { width: 100%; }

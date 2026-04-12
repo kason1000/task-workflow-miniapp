@@ -78,6 +78,7 @@ export function PhotoUpload({ photos, onPhotosChange, required, disabled }: Phot
               <button
                 onClick={() => handleRemovePhoto(index)}
                 disabled={disabled}
+                aria-label="Close"
                 style={{
                   background: 'transparent',
                   color: '#ef4444',

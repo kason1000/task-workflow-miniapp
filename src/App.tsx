@@ -379,6 +379,7 @@ function App() {
             {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
               <button
                 onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
+                aria-label={showHamburgerMenu ? 'Close menu' : 'Open menu'}
                 style={{
                   padding: '6px 10px',
                   background: 'var(--tg-theme-secondary-bg-color)',

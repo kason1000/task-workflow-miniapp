@@ -76,6 +76,7 @@ export function VideoUpload({ video, onVideoChange, required, disabled }: VideoU
           <button
             onClick={handleRemoveVideo}
             disabled={disabled}
+            aria-label="Close"
             style={{
               background: 'transparent',
               color: '#ef4444',

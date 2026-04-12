@@ -313,3 +313,17 @@ class ApiService {
 }
 
 export const api = new ApiService();
+
+/** Revoke a single blob URL to free memory. Safe to call on non-blob URLs (no-op). */
+export function revokeMediaUrl(url: string): void {
+  if (url && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Revoke all blob URLs in a record/map of cached media. */
+export function revokeAllMediaUrls(cache: Record<string, string>): void {
+  for (const url of Object.values(cache)) {
+    revokeMediaUrl(url);
+  }
+}

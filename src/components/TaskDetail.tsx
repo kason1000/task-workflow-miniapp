@@ -1,28 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../types';
-import { api } from '../services/api';
+import { api, revokeAllMediaUrls } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
-
-// Helper function to get group color (use configured color if available, otherwise generate)
-const getGroupColor = (groupId: string, configuredColor?: string) => {
-  if (configuredColor) {
-    return configuredColor;
-  }
-  
-  // Simple hash function to generate consistent colors for group IDs
-  let hash = 0;
-  for (let i = 0; i < groupId.length; i++) {
-    hash = groupId.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  // Generate hue based on hash to ensure different groups have different colors
-  const hue = hash % 360;
-  // Use a consistent saturation and lightness to maintain readability
-  return `hsl(${hue}, 70%, 50%)`;
-};
+import { statusColors, getGroupColor } from '../utils/taskStyles';
+import { MediaGrid } from './MediaGrid';
+import { TaskActionBar } from './TaskActionBar';
 
 interface TaskDetailProps {
   task: Task;
@@ -31,14 +16,7 @@ interface TaskDetailProps {
   onTaskUpdated: () => void;
 }
 
-const statusColors: Record<TaskStatus, string> = {
-  New: 'badge-new',
-  Received: 'badge-received',
-  Submitted: 'badge-submitted',
-  Redo: 'badge-redo',
-  Completed: 'badge-completed',
-  Archived: 'badge-archived',
-};
+// statusColors is now imported from ../utils/taskStyles
 
 async function downloadFiles(
   fileSpecs: Array<{ fileId: string; fileName: string; mimeType: string }>
@@ -60,6 +38,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
   const cachedShareRef = useRef<{ files: File[]; title: string } | null>(null);
+
+  // Revoke blob URLs on unmount to prevent memory leaks
+  const mediaCacheRef = useRef(mediaCache);
+  mediaCacheRef.current = mediaCache;
+  useEffect(() => {
+    return () => revokeAllMediaUrls(mediaCacheRef.current);
+  }, []);
 
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -902,330 +887,35 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         )}
 
         {/* Sets Display */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          paddingBottom: '8px'
-        }}>
-          {Array.from({ length: task.requireSets }).map((_, setIndex) => {
-            const set = task.sets[setIndex] || { photos: [], video: undefined };
-            const photoCount = set.photos?.length || 0;
-            const hasVideo = !!set.video;
-            const fileCount = photoCount + (hasVideo ? 1 : 0);
-
-            const allSetMedia: Array<{
-              type: 'photo' | 'video';
-              fileId: string;
-              photoIndex?: number;
-              mediaIndex: number;
-            }> = [];
-
-            // Photos come first
-            set.photos?.forEach((photo, idx) => {
-              allSetMedia.push({
-                type: 'photo',
-                fileId: photo.file_id,
-                photoIndex: idx,
-                mediaIndex: idx
-              });
-            });
-
-            // Video comes after photos
-            if (set.video) {
-              allSetMedia.push({
-                type: 'video',
-                fileId: set.video.file_id,
-                mediaIndex: photoCount
-              });
-            }
-
-            return (
-              <div
-                key={setIndex}
-                style={{
-                  background: 'var(--tg-theme-bg-color)',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  border: '1px solid var(--tg-theme-secondary-bg-color)'
-                }}
-              >
-                {/* Set Header */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px'
-                }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600' }}>
-                    {t('taskDetail.set', { index: setIndex + 1 })}
-                  </div>
-
-                  {fileCount > 0 && !selectionMode && (
-                    <button
-                      onClick={() => shareSetDirect(setIndex)}
-                      disabled={loading}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '12px',
-                        background: 'var(--tg-theme-button-color)',
-                        color: 'var(--tg-theme-button-text-color)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      📤 {fileCount}
-                    </button>
-                  )}
-                </div>
-
-                {/* Media Row */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {allSetMedia.length === 0 ? (
-                    <div style={{
-                      width: '80px',
-                      height: '80px',
-                      background: 'var(--tg-theme-secondary-bg-color)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      border: '2px dashed var(--tg-theme-hint-color)'
-                    }}>
-                      📷
-                    </div>
-                  ) : (
-                    allSetMedia.map((media) => {
-                      const imageUrl = mediaCache[media.fileId];
-                      const isCreatedPhoto = media.fileId === task.createdPhoto?.file_id;
-                      const canDelete = !isCreatedPhoto && canDeleteMedia;
-                      const isSelected = selectedMedia.has(media.fileId);
-
-                      return (
-                        <div
-                          key={media.fileId}
-                          style={{
-                            width: '80px',
-                            height: '80px',
-                            minWidth: '80px',
-                            position: 'relative',
-                            flexShrink: 0
-                          }}
-                        >
-                          <div
-                            onClick={() => {
-                              hapticFeedback.light();
-                              if (selectionMode) {
-                                if (canDelete) {
-                                  toggleMediaSelection(media.fileId);
-                                }
-                              } else {
-                                handleMediaClick(setIndex, media.mediaIndex);
-                              }
-                            }}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              background: imageUrl
-                                ? `url(${imageUrl}) center/cover`
-                                : 'var(--tg-theme-secondary-bg-color)',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '28px',
-                              border: selectionMode && isSelected
-                                ? '3px solid #ef4444'
-                                : '2px solid var(--tg-theme-button-color)',
-                              overflow: 'hidden',
-                              opacity: selectionMode && !canDelete ? 0.5 : 1
-                            }}
-                          >
-                            {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
-
-                            {media.type === 'video' && imageUrl && (
-                              <div style={{
-                                position: 'absolute',
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '50%',
-                                background: 'rgba(255,255,255,0.95)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '11px'
-                              }}>
-                                ▶️
-                              </div>
-                            )}
-
-                            {media.type === 'photo' && imageUrl && !selectionMode && (
-                              <div style={{
-                                position: 'absolute',
-                                bottom: '4px',
-                                right: '4px',
-                                background: 'rgba(0,0,0,0.6)',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontWeight: 600
-                              }}>
-                                {(media.photoIndex ?? 0) + 1}
-                              </div>
-                            )}
-
-                            {selectionMode && canDelete && (
-                              <div style={{
-                                position: 'absolute',
-                                top: '4px',
-                                right: '4px',
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                background: isSelected ? '#ef4444' : 'rgba(0,0,0,0.6)',
-                                border: '2px solid white',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '14px'
-                              }}>
-                                {isSelected && '✓'}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <MediaGrid
+          task={task}
+          mediaCache={mediaCache}
+          loadingMedia={loadingMedia}
+          selectionMode={selectionMode}
+          selectedMedia={selectedMedia}
+          canDeleteMedia={canDeleteMedia}
+          onMediaClick={handleMediaClick}
+          onToggleMediaSelection={toggleMediaSelection}
+          onShareSetDirect={shareSetDirect}
+          loading={loading}
+          t={t}
+        />
       </div>
 
       {/* Fixed Action Buttons */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'var(--tg-theme-bg-color)',
-        borderTop: '1px solid var(--tg-theme-secondary-bg-color)',
-        padding: '12px 16px',
-        zIndex: 50,
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{
-          maxWidth: '600px',
-          margin: '0 auto',
-          display: 'flex',
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}>
-          {/* Primary Action: Send to Chat */}
-          <button
-            onClick={handleSendToChat}
-            disabled={loading}
-            style={{
-              flex: '1 1 100%',
-              background: 'var(--tg-theme-button-color)',
-              color: 'var(--tg-theme-button-text-color)',
-              fontWeight: '600',
-              padding: '12px',
-              fontSize: '15px'
-            }}
-          >
-            {t('taskDetail.sendToChat')}
-          </button>
+      <TaskActionBar
+        task={task}
+        userRole={userRole}
+        loading={loading}
+        canTransition={canTransition}
+        onTransition={handleTransition}
+        onArchive={handleArchive}
+        onRestore={handleRestore}
+        onDelete={handleDelete}
+        onSendToChat={handleSendToChat}
+        t={t}
+      />
 
-          {task.status === 'New' && canTransition('Received') && (
-            <button
-              onClick={() => handleTransition('Received')}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)' }}
-            >
-              {t('taskDetail.receive')}
-            </button>
-          )}
-
-          {task.status === 'Received' && canTransition('New') && (
-            <button
-              onClick={() => handleTransition('New')}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
-            >
-              {t('taskDetail.moveToNew')}
-            </button>
-          )}
-
-          {(task.status === 'Received' || task.status === 'Redo') && canTransition('Submitted') && (
-            <button
-              onClick={() => handleTransition('Submitted')}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
-            >
-              {t('taskDetail.submit')}
-            </button>
-          )}
-
-          {task.status === 'Submitted' && canTransition('Redo') && (
-            <button
-              onClick={() => handleTransition('Redo')}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
-            >
-              {t('taskDetail.redo')}
-            </button>
-          )}
-
-          {task.status === 'Submitted' && canTransition('Completed') && (
-            <button
-              onClick={() => handleTransition('Completed')}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
-            >
-              {t('taskDetail.complete')}
-            </button>
-          )}
-
-          {!isArchived && (task.status === 'Submitted' || task.status === 'Completed') &&
-            ['Lead', 'Admin'].includes(userRole) && (
-              <button
-                onClick={handleArchive}
-                disabled={loading}
-                style={{ flex: '1 1 calc(50% - 4px)', background: '#6b7280' }}
-              >
-                {t('taskDetail.archive')}
-              </button>
-            )
-          }
-
-          {isArchived && userRole === 'Admin' && (
-            <button
-              onClick={handleRestore}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#3b82f6' }}
-            >
-              {t('taskDetail.restore')}
-            </button>
-          )}
-
-          {userRole === 'Admin' && (
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#ef4444', fontSize: '13px' }}
-            >
-              {t('taskDetail.delete')}
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* Fullscreen Image Viewer */}
       {fullscreenImage && viewerMode && (
@@ -1481,7 +1171,7 @@ function DetailImageViewer({
 
 
   return (
-    <div ref={containerRef} style={{
+    <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Image viewer" onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }} tabIndex={-1} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: isVisible ? 'rgba(0,0,0,0.97)' : 'rgba(0,0,0,0)',
       zIndex: 9999, transition: 'background 0.3s ease',
@@ -1502,6 +1192,7 @@ function DetailImageViewer({
         )}
         {!hasMultiple && <span />}
         <div onClick={(e) => { e.stopPropagation(); onClose(); }} onTouchEnd={(e) => e.stopPropagation()}
+          role="button" aria-label="Close" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); } }}
           style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', padding: 0 }}
         >✕</div>
       </div>
@@ -1601,7 +1292,7 @@ function DetailImageViewer({
             {/* Thumbnail row (media mode only) */}
             {hasMultiple && (
               <div style={{ display: 'flex', alignItems: 'center', padding: '2px 6px 6px', gap: '4px' }}>
-                <button onClick={(e) => { e.stopPropagation(); goPrevLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
+                <button onClick={(e) => { e.stopPropagation(); goPrevLocal(); }} onTouchEnd={(e) => e.stopPropagation()} aria-label="Previous"
                   style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
                 >‹</button>
                 <div ref={thumbStripRef} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
@@ -1623,7 +1314,7 @@ function DetailImageViewer({
                     );
                   })}
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); goNextLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
+                <button onClick={(e) => { e.stopPropagation(); goNextLocal(); }} onTouchEnd={(e) => e.stopPropagation()} aria-label="Next"
                   style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
                 >›</button>
               </div>

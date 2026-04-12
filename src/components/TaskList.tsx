@@ -1,18 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../types';
-import { api } from '../services/api';
+import { api, revokeAllMediaUrls } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
-
-const statusColors: Record<TaskStatus, string> = {
-  New: 'badge-new',
-  Received: 'badge-received',
-  Submitted: 'badge-submitted',
-  Redo: 'badge-redo',
-  Completed: 'badge-completed',
-  Archived: 'badge-archived',
-};
+import { statusColors, getGroupColor } from '../utils/taskStyles';
+import { TaskFilterBar } from './TaskFilterBar';
+import { TaskCard } from './TaskCard';
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
@@ -39,6 +33,13 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
   const [page, setPage] = useState(1);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [userRole, setUserRole] = useState<string>('Member');
+
+  // Revoke blob URLs on unmount to prevent memory leaks
+  const thumbnailsRef = useRef(thumbnails);
+  thumbnailsRef.current = thumbnails;
+  useEffect(() => {
+    return () => revokeAllMediaUrls(thumbnailsRef.current);
+  }, []);
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   
   const [groups, setGroups] = useState<Group[]>([]);
@@ -333,20 +334,6 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
     }
   };
 
-  const handleStatusFilter = (status?: TaskStatus | 'InProgress') => {
-    if (scrollContainerRef.current) {
-      scrollPositionRef.current = scrollContainerRef.current.scrollLeft;
-    }
-    
-    hapticFeedback.light();
-    setFilter(prev => ({ ...prev, status: (status || 'all') as any, showArchived: false }));
-  };
-
-  const handleArchiveToggle = () => {
-    hapticFeedback.light();
-    setFilter(prev => ({ ...prev, status: 'all', showArchived: !prev.showArchived, submittedMonth: undefined, doneBy: undefined }));
-  };
-
   const handleTaskClick = (task: Task) => {
     hapticFeedback.medium();
     onTaskClick(task);
@@ -458,172 +445,22 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
   const canSeeArchived = userRole === 'Admin' || userRole === 'Lead';
   const selectedGroup = groups.find(g => g.id === groupId);
 
-  // Generate month options for archive filter (last 6 months)
-  const getMonthOptions = () => {
-    const months: { value: string; label: string }[] = [];
-    const now = new Date();
-    for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
-      months.push({ value, label });
-    }
-    return months;
-  };
-
   return (
     <div>
       {/* Filter Bar */}
-      <div style={{
-        position: 'sticky',
-        top: '60px',
-        zIndex: 50,
-        background: 'var(--tg-theme-bg-color)',
-        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        padding: '8px 16px',
-        marginLeft: '-16px',
-        marginRight: '-16px',
-        marginBottom: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <div
-              ref={scrollContainerRef}
-              style={{
-                display: 'flex', gap: '6px', overflowX: 'auto', flex: 1,
-                scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch', paddingBottom: '4px'
-              }}
-            >
-              {filter.showArchived ? (
-                <>
-                  {/* Month filter for archive view */}
-                  <button
-                    onClick={() => { setFilter(prev => ({ ...prev, submittedMonth: undefined })); hapticFeedback.light(); }}
-                    style={{
-                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                      background: !filter.submittedMonth ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                      color: !filter.submittedMonth ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '8px'
-                    }}
-                  >All</button>
-                  {getMonthOptions().map(m => (
-                    <button
-                      key={m.value}
-                      onClick={() => { setFilter(prev => ({ ...prev, submittedMonth: m.value })); hapticFeedback.light(); }}
-                      style={{
-                        minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                        background: filter.submittedMonth === m.value ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                        color: filter.submittedMonth === m.value ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                        border: 'none', borderRadius: '8px'
-                      }}
-                    >{m.label}</button>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleStatusFilter()}
-                    style={{
-                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                      background: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                      color: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '8px'
-                    }}
-                  >{t('taskList.filterAll')}</button>
-
-                  {userRole === 'Viewer' && (
-                    <button
-                      onClick={() => handleStatusFilter('InProgress')}
-                      style={{
-                        minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                        background: filter.status === 'InProgress' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                        color: filter.status === 'InProgress' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                        border: 'none', borderRadius: '8px'
-                      }}
-                    >{t('taskList.filterInProgress')}</button>
-                  )}
-
-                  {statusOrder.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusFilter(status)}
-                      style={{
-                        minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                        background: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                        color: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                        border: 'none', borderRadius: '8px'
-                      }}
-                    >{t(`statusLabels.${status}`)}</button>
-                  ))}
-                </>
-              )}
-            </div>
-
-            {/* Compact action buttons */}
-            <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '6px', borderLeft: '1px solid var(--tg-theme-hint-color)' }}>
-              {canSeeArchived && (
-                <button
-                  onClick={handleArchiveToggle}
-                  style={{
-                    minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
-                    background: filter.showArchived ? 'var(--tg-theme-button-color)' : 'transparent',
-                    color: filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                    border: 'none', borderRadius: '6px', lineHeight: 1
-                  }}
-                  title={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
-                >🗃️</button>
-              )}
-              <button
-                onClick={handleRefresh}
-                style={{
-                  minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
-                  background: 'transparent', color: 'var(--tg-theme-text-color)',
-                  border: 'none', borderRadius: '6px', lineHeight: 1
-                }}
-                title={t('taskList.refreshTitle')}
-              >🔄</button>
-            </div>
-          </div>
-
-          {/* User filter row (archived view only) */}
-          {filter.showArchived && Object.keys(submitterCounts).length > 0 && (
-            <div style={{
-              display: 'flex', gap: '6px', overflowX: 'auto', marginTop: '6px',
-              scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch', paddingBottom: '2px'
-            }}>
-              <button
-                onClick={() => { setFilter(prev => ({ ...prev, doneBy: undefined })); hapticFeedback.light(); }}
-                style={{
-                  minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
-                  background: !filter.doneBy ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                  color: !filter.doneBy ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                  border: 'none', borderRadius: '6px'
-                }}
-              >👥 All</button>
-              {Object.entries(submitterCounts)
-                .sort(([,a], [,b]) => b - a)
-                .map(([userId, count]) => {
-                  const uid = parseInt(userId);
-                  const name = userNames[uid] || `User ${userId}`;
-                  const isActive = filter.doneBy === uid;
-                  return (
-                    <button
-                      key={userId}
-                      onClick={() => { setFilter(prev => ({ ...prev, doneBy: uid })); hapticFeedback.light(); }}
-                      style={{
-                        minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
-                        background: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                        color: isActive ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                        border: 'none', borderRadius: '6px'
-                      }}
-                    >{name} ({count})</button>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-      </div>
+      <TaskFilterBar
+        filter={filter}
+        setFilter={setFilter}
+        statusOrder={statusOrder}
+        userRole={userRole}
+        canSeeArchived={canSeeArchived}
+        submitterCounts={submitterCounts}
+        userNames={userNames}
+        onRefresh={handleRefresh}
+        scrollContainerRef={scrollContainerRef}
+        scrollPositionRef={scrollPositionRef}
+        t={t}
+      />
 
       {/* Task Count */}
       <div style={{ 
@@ -811,264 +648,10 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
   );
 }
 
-// Helper function to get group color (use configured color if available, otherwise generate)
-const getGroupColor = (groupId: string, configuredColor?: string) => {
-  if (configuredColor) {
-    return configuredColor;
-  }
-  
-  // Simple hash function to generate consistent colors for group IDs
-  let hash = 0;
-  for (let i = 0; i < groupId.length; i++) {
-    hash = groupId.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  // Generate hue based on hash to ensure different groups have different colors
-  const hue = hash % 360;
-  // Use a consistent saturation and lightness to maintain readability
-  return `hsl(${hue}, 70%, 50%)`;
-};
 
-// TaskCard component with group badge and colored bar
-function TaskCard({
-  task,
-  thumbnailUrl,
-  userNames,
-  groups,
-  onThumbnailClick,
-  t,
-  formatDate,
-  isArchived,
-}: {
-  task: Task;
-  thumbnailUrl?: string;
-  userNames: Record<number, string>;
-  groups: Group[];
-  onThumbnailClick: (task: Task, url: string, rect: DOMRect, e: React.MouseEvent) => void;
-  t: (key: string, params?: Record<string, string | number | boolean>) => string;
-  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
-  isArchived?: boolean;
-}) {
-  const thumbnailRef = useRef<HTMLDivElement>(null);
+// getGroupColor is now imported from ../utils/taskStyles
+// TaskCard is now imported from ./TaskCard
 
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  
-  const completedSets = task.sets.filter((set) => {
-    const hasPhotos = set.photos.length >= 3;
-    const hasVideo = task.labels.video ? !!set.video : true;
-    return hasPhotos && hasVideo;
-  }).length;
-
-  const progress = (completedSets / task.requireSets) * 100;
-  const doneName = task.doneBy ? (userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })) : null;
-  const taskGroup = groups.find(g => g.id === task.groupId);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (thumbnailUrl && thumbnailRef.current) {
-      const rect = thumbnailRef.current.getBoundingClientRect();
-      onThumbnailClick(task, thumbnailUrl, rect, e);
-    }
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <div style={{ 
-        display: 'flex', 
-        gap: '6px', 
-        padding: '2px 0 0 0', 
-        borderRadius: '0 0 6px 6px'
-      }}>
-        {/* Thumbnail */}
-        <div
-          ref={thumbnailRef}
-          onClick={handleClick}
-          style={{
-            width: '60px',
-            height: '60px',
-            minWidth: '60px',
-            borderRadius: '6px',
-            overflow: 'hidden',
-            background: thumbnailUrl && !imageError
-              ? 'var(--tg-theme-secondary-bg-color)'
-              : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '24px',
-            border: '1px solid var(--tg-theme-secondary-bg-color)',
-            cursor: thumbnailUrl ? 'pointer' : 'default',
-            position: 'relative',
-            transition: 'transform 0.2s, border-color 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            if (thumbnailUrl) {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.borderColor = 'var(--tg-theme-button-color)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (thumbnailUrl) {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.borderColor = 'var(--tg-theme-secondary-bg-color)';
-            }
-          }}
-        >
-          {/* Background image (hidden until loaded) */}
-          {thumbnailUrl && !imageError && (
-            <img
-              src={thumbnailUrl}
-              alt="Task thumbnail"
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-              style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: imageLoaded ? 1 : 0,
-                transition: 'opacity 0.3s ease'
-              }}
-            />
-          )}
-          
-          {/* Loading skeleton or placeholder */}
-          {!imageLoaded && !imageError && thumbnailUrl && (
-            <div style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 1.5s infinite'
-            }} />
-          )}
-          
-          {/* Fallback icon */}
-          {!thumbnailUrl && '📷'}
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '4px'
-          }}>
-            <h3 style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              flex: 1,
-              marginRight: '8px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              {task.labels.video && <span style={{ fontSize: '14px' }}>🎥</span>}
-              {task.title}
-            </h3>
-            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '12px', padding: '4px 7px' }}>
-              {t(`statusLabels.${task.status}`)}
-            </span>
-          </div>
-
-          {/* NEW: Group Badge */}
-          {taskGroup && (
-            <div style={{ marginBottom: '2px' }}>
-              <span style={{
-                display: 'inline-block',
-                fontSize: '11px',
-                padding: '3px 6px',
-                background: 'var(--tg-theme-secondary-bg-color)',
-                color: 'var(--tg-theme-hint-color)',
-                borderRadius: '4px'
-              }}>
-                👥 {taskGroup.name}
-              </span>
-            </div>
-          )}
-
-          {isArchived ? (
-            /* Archived view: show submitter + submitted date, no progress bar */
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              fontSize: '11px',
-              color: 'var(--tg-theme-hint-color)',
-              alignItems: 'center'
-            }}>
-              {doneName && <span>{t('taskList.doneBy', { name: doneName })}</span>}
-              {(task as any).submittedAt && <span>📅 {formatDate((task as any).submittedAt)}</span>}
-            </div>
-          ) : (
-            /* Active view: progress bar + date */
-            <>
-              <div style={{ marginBottom: '2px' }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '12px',
-                  color: 'var(--tg-theme-hint-color)',
-                  marginBottom: '1px',
-                  gap: '4px'
-                }}>
-                  <span>{t('taskList.progress')}</span>
-                  {doneName && task.status !== 'New' && task.status !== 'Received' && (
-                    <span style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                      textAlign: 'center',
-                      fontSize: '12px'
-                    }}>
-                      {t('taskList.doneBy', { name: doneName })}
-                    </span>
-                  )}
-                  <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
-                    {completedSets}/{task.requireSets}
-                  </span>
-                </div>
-                <div style={{
-                  height: '5px',
-                  background: 'var(--tg-theme-bg-color)',
-                  borderRadius: '2px',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${progress}%`,
-                    background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
-                    transition: 'width 0.3s',
-                  }} />
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '4px',
-                fontSize: '11px',
-                color: 'var(--tg-theme-hint-color)',
-                flexWrap: 'wrap',
-                alignItems: 'center'
-              }}>
-                {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-                  <span>📅 {formatDate(task.lastModifiedAt)}</span>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ImageViewer({
   imageUrl,
@@ -1441,6 +1024,11 @@ function ImageViewer({
   return (
     <div
       ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image viewer"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      tabIndex={-1}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         background: isVisible ? 'rgba(0,0,0,0.97)' : 'rgba(0,0,0,0)',
@@ -1463,6 +1051,10 @@ function ImageViewer({
         <div
           onClick={(e) => { e.stopPropagation(); onClose(); }}
           onTouchEnd={(e) => e.stopPropagation()}
+          role="button"
+          aria-label="Close"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose(); } }}
           style={{
             width: '36px', height: '36px', borderRadius: '50%',
             background: 'rgba(255,255,255,0.12)', display: 'flex',
@@ -1545,6 +1137,7 @@ function ImageViewer({
               <button
                 onClick={(e) => { e.stopPropagation(); goToPreviousPhoto(); }}
                 onTouchEnd={(e) => e.stopPropagation()}
+                aria-label="Previous"
                 style={{
                   width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px',
                   background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
@@ -1596,6 +1189,7 @@ function ImageViewer({
               <button
                 onClick={(e) => { e.stopPropagation(); goToNextPhoto(); }}
                 onTouchEnd={(e) => e.stopPropagation()}
+                aria-label="Next"
                 style={{
                   width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px',
                   background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
