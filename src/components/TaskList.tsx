@@ -1100,14 +1100,31 @@ function ImageViewer({
   const { t, formatDate } = useLocale();
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  
+
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastTouchDistance = useRef<number | null>(null);
+
+  // All gesture state in refs for 60fps (no re-renders during gesture)
+  const gestureRef = useRef({
+    scale: 1,
+    posX: 0,
+    posY: 0,
+    startDistance: 0,
+    startScale: 1,
+    startMidX: 0,
+    startMidY: 0,
+    startPosX: 0,
+    startPosY: 0,
+    isPinching: false,
+    isPanning: false,
+    panStartX: 0,
+    panStartY: 0,
+    moved: false,
+    lastTap: 0,
+  });
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const img = new Image();
@@ -1119,23 +1136,167 @@ function ImageViewer({
   }, [imageUrl]);
 
   useEffect(() => {
+    gestureRef.current.scale = 1;
+    gestureRef.current.posX = 0;
+    gestureRef.current.posY = 0;
     setScale(1);
     setPosition({ x: 0, y: 0 });
     setIsImageLoaded(false);
   }, [imageUrl]);
 
+  const applyTransform = () => {
+    if (!imageRef.current) return;
+    const g = gestureRef.current;
+    imageRef.current.style.transition = 'none';
+    imageRef.current.style.transform = `translate(calc(-50% + ${g.posX}px), calc(-50% + ${g.posY}px)) scale(${g.scale})`;
+  };
+
+  const animateToRest = (targetScale: number, targetX: number, targetY: number) => {
+    if (!imageRef.current) return;
+    gestureRef.current.scale = targetScale;
+    gestureRef.current.posX = targetX;
+    gestureRef.current.posY = targetY;
+    imageRef.current.style.transition = 'transform 0.3s cubic-bezier(0.2, 0, 0, 1)';
+    imageRef.current.style.transform = `translate(calc(-50% + ${targetX}px), calc(-50% + ${targetY}px)) scale(${targetScale})`;
+    setScale(targetScale);
+    setPosition({ x: targetX, y: targetY });
+  };
+
+  // Native touch listeners for smooth 60fps
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const g = gestureRef.current;
+      g.moved = false;
+
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        g.isPinching = true;
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        g.startDistance = Math.hypot(dx, dy);
+        g.startScale = g.scale;
+        g.startMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        g.startMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        g.startPosX = g.posX;
+        g.startPosY = g.posY;
+      } else if (e.touches.length === 1) {
+        if (g.scale > 1) {
+          g.isPanning = true;
+          g.panStartX = e.touches[0].clientX - g.posX;
+          g.panStartY = e.touches[0].clientY - g.posY;
+        }
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const g = gestureRef.current;
+      g.moved = true;
+
+      if (e.touches.length === 2 && g.isPinching) {
+        e.preventDefault();
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        const dist = Math.hypot(dx, dy);
+        const ratio = dist / g.startDistance;
+        const newScale = Math.min(Math.max(g.startScale * ratio, 0.5), 5);
+
+        // Zoom toward pinch center
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+
+        if (g.startScale > 0) {
+          const scaleDelta = newScale / g.startScale;
+          g.posX = g.startPosX * scaleDelta + (midX - g.startMidX);
+          g.posY = g.startPosY * scaleDelta + (midY - g.startMidY);
+        }
+
+        g.scale = newScale;
+        applyTransform();
+      } else if (e.touches.length === 1 && g.isPanning && g.scale > 1) {
+        e.preventDefault();
+        g.posX = e.touches[0].clientX - g.panStartX;
+        g.posY = e.touches[0].clientY - g.panStartY;
+        applyTransform();
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const g = gestureRef.current;
+
+      if (g.isPinching) {
+        g.isPinching = false;
+        // Snap back if zoomed out below 1
+        if (g.scale < 1) {
+          animateToRest(1, 0, 0);
+        } else {
+          setScale(g.scale);
+          setPosition({ x: g.posX, y: g.posY });
+        }
+        return;
+      }
+
+      if (g.isPanning) {
+        g.isPanning = false;
+        setPosition({ x: g.posX, y: g.posY });
+        return;
+      }
+
+      // Single-finger tap (no movement)
+      if (!g.moved && e.changedTouches.length === 1 && g.scale <= 1) {
+        const now = Date.now();
+        const timeSince = now - g.lastTap;
+        g.lastTap = now;
+
+        if (timeSince < 300 && timeSince > 0) {
+          // Double-tap → zoom in
+          if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
+          animateToRest(2.5, 0, 0);
+        } else {
+          // Single tap → close (after delay for double-tap check)
+          if (tapTimer.current) clearTimeout(tapTimer.current);
+          tapTimer.current = setTimeout(() => {
+            onClose();
+            tapTimer.current = null;
+          }, 280);
+        }
+      } else if (!g.moved && e.changedTouches.length === 1 && g.scale > 1) {
+        // Double-tap to zoom out
+        const now = Date.now();
+        const timeSince = now - g.lastTap;
+        g.lastTap = now;
+        if (timeSince < 300 && timeSince > 0) {
+          animateToRest(1, 0, 0);
+        }
+      }
+
+      g.moved = false;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [onClose]);
+
   const getFittedDimensions = () => {
     if (!imageDimensions || !containerRef.current) {
       return { width: 0, height: 0 };
     }
-
     const containerWidth = window.innerWidth;
     const containerHeight = window.innerHeight;
     const imageAspect = imageDimensions.width / imageDimensions.height;
     const containerAspect = containerWidth / containerHeight;
-
     let width, height;
-
     if (imageAspect > containerAspect) {
       width = containerWidth;
       height = containerWidth / imageAspect;
@@ -1143,112 +1304,7 @@ function ImageViewer({
       height = containerHeight;
       width = containerHeight * imageAspect;
     }
-
     return { width, height };
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
-      );
-      lastTouchDistance.current = distance;
-    } else if (e.touches.length === 1 && scale > 1) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.touches[0].clientX - position.x,
-        y: e.touches[0].clientY - position.y
-      });
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    isTouchMoving.current = true;
-    if (e.touches.length === 2) {
-      e.preventDefault();
-
-      if (lastTouchDistance.current === null) {
-        const d = Math.hypot(
-          e.touches[1].clientX - e.touches[0].clientX,
-          e.touches[1].clientY - e.touches[0].clientY
-        );
-        lastTouchDistance.current = d;
-        return;
-      }
-
-      const distance = Math.hypot(
-        e.touches[1].clientX - e.touches[0].clientX,
-        e.touches[1].clientY - e.touches[0].clientY
-      );
-
-      const scaleChange = distance / lastTouchDistance.current;
-      const newScale = Math.min(Math.max(scale * scaleChange, 1), 4);
-
-      setScale(newScale);
-      lastTouchDistance.current = distance;
-
-      if (newScale === 1) {
-        setPosition({ x: 0, y: 0 });
-      }
-    } else if (e.touches.length === 1 && isDragging && scale > 1) {
-      e.preventDefault();
-      const newX = e.touches[0].clientX - dragStart.x;
-      const newY = e.touches[0].clientY - dragStart.y;
-      setPosition({ x: newX, y: newY });
-    }
-  };
-
-  const isTouchMoving = useRef(false);
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    // Single-finger tap (no move, no pinch) → close viewer
-    if (e.changedTouches.length === 1 && !isTouchMoving.current && lastTouchDistance.current === null && scale === 1) {
-      handleTap();
-    }
-    lastTouchDistance.current = null;
-    setIsDragging(false);
-    isTouchMoving.current = false;
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.min(Math.max(scale * delta, 1), 4);
-    setScale(newScale);
-    
-    if (newScale === 1) {
-      setPosition({ x: 0, y: 0 });
-    }
-  };
-
-  const lastTap = useRef<number>(0);
-  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleTap = () => {
-    const now = Date.now();
-    const timeSince = now - lastTap.current;
-    lastTap.current = now;
-
-    if (timeSince < 300 && timeSince > 0) {
-      // Double-tap: toggle zoom
-      if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
-      if (scale > 1) {
-        setScale(1);
-        setPosition({ x: 0, y: 0 });
-      } else {
-        setScale(2.5);
-      }
-    } else {
-      // Single tap: close after short delay (cancelled if double-tap follows)
-      if (tapTimer.current) clearTimeout(tapTimer.current);
-      tapTimer.current = setTimeout(() => {
-        if (scale === 1) onClose();
-        tapTimer.current = null;
-      }, 300);
-    }
   };
 
   // Navigation between task thumbnails (looping)
@@ -1328,18 +1384,11 @@ function ImageViewer({
   const currentPhoto = allPhotos[currentPhotoIndex];
   const currentTask = tasks.find(t => t.id === currentPhoto?.taskId) || tasks[currentTaskIndex];
 
+  const fittedDimensions = isImageLoaded ? getFittedDimensions() : { width: 0, height: 0 };
+
   return (
     <div
       ref={containerRef}
-      onClick={(e) => {
-        if (e.target === containerRef.current && scale === 1) {
-          handleTap();
-        }
-      }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onWheel={handleWheel}
       style={{
         position: 'fixed',
         top: 0,
@@ -1352,13 +1401,15 @@ function ImageViewer({
         alignItems: 'center',
         justifyContent: 'center',
         transition: 'background 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        cursor: scale > 1 ? 'move' : 'default',
         overflow: 'hidden',
-        touchAction: 'none'
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
     >
       <div
         onClick={(e) => { e.stopPropagation(); onClose(); }}
+        onTouchEnd={(e) => e.stopPropagation()}
         style={{
           position: 'absolute',
           top: 'max(16px, env(safe-area-inset-top))',
@@ -1388,18 +1439,32 @@ function ImageViewer({
         ref={imageRef}
         src={imageUrl}
         alt="Fullscreen view"
+        draggable={false}
         style={{
           position: 'absolute',
-          transform: scale > 1 ? `translate(${position.x / scale}px, ${position.y / scale}px) scale(${scale})` : animationStyle.transform,
-          transition: isAnimating || (scale === 1 && position.x === 0 && position.y === 0)
+          top: '50%',
+          left: '50%',
+          width: isImageLoaded ? `${fittedDimensions.width}px` : undefined,
+          height: isImageLoaded ? `${fittedDimensions.height}px` : undefined,
+          transform: isAnimating && thumbnailRect
+            ? undefined
+            : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+          transition: isAnimating
             ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             : 'none',
-          touchAction: 'none',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-          pointerEvents: 'none',
           transformOrigin: 'center center',
-          ...animationStyle
+          objectFit: 'contain',
+          touchAction: 'none',
+          pointerEvents: 'none',
+          ...(isAnimating && thumbnailRect ? {
+            width: `${thumbnailRect.width}px`,
+            height: `${thumbnailRect.height}px`,
+            top: `${thumbnailRect.top}px`,
+            left: `${thumbnailRect.left}px`,
+            transform: 'none',
+            borderRadius: '8px',
+            objectFit: 'cover' as const
+          } : {})
         }}
       />
 
