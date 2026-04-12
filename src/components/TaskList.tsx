@@ -768,6 +768,8 @@ export function TaskList({ onTaskClick, groupId }: TaskListProps) {
           setCurrentPhotoIndex={setCurrentPhotoIndex}
           setFullscreenImage={setFullscreenImage}
           setCurrentFullscreenTaskId={setCurrentFullscreenTaskId}
+          userNames={userNames}
+          groups={groups}
         />
       )}
 
@@ -1058,43 +1060,44 @@ function TaskCard({
   );
 }
 
-// Enhanced ImageViewer component with navigation and send to chat button
 function ImageViewer({
   imageUrl,
   thumbnailRect,
   isAnimating,
   isClosing,
   onClose,
-  tasks, // All tasks for navigation
-  currentTaskIndex, // Index of current task
-  onTaskClick, // For navigating to task detail
-  onSendToChat, // For sending to chat
-  sending, // For send button state
-  allPhotos, // All photos for navigation
-  currentPhotoIndex, // Current photo index
-  setCurrentPhotoIndex, // Setter for current photo index
-  setFullscreenImage, // Setter for fullscreen image
-  setCurrentFullscreenTaskId, // Setter for current fullscreen task ID
+  tasks,
+  currentTaskIndex,
+  onTaskClick,
+  onSendToChat,
+  sending,
+  allPhotos,
+  currentPhotoIndex,
+  setCurrentPhotoIndex,
+  setFullscreenImage,
+  setCurrentFullscreenTaskId,
+  userNames,
+  groups,
 }: {
   imageUrl: string;
   thumbnailRect: DOMRect | null;
   isAnimating: boolean;
   isClosing: boolean;
   onClose: () => void;
-  tasks: Task[]; // All tasks for navigation
-  currentTaskIndex: number; // Index of current task
-  onTaskClick: (task: Task) => void; // For navigating to task detail
-  onSendToChat: (taskId: string, e: React.MouseEvent) => void; // For sending to chat
-  sending: Record<string, boolean>; // For send button state
-  allPhotos: Array<{url: string, taskId: string, taskIndex: number}>; // All photos for navigation
-  currentPhotoIndex: number; // Current photo index
-  setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>; // Setter for current photo index
-  setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>; // Setter for fullscreen image
-  setCurrentFullscreenTaskId: React.Dispatch<React.SetStateAction<string | null>>; // Setter for current fullscreen task ID
+  tasks: Task[];
+  currentTaskIndex: number;
+  onTaskClick: (task: Task) => void;
+  onSendToChat: (taskId: string, e: React.MouseEvent) => void;
+  sending: Record<string, boolean>;
+  allPhotos: Array<{url: string, taskId: string, taskIndex: number}>;
+  currentPhotoIndex: number;
+  setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>;
+  setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>;
+  setCurrentFullscreenTaskId: React.Dispatch<React.SetStateAction<string | null>>;
+  userNames: Record<number, string>;
+  groups: Group[];
 }) {
-  const { t } = useLocale();
-  const sendingLabel = t('taskList.sendingLabel');
-  const sendLabel = t('taskList.sendToChatAction');
+  const { t, formatDate } = useLocale();
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -1379,97 +1382,119 @@ function ImageViewer({
         }}
       />
 
-      {/* Navigation and action buttons at the bottom - arranged with round nav buttons on far sides */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: 0,
-        right: 0,
-        zIndex: 10000,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 20px',
-        opacity: isClosing ? 0 : 1,
-        transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-      }}>
-        <button
-          onClick={goToPreviousPhoto}
-          style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            color: 'white',
-            cursor: 'pointer',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            backdropFilter: 'blur(4px)',
-            flexShrink: 0,
-            boxSizing: 'border-box',
-            outline: 'none',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-          }}
-        >
-          {'<'}
-        </button>
-        
-        <button
-          onClick={(e) => onSendToChat(currentTask.id, e)}
-          disabled={sending[currentTask.id]}
-          style={{
-            padding: '12px 30px',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: sending[currentTask.id]
-              ? 'rgba(107, 114, 128, 0.9)'
-              : 'rgba(36, 129, 204, 0.9)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '24px',
-            cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
-            backdropFilter: 'blur(4px)',
-            margin: '0 20px',
-            flexShrink: 0
-          }}
-        >
-          <span style={{ fontSize: '18px' }}>
-            {sending[currentTask.id] ? '⏳' : '💬'}
-          </span>
-          <span>
-            {sending[currentTask.id] ? sendingLabel : sendLabel}
-          </span>
-        </button>
-        
-        <button
-          onClick={goToNextPhoto}
-          style={{
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            color: 'white',
-            cursor: 'pointer',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            backdropFilter: 'blur(4px)',
-            flexShrink: 0,
-            boxSizing: 'border-box',
-            outline: 'none',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-          }}
-        >
-          {'>'}
-        </button>
-      </div>
+      {/* Bottom panel: task info + actions */}
+      {(() => {
+        if (!currentTask) return null;
+        const taskGroup = groups.find(g => g.id === currentTask.groupId);
+        const doneName = currentTask.doneBy ? (userNames[currentTask.doneBy] || t('common.userFallback', { id: currentTask.doneBy })) : null;
+        const completedSets = currentTask.sets.filter(set => {
+          const hasPhotos = set.photos.length >= 3;
+          const hasVideo = currentTask.labels.video ? !!set.video : true;
+          return hasPhotos && hasVideo;
+        }).length;
+
+        return (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 10000,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.85) 30%)',
+            padding: '40px 16px 20px',
+            opacity: isClosing ? 0 : 1,
+            transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}>
+            {/* Task info */}
+            <div style={{ marginBottom: '12px', maxWidth: '400px', margin: '0 auto 12px' }}>
+              {/* Status + Group */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                <span className={`badge ${statusColors[currentTask.status]}`} style={{ fontSize: '11px', padding: '3px 8px' }}>
+                  {t(`statusLabels.${currentTask.status}`)}
+                </span>
+                {taskGroup && (
+                  <span style={{
+                    fontSize: '11px', padding: '3px 8px',
+                    background: 'rgba(255,255,255,0.15)', color: 'white',
+                    borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px'
+                  }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: taskGroup.color || '#3b82f6' }} />
+                    {taskGroup.name}
+                  </span>
+                )}
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                  {currentPhotoIndex + 1}/{allPhotos.length}
+                </span>
+              </div>
+
+              {/* Progress + submitter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+                <span>{completedSets}/{currentTask.requireSets} sets</span>
+                {doneName && currentTask.status !== 'New' && (
+                  <span>👤 {doneName}</span>
+                )}
+                {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
+                  <span>📅 {formatDate(currentTask.lastModifiedAt)}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              maxWidth: '400px',
+              margin: '0 auto',
+              gap: '8px'
+            }}>
+              <button
+                onClick={goToPreviousPhoto}
+                style={{
+                  width: '44px', height: '44px', borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.15)', color: 'white',
+                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', cursor: 'pointer', flexShrink: 0, backdropFilter: 'blur(4px)'
+                }}
+              >{'<'}</button>
+
+              <button
+                onClick={() => { onClose(); onTaskClick(currentTask); }}
+                style={{
+                  flex: 1, padding: '10px', fontSize: '13px',
+                  background: 'rgba(255,255,255,0.15)', color: 'white',
+                  border: 'none', borderRadius: '10px', cursor: 'pointer',
+                  backdropFilter: 'blur(4px)', fontWeight: 500
+                }}
+              >📋 {t('common.details')}</button>
+
+              <button
+                onClick={(e) => onSendToChat(currentTask.id, e)}
+                disabled={sending[currentTask.id]}
+                style={{
+                  flex: 1, padding: '10px', fontSize: '13px',
+                  background: sending[currentTask.id] ? 'rgba(107,114,128,0.9)' : 'rgba(36,129,204,0.9)',
+                  color: 'white', border: 'none', borderRadius: '10px',
+                  cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
+                  backdropFilter: 'blur(4px)', fontWeight: 500
+                }}
+              >
+                {sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}
+              </button>
+
+              <button
+                onClick={goToNextPhoto}
+                style={{
+                  width: '44px', height: '44px', borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.15)', color: 'white',
+                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', cursor: 'pointer', flexShrink: 0, backdropFilter: 'blur(4px)'
+                }}
+              >{'>'}</button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
