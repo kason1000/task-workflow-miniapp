@@ -313,47 +313,61 @@ export function GalleryOverlay({
     }
   };
 
+  const cachedShareRef = useRef<{ files: File[]; title: string } | null>(null);
+
   const handleShareCurrentSet = async () => {
     hapticFeedback.medium();
-    setActionLoading(true);
 
+    if (cachedShareRef.current) {
+      try {
+        await navigator.share({ title: cachedShareRef.current.title, files: cachedShareRef.current.files });
+        hapticFeedback.success();
+      } catch (e: any) {
+        if (e.name !== 'AbortError') showAlert(t('gallery.shareFailed', { error: e.message }));
+      }
+      cachedShareRef.current = null;
+      return;
+    }
+
+    setActionLoading(true);
     try {
       const set = task.sets[currentSetIndex];
-      const specs: Array<{ fileId: string; fileName: string; mimeType: string }> = [];
-      set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${currentSetIndex + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
-      if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${currentSetIndex + 1}_video.mp4`, mimeType: 'video/mp4' });
-
       const files: File[] = [];
-      for (const spec of specs) {
-        const { fileUrl } = await api.getProxiedMediaUrl(spec.fileId);
+
+      if (set.photos) {
+        for (let i = 0; i < set.photos.length; i++) {
+          const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
+          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const blob = await response.blob();
+          files.push(new File([blob], `set${currentSetIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
+        }
+      }
+      if (set.video) {
+        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
         const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
-        files.push(new File([blob], spec.fileName, { type: spec.mimeType }));
+        files.push(new File([blob], `set${currentSetIndex + 1}_video.mp4`, { type: blob.type || 'video/mp4' }));
       }
 
       if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
 
-      const deadline = Date.now() + 30000;
-      while (Date.now() < deadline) {
-        try {
-          await navigator.share({ title: `${task.title} - Set ${currentSetIndex + 1}`, files });
-          hapticFeedback.success();
-          break;
-        } catch (err: any) {
-          if (err.name === 'AbortError') break;
-          if (err.name === 'NotAllowedError' && Date.now() < deadline) {
-            await new Promise(r => setTimeout(r, 500));
-            continue;
-          }
-          throw err;
+      const title = `${task.title} - Set ${currentSetIndex + 1}`;
+      try {
+        await navigator.share({ title, files });
+        hapticFeedback.success();
+      } catch (e: any) {
+        if (e.name === 'AbortError') return;
+        if (e.name === 'NotAllowedError') {
+          cachedShareRef.current = { files, title };
+          return;
         }
+        throw e;
       }
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        hapticFeedback.error();
-        showAlert(t('gallery.shareFailed', { error: error.message }));
-      }
+      hapticFeedback.error();
+      showAlert(t('gallery.shareFailed', { error: error.message }));
     } finally {
       setActionLoading(false);
     }

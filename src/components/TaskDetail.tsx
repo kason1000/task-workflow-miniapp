@@ -40,41 +40,18 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
-async function fetchFilesAndShare(
-  fileSpecs: Array<{ fileId: string; fileName: string; mimeType: string }>,
-  title: string,
-  timeoutMs: number = 30000,
-  retryIntervalMs: number = 500
-): Promise<boolean> {
+async function downloadFiles(
+  fileSpecs: Array<{ fileId: string; fileName: string; mimeType: string }>
+): Promise<File[]> {
   const files: File[] = [];
-
   for (const spec of fileSpecs) {
     const { fileUrl } = await api.getProxiedMediaUrl(spec.fileId);
     const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob = await response.blob();
-    if (blob.size < 100) throw new Error('File too small');
     files.push(new File([blob], spec.fileName, { type: spec.mimeType }));
   }
-
-  if (files.length === 0) throw new Error('No files');
-  if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
-
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      await navigator.share({ title, files });
-      return true;
-    } catch (err: any) {
-      if (err.name === 'AbortError') return false;
-      if (err.name === 'NotAllowedError' && Date.now() < deadline) {
-        await new Promise(r => setTimeout(r, retryIntervalMs));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error('Share timed out');
+  return files;
 }
 
 export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
@@ -82,6 +59,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [loading, setLoading] = useState(false);
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
+  const cachedShareRef = useRef<{ files: File[]; title: string } | null>(null);
 
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -315,8 +293,20 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const shareSetDirect = async (setIndex: number) => {
     hapticFeedback.medium();
-    setLoading(true);
 
+    // If files already cached from a previous attempt, share instantly
+    if (cachedShareRef.current) {
+      try {
+        await navigator.share({ title: cachedShareRef.current.title, files: cachedShareRef.current.files });
+        hapticFeedback.success();
+      } catch (e: any) {
+        if (e.name !== 'AbortError') showAlert(t('taskDetail.shareFailed', { error: e.message }));
+      }
+      cachedShareRef.current = null;
+      return;
+    }
+
+    setLoading(true);
     try {
       const set = task.sets[setIndex];
       if (!set) return;
@@ -325,13 +315,26 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
       set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${setIndex + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
       if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${setIndex + 1}_video.mp4`, mimeType: 'video/mp4' });
 
-      const shared = await fetchFilesAndShare(specs, `${task.title} - Set ${setIndex + 1}`);
-      if (shared) hapticFeedback.success();
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        hapticFeedback.error();
-        showAlert(t('taskDetail.shareFailed', { error: error.message }));
+      const title = `${task.title} - Set ${setIndex + 1}`;
+      const files = await downloadFiles(specs);
+
+      if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
+
+      try {
+        await navigator.share({ title, files });
+        hapticFeedback.success();
+      } catch (e: any) {
+        if (e.name === 'AbortError') return;
+        // Gesture expired — cache files silently, next tap will work
+        if (e.name === 'NotAllowedError') {
+          cachedShareRef.current = { files, title };
+          return;
+        }
+        throw e;
       }
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(t('taskDetail.shareFailed', { error: error.message }));
     } finally {
       setLoading(false);
     }
@@ -615,9 +618,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             }}>
               <div>
                 {t('taskDetail.createdBy', {
-                  name: WebApp.initDataUnsafe?.user?.id === task.createdBy
-                    ? (WebApp.initDataUnsafe.user.first_name || t('common.userFallback', { id: task.createdBy }))
-                    : t('common.userFallback', { id: task.createdBy }),
+                  name: userNames[task.createdBy] || WebApp.initDataUnsafe?.user?.first_name || t('common.userFallback', { id: task.createdBy }),
                   date: formatDate(task.createdAt),
                 })}
               </div>
@@ -625,9 +626,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               {task.doneBy && (
                 <div>
                   {t('taskDetail.submittedBy', {
-                    name: WebApp.initDataUnsafe?.user?.id === task.doneBy
-                      ? (WebApp.initDataUnsafe.user.first_name || t('common.userFallback', { id: task.doneBy }))
-                      : t('common.userFallback', { id: task.doneBy }),
+                    name: userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy }),
                   })}
                 </div>
               )}
@@ -792,6 +791,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               <button
                 onClick={async () => {
                   hapticFeedback.medium();
+
+                  if (cachedShareRef.current) {
+                    try {
+                      await navigator.share({ title: cachedShareRef.current.title, files: cachedShareRef.current.files });
+                      hapticFeedback.success();
+                    } catch (e: any) {
+                      if (e.name !== 'AbortError') showAlert(t('taskDetail.shareFailed', { error: e.message }));
+                    }
+                    cachedShareRef.current = null;
+                    return;
+                  }
+
                   setLoading(true);
                   try {
                     const specs: Array<{ fileId: string; fileName: string; mimeType: string }> = [];
@@ -801,13 +812,24 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${si + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
                       if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${si + 1}_video.mp4`, mimeType: 'video/mp4' });
                     }
-                    const shared = await fetchFilesAndShare(specs, task.title);
-                    if (shared) hapticFeedback.success();
-                  } catch (error: any) {
-                    if (error.name !== 'AbortError') {
-                      hapticFeedback.error();
-                      showAlert(t('taskDetail.shareFailed', { error: error.message }));
+
+                    const files = await downloadFiles(specs);
+                    if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
+
+                    try {
+                      await navigator.share({ title: task.title, files });
+                      hapticFeedback.success();
+                    } catch (e: any) {
+                      if (e.name === 'AbortError') return;
+                      if (e.name === 'NotAllowedError') {
+                        cachedShareRef.current = { files, title: task.title };
+                        return;
+                      }
+                      throw e;
                     }
+                  } catch (error: any) {
+                    hapticFeedback.error();
+                    showAlert(t('taskDetail.shareFailed', { error: error.message }));
                   } finally {
                     setLoading(false);
                   }
