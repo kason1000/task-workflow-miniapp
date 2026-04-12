@@ -43,9 +43,7 @@ export function GalleryOverlay({
   const [imageScale, setImageScale] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [pendingShareFiles, setPendingShareFiles] = useState<File[] | null>(null);
-  const [pendingShareTitle, setPendingShareTitle] = useState('');
-  const [galleryShareProgress, setGalleryShareProgress] = useState('');
+  const [blobCache, setBlobCache] = useState<Record<string, Blob>>({});
   const [isExiting, setIsExiting] = useState(false);
   
   const mediaContainerRef = useRef<HTMLDivElement>(null);
@@ -103,6 +101,30 @@ export function GalleryOverlay({
   useEffect(() => {
     setCurrentMediaIndex(0);
   }, [currentSetIndex]);
+
+  // Pre-cache blobs for sharing
+  useEffect(() => {
+    if (!isOpen) return;
+    const cacheBlobs = async () => {
+      const fileIds: string[] = [];
+      task.sets.forEach(set => {
+        set.photos?.forEach(p => fileIds.push(p.file_id));
+        if (set.video) fileIds.push(set.video.file_id);
+      });
+      for (const fileId of fileIds) {
+        if (blobCache[fileId]) continue;
+        try {
+          const { fileUrl } = await api.getProxiedMediaUrl(fileId);
+          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+          if (response.ok) {
+            const blob = await response.blob();
+            if (blob.size > 100) setBlobCache(prev => ({ ...prev, [fileId]: blob }));
+          }
+        } catch {}
+      }
+    };
+    cacheBlobs();
+  }, [isOpen, task.id]);
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -317,64 +339,36 @@ export function GalleryOverlay({
   };
 
   const handleShareCurrentSet = async () => {
-    // If files ready, share immediately (fresh gesture)
-    if (pendingShareFiles && pendingShareFiles.length > 0) {
-      try {
-        await navigator.share({ title: pendingShareTitle, files: pendingShareFiles });
-        hapticFeedback.success();
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          showAlert(t('gallery.shareFailed', { error: error.message }));
-        }
-      } finally {
-        setPendingShareFiles(null);
-        setGalleryShareProgress('');
-      }
-      return;
-    }
-
-    const set = task.sets[currentSetIndex];
-    setActionLoading(true);
     hapticFeedback.medium();
 
     try {
+      const set = task.sets[currentSetIndex];
       const files: File[] = [];
-      const totalItems = (set.photos?.length || 0) + (set.video ? 1 : 0);
-      let downloaded = 0;
 
       if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
-          setGalleryShareProgress(`${++downloaded}/${totalItems}`);
-          const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
-          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
-          if (!response.ok) throw new Error(`Failed to fetch photo ${i + 1}`);
-          const blob = await response.blob();
+          const blob = blobCache[set.photos[i].file_id];
+          if (!blob) throw new Error('not_cached');
           files.push(new File([blob], `set${currentSetIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
         }
       }
-
       if (set.video) {
-        setGalleryShareProgress(`${++downloaded}/${totalItems}`);
-        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-        const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
-        if (!response.ok) throw new Error(`Failed to fetch video`);
-        const blob = await response.blob();
-        files.push(new File([blob], `set${currentSetIndex + 1}_video.mp4`, { type: 'video/mp4' }));
+        const blob = blobCache[set.video.file_id];
+        if (!blob) throw new Error('not_cached');
+        files.push(new File([blob], `set${currentSetIndex + 1}_video.mp4`, { type: blob.type || 'video/mp4' }));
       }
 
-      if (navigator.share && navigator.canShare({ files })) {
-        setPendingShareFiles(files);
-        setPendingShareTitle(`${task.title} - Set ${currentSetIndex + 1}`);
-        setGalleryShareProgress('');
-        setActionLoading(false);
-      }
+      if (files.length === 0 || !navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
+
+      await navigator.share({ title: `${task.title} - Set ${currentSetIndex + 1}`, files });
+      hapticFeedback.success();
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
+      if (error.message === 'not_cached') {
+        showAlert(t('gallery.shareFailed', { error: 'Files still loading, please wait a moment and try again' }));
+      } else if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(t('gallery.shareFailed', { error: error.message }));
       }
-      setGalleryShareProgress('');
-      setActionLoading(false);
     }
   };
 
@@ -967,8 +961,8 @@ export function GalleryOverlay({
               cursor: actionLoading ? 'not-allowed' : 'pointer'
             }}
           >
-            {pendingShareFiles ? '📤' : actionLoading ? '⏳' : <Share2 size={18} />}
-            {pendingShareFiles ? 'Tap to share' : actionLoading ? (galleryShareProgress || t('gallery.shareLoading')) : t('gallery.shareSet', { index: currentSetIndex + 1 })}
+            {actionLoading ? '⏳' : <Share2 size={18} />}
+            {actionLoading ? t('gallery.shareLoading') : t('gallery.shareSet', { index: currentSetIndex + 1 })}
           </button>
           
           {canDelete && (
