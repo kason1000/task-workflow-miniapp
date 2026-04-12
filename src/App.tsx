@@ -414,15 +414,12 @@ function App() {
                   {(() => {
                     const sg = groups.find(g => g.id === selectedGroupId);
                     return sg ? (
-                      <>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: sg.color || '#3b82f6' }} />
-                        <span>{sg.name}</span>
-                      </>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: sg.color || '#3b82f6' }} />
                     ) : (
-                      <span>👥 {t('taskList.allGroups').replace('👥 ', '')}</span>
+                      <span>👥</span>
                     );
                   })()}
-                  <span style={{ fontSize: '9px' }}>{showGroupDropdown ? '▲' : '▼'}</span>
+                  <span style={{ fontSize: '8px' }}>▼</span>
                 </button>
                 {showGroupDropdown && (
                   <div style={{
