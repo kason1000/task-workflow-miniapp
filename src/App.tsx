@@ -19,6 +19,21 @@ import { ThemeSwitcher } from './components/ThemeSwitcher';
 import { useTheme } from './contexts/ThemeContext';
 import { MosaicLayout } from './designs/mosaic/MosaicLayout';
 import { CommandLayout } from './designs/command/CommandLayout';
+import { ElderLayout } from './designs/elder/ElderLayout';
+import { ZenLayout } from './designs/zen/ZenLayout';
+import { RetroLayout } from './designs/retro/RetroLayout';
+import { GlassLayout } from './designs/glass/GlassLayout';
+import { BrutalistLayout } from './designs/brutalist/BrutalistLayout';
+
+const CUSTOM_LAYOUTS: Record<string, React.ComponentType<any>> = {
+  mosaic: MosaicLayout,
+  command: CommandLayout,
+  elder: ElderLayout,
+  zen: ZenLayout,
+  retro: RetroLayout,
+  glass: GlassLayout,
+  brutalist: BrutalistLayout,
+};
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
 
@@ -360,8 +375,8 @@ function App() {
   }
 
   // Custom layout designs — completely different UI
-  if (theme === 'mosaic' || theme === 'command') {
-    const LayoutComponent = theme === 'mosaic' ? MosaicLayout : CommandLayout;
+  const LayoutComponent = CUSTOM_LAYOUTS[theme];
+  if (LayoutComponent) {
     return (
       <>
         <LayoutComponent

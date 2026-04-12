@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-export type ThemeId = 'classic' | 'noir' | 'aurora' | 'mosaic' | 'command';
+export type ThemeId = 'classic' | 'noir' | 'aurora' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
 
 interface ThemeInfo {
   id: ThemeId;
@@ -26,6 +26,11 @@ const THEMES: ThemeInfo[] = [
   { id: 'aurora', name: 'Aurora', description: 'Vibrant gradient experience', hasCustomLayout: false },
   { id: 'mosaic', name: 'Mosaic', description: 'Photo-first editorial gallery', hasCustomLayout: true },
   { id: 'command', name: 'Command', description: 'Retro terminal dashboard', hasCustomLayout: true },
+  { id: 'elder', name: 'Easy View', description: 'Large text, simple layout for everyone', hasCustomLayout: true },
+  { id: 'zen', name: 'Zen', description: 'Calm Japanese minimalism', hasCustomLayout: true },
+  { id: 'retro', name: 'Retro', description: '90s pixel nostalgia', hasCustomLayout: true },
+  { id: 'glass', name: 'Glass', description: 'Modern frosted glass panels', hasCustomLayout: true },
+  { id: 'brutalist', name: 'Brutalist', description: 'Raw bold anti-design', hasCustomLayout: true },
 ];
 
 const VALID_THEMES = THEMES.map(t => t.id);

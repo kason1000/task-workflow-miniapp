@@ -6,6 +6,11 @@ const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; 
   aurora: { icon: '🌌', bg: '#0f0f1a', accent: '#7c6cf0' },
   mosaic: { icon: '🖼️', bg: '#faf8f5', accent: '#c45d3e', tag: 'NEW' },
   command: { icon: '⌨️', bg: '#080808', accent: '#39ff14', tag: 'NEW' },
+  elder: { icon: '👴', bg: '#fffef7', accent: '#1a6b3c', tag: 'NEW' },
+  zen: { icon: '🍃', bg: '#f5f2eb', accent: '#6b8f71', tag: 'NEW' },
+  retro: { icon: '👾', bg: '#1a0a2e', accent: '#ff6ec7', tag: 'NEW' },
+  glass: { icon: '💎', bg: '#e8edf5', accent: '#4a7dff', tag: 'NEW' },
+  brutalist: { icon: '🔲', bg: '#ffffff', accent: '#ff0000', tag: 'NEW' },
 };
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {

@@ -11,6 +11,11 @@ import './themes/noir.css';
 import './themes/aurora.css';
 import './designs/mosaic/mosaic.css';
 import './designs/command/command.css';
+import './designs/elder/elder.css';
+import './designs/zen/zen.css';
+import './designs/retro/retro.css';
+import './designs/glass/glass.css';
+import './designs/brutalist/brutalist.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
