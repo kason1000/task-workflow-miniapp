@@ -1336,23 +1336,23 @@ function ImageViewer({
         onClick={onClose}
         style={{
           position: 'absolute',
-          top: '20px',
-          right: '20px',
+          top: 'max(16px, env(safe-area-inset-top))',
+          right: '16px',
           width: '36px',
           height: '36px',
-          borderRadius: '10px',
-          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '12px',
+          background: 'rgba(255, 255, 255, 0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '24px',
-          color: 'white',
+          fontSize: '18px',
+          color: 'rgba(255,255,255,0.8)',
           cursor: 'pointer',
           zIndex: 10000,
           opacity: isClosing ? 0 : 1,
           transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
           padding: 0
         }}
       >
@@ -1382,7 +1382,7 @@ function ImageViewer({
         }}
       />
 
-      {/* Bottom panel: task info + actions */}
+      {/* Bottom panel */}
       {(() => {
         if (!currentTask) return null;
         const taskGroup = groups.find(g => g.id === currentTask.groupId);
@@ -1392,105 +1392,150 @@ function ImageViewer({
           const hasVideo = currentTask.labels.video ? !!set.video : true;
           return hasPhotos && hasVideo;
         }).length;
+        const progress = Math.round((completedSets / currentTask.requireSets) * 100);
 
         return (
           <div style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 10000,
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.85) 30%)',
-            padding: '40px 16px 20px',
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
+            background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.92) 100%)',
+            paddingTop: '48px',
             opacity: isClosing ? 0 : 1,
             transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
           }}>
-            {/* Task info */}
-            <div style={{ marginBottom: '12px', maxWidth: '400px', margin: '0 auto 12px' }}>
-              {/* Status + Group */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                <span className={`badge ${statusColors[currentTask.status]}`} style={{ fontSize: '11px', padding: '3px 8px' }}>
+            {/* Info card */}
+            <div style={{
+              margin: '0 12px 10px',
+              padding: '12px 14px',
+              background: 'rgba(255,255,255,0.08)',
+              borderRadius: '14px',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              {/* Row 1: badges */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <span className={`badge ${statusColors[currentTask.status]}`} style={{
+                  fontSize: '10px', padding: '2px 8px', fontWeight: 600, letterSpacing: '0.3px'
+                }}>
                   {t(`statusLabels.${currentTask.status}`)}
                 </span>
                 {taskGroup && (
                   <span style={{
-                    fontSize: '11px', padding: '3px 8px',
-                    background: 'rgba(255,255,255,0.15)', color: 'white',
-                    borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px'
+                    fontSize: '10px', padding: '2px 8px',
+                    background: taskGroup.color || '#3b82f6', color: 'white',
+                    borderRadius: '10px', fontWeight: 600, letterSpacing: '0.3px',
+                    display: 'flex', alignItems: 'center', gap: '4px'
                   }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: taskGroup.color || '#3b82f6' }} />
                     {taskGroup.name}
                   </span>
                 )}
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
-                  {currentPhotoIndex + 1}/{allPhotos.length}
+                <span style={{
+                  marginLeft: 'auto', fontSize: '10px', color: 'rgba(255,255,255,0.4)',
+                  fontWeight: 500, fontVariantNumeric: 'tabular-nums'
+                }}>
+                  {currentPhotoIndex + 1} / {allPhotos.length}
                 </span>
               </div>
 
-              {/* Progress + submitter */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-                <span>{completedSets}/{currentTask.requireSets} sets</span>
+              {/* Row 2: progress bar */}
+              <div style={{
+                height: '3px', borderRadius: '2px',
+                background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '8px'
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: '2px',
+                  width: `${progress}%`,
+                  background: progress === 100 ? '#34d399' : '#60a5fa',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+
+              {/* Row 3: meta line */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                fontSize: '11px', color: 'rgba(255,255,255,0.55)', fontWeight: 400
+              }}>
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {completedSets}/{currentTask.requireSets} sets
+                </span>
                 {doneName && currentTask.status !== 'New' && (
-                  <span>👤 {doneName}</span>
+                  <>
+                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      {doneName}
+                    </span>
+                  </>
                 )}
                 {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
-                  <span>📅 {formatDate(currentTask.lastModifiedAt)}</span>
+                  <>
+                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+                    <span>{formatDate(currentTask.lastModifiedAt)}</span>
+                  </>
                 )}
               </div>
             </div>
 
-            {/* Action buttons */}
+            {/* Actions row */}
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              maxWidth: '400px',
-              margin: '0 auto',
-              gap: '8px'
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '0 12px 16px',
+              paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
             }}>
               <button
                 onClick={goToPreviousPhoto}
                 style={{
-                  width: '44px', height: '44px', borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.15)', color: 'white',
-                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '18px', cursor: 'pointer', flexShrink: 0, backdropFilter: 'blur(4px)'
+                  width: '42px', height: '42px', borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)',
+                  border: '1px solid rgba(255,255,255,0.08)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  fontSize: '16px', cursor: 'pointer', flexShrink: 0
                 }}
-              >{'<'}</button>
+              >‹</button>
 
               <button
                 onClick={() => { onClose(); onTaskClick(currentTask); }}
                 style={{
-                  flex: 1, padding: '10px', fontSize: '13px',
-                  background: 'rgba(255,255,255,0.15)', color: 'white',
-                  border: 'none', borderRadius: '10px', cursor: 'pointer',
-                  backdropFilter: 'blur(4px)', fontWeight: 500
+                  flex: 1, height: '42px', fontSize: '13px',
+                  background: 'rgba(255,255,255,0.1)', color: 'white',
+                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+                  cursor: 'pointer', fontWeight: 500,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
-              >📋 {t('common.details')}</button>
+              >
+                <span style={{ fontSize: '15px' }}>📋</span>
+                <span>{t('common.details')}</span>
+              </button>
 
               <button
                 onClick={(e) => onSendToChat(currentTask.id, e)}
                 disabled={sending[currentTask.id]}
                 style={{
-                  flex: 1, padding: '10px', fontSize: '13px',
-                  background: sending[currentTask.id] ? 'rgba(107,114,128,0.9)' : 'rgba(36,129,204,0.9)',
-                  color: 'white', border: 'none', borderRadius: '10px',
+                  flex: 1, height: '42px', fontSize: '13px',
+                  background: sending[currentTask.id]
+                    ? 'rgba(107,114,128,0.7)'
+                    : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                  borderRadius: '12px',
                   cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
-                  backdropFilter: 'blur(4px)', fontWeight: 500
+                  fontWeight: 500,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 8px rgba(37,99,235,0.3)'
                 }}
               >
-                {sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}
+                <span style={{ fontSize: '15px' }}>{sending[currentTask.id] ? '⏳' : '💬'}</span>
+                <span>{t('taskList.sendButton')}</span>
               </button>
 
               <button
                 onClick={goToNextPhoto}
                 style={{
-                  width: '44px', height: '44px', borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.15)', color: 'white',
-                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '18px', cursor: 'pointer', flexShrink: 0, backdropFilter: 'blur(4px)'
+                  width: '42px', height: '42px', borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)',
+                  border: '1px solid rgba(255,255,255,0.08)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  fontSize: '16px', cursor: 'pointer', flexShrink: 0
                 }}
-              >{'>'}</button>
+              >›</button>
             </div>
           </div>
         );
