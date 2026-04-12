@@ -1236,10 +1236,15 @@ function ImageViewer({
           e.preventDefault();
           g.swipeDeltaX = dx;
           if (imageRef.current) {
-            const opacity = Math.max(0.3, 1 - Math.abs(dx) / window.innerWidth);
+            // Rubber-band resistance at edges
+            const w = window.innerWidth;
+            const isAtEdge = (dx > 0 && currentPhotoIndex === 0) || (dx < 0 && currentPhotoIndex === allPhotos.length - 1);
+            const adjustedDx = isAtEdge ? dx * 0.3 : dx;
+            const progress = Math.min(Math.abs(adjustedDx) / w, 1);
+            const imgScale = 1 - progress * 0.08;
             imageRef.current.style.transition = 'none';
-            imageRef.current.style.transform = `translate(calc(-50% + ${dx}px), -50%) scale(1)`;
-            imageRef.current.style.opacity = String(opacity);
+            imageRef.current.style.transform = `translate(calc(-50% + ${adjustedDx}px), -50%) scale(${imgScale})`;
+            imageRef.current.style.opacity = '1';
           }
         }
       } else if (e.touches.length === 1 && g.isPanning && g.scale > 1) {
@@ -1264,18 +1269,31 @@ function ImageViewer({
         return;
       }
 
-      // Swipe complete → navigate
+      // Swipe complete → navigate or snap back
       if (g.isSwiping) {
         g.isSwiping = false;
-        const threshold = window.innerWidth * 0.2;
+        const threshold = window.innerWidth * 0.15;
+        const shouldNavigate = Math.abs(g.swipeDeltaX) > threshold;
+        const dir = g.swipeDeltaX < 0 ? 1 : -1; // 1=next, -1=prev
+        const canNav = dir === 1 ? currentPhotoIndex < allPhotos.length - 1 : currentPhotoIndex > 0;
+
         if (imageRef.current) {
-          imageRef.current.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
-          imageRef.current.style.opacity = '1';
-          imageRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
-        }
-        if (Math.abs(g.swipeDeltaX) > threshold) {
-          if (g.swipeDeltaX < 0) goToNextPhoto();
-          else goToPreviousPhoto();
+          if (shouldNavigate && canNav) {
+            // Slide out in swipe direction, then switch photo
+            const exitX = dir * -window.innerWidth;
+            imageRef.current.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease';
+            imageRef.current.style.transform = `translate(calc(-50% + ${exitX}px), -50%) scale(0.9)`;
+            imageRef.current.style.opacity = '0';
+            setTimeout(() => {
+              if (dir === 1) goToNextPhoto();
+              else goToPreviousPhoto();
+            }, 200);
+          } else {
+            // Snap back
+            imageRef.current.style.transition = 'transform 0.35s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease';
+            imageRef.current.style.opacity = '1';
+            imageRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
+          }
         }
         g.swipeDeltaX = 0;
         return;
@@ -1373,7 +1391,20 @@ function ImageViewer({
 
   const currentPhoto = allPhotos[currentPhotoIndex];
   const currentTask = tasks.find(t => t.id === currentPhoto?.taskId) || tasks[currentTaskIndex];
-  const fittedDimensions = isImageLoaded ? getFittedDimensions() : { width: 0, height: 0 };
+
+  // Position image in center of area ABOVE the bottom panel (~170px)
+  const bottomH = 170;
+  const areaH = window.innerHeight - bottomH;
+  const imgCenterY = areaH / 2;
+  const fitForArea = () => {
+    if (!imageDimensions) return { width: 0, height: 0 };
+    const w = window.innerWidth;
+    const h = areaH - 20; // small padding
+    const aspect = imageDimensions.width / imageDimensions.height;
+    if (aspect > w / h) return { width: w, height: w / aspect };
+    return { width: h * aspect, height: h };
+  };
+  const fitted = isImageLoaded ? fitForArea() : { width: 0, height: 0 };
 
   // Scroll active thumbnail into view
   useEffect(() => {
@@ -1385,107 +1416,83 @@ function ImageViewer({
     }
   }, [currentPhotoIndex]);
 
-  // isAnimating=true means "fully visible", false means "entering/exiting"
   const isVisible = isAnimating;
 
   return (
     <div
       ref={containerRef}
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: isVisible ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0)',
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: isVisible ? 'rgba(0,0,0,0.97)' : 'rgba(0,0,0,0)',
         zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'background 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden',
-        touchAction: 'none',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
+        transition: 'background 0.3s ease',
+        overflow: 'hidden', touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
       }}
     >
-      {/* Close button */}
-      <div
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        onTouchEnd={(e) => e.stopPropagation()}
-        style={{
-          position: 'absolute',
-          top: 'max(16px, env(safe-area-inset-top))',
-          right: '16px',
-          width: '36px',
-          height: '36px',
-          borderRadius: '12px',
-          background: 'rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '18px',
-          color: 'rgba(255,255,255,0.8)',
-          cursor: 'pointer',
-          zIndex: 10000,
-          opacity: isVisible ? 1 : 0,
-          transform: isVisible ? 'translateY(0)' : 'translateY(-10px)',
-          transition: 'opacity 0.3s ease, transform 0.3s ease',
-          transitionDelay: isVisible ? '0.15s' : '0s',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(20px)',
-          padding: 0
-        }}
-      >
-        ✕
+      {/* Top bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10001,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: 'max(10px, env(safe-area-inset-top)) 14px 6px',
+        opacity: isVisible ? 1 : 0, transition: 'opacity 0.25s ease',
+        transitionDelay: isVisible ? '0.1s' : '0s',
+      }}>
+        <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+          {currentPhotoIndex + 1} / {allPhotos.length}
+        </span>
+        <div
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          onTouchEnd={(e) => e.stopPropagation()}
+          style={{
+            width: '30px', height: '30px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            fontSize: '15px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0,
+          }}
+        >✕</div>
       </div>
 
-      {/* Image */}
+      {/* Image — vertically centered in area above bottom panel */}
       <img
         ref={imageRef}
         src={imageUrl}
-        alt="Fullscreen view"
+        alt=""
         draggable={false}
         style={{
           position: 'absolute',
-          top: '50%',
           left: '50%',
-          width: isImageLoaded ? `${fittedDimensions.width}px` : undefined,
-          height: isImageLoaded ? `${fittedDimensions.height}px` : undefined,
+          top: `${imgCenterY}px`,
+          width: fitted.width ? `${fitted.width}px` : undefined,
+          height: fitted.height ? `${fitted.height}px` : undefined,
           opacity: isVisible ? 1 : 0,
           transform: isVisible
             ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`
-            : `translate(-50%, calc(-50% + 20px)) scale(0.92)`,
-          transition: scale === 1
-            ? 'opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
-            : 'none',
+            : 'translate(-50%, calc(-50% + 20px)) scale(0.92)',
+          transition: scale === 1 ? 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
           transformOrigin: 'center center',
-          objectFit: 'contain',
-          touchAction: 'none',
-          pointerEvents: 'none',
+          objectFit: 'contain', touchAction: 'none', pointerEvents: 'none',
         }}
       />
 
       {/* Bottom panel */}
-      {(() => {
-        if (!currentTask) return null;
+      {currentTask && (() => {
         const taskGroup = groups.find(g => g.id === currentTask.groupId);
         const doneName = currentTask.doneBy ? (userNames[currentTask.doneBy] || t('common.userFallback', { id: currentTask.doneBy })) : null;
 
         return (
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
-            background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.95) 100%)',
-            paddingTop: '40px',
+            background: 'rgba(0,0,0,0.95)',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
             opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(16px)',
-            transition: 'opacity 0.3s ease, transform 0.3s ease',
-            transitionDelay: isVisible ? '0.1s' : '0s'
+            transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'opacity 0.25s ease, transform 0.25s ease',
+            transitionDelay: isVisible ? '0.08s' : '0s'
           }}>
-            {/* Info row — single compact line */}
+            {/* Info row */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '0 14px 8px', flexWrap: 'nowrap', overflow: 'hidden'
+              padding: '8px 14px 6px', overflow: 'hidden'
             }}>
               <span className={`badge ${statusColors[currentTask.status]}`} style={{
                 fontSize: '10px', padding: '2px 7px', fontWeight: 600, flexShrink: 0
@@ -1497,108 +1504,121 @@ function ImageViewer({
                   fontSize: '10px', padding: '2px 7px', flexShrink: 0,
                   background: taskGroup.color || '#3b82f6', color: 'white',
                   borderRadius: '10px', fontWeight: 600
-                }}>
-                  {taskGroup.name}
-                </span>
+                }}>{taskGroup.name}</span>
               )}
               {doneName && currentTask.status !== 'New' && (
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   👤 {doneName}
                 </span>
               )}
               {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', flexShrink: 0, marginLeft: 'auto' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', flexShrink: 0, marginLeft: 'auto' }}>
                   {formatDate(currentTask.lastModifiedAt)}
                 </span>
               )}
             </div>
 
-            {/* Thumbnail strip */}
-            <div
-              ref={thumbStripRef}
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
-              style={{
-                display: 'flex', gap: '3px', overflowX: 'auto',
-                padding: '0 14px 10px',
-                scrollbarWidth: 'none', msOverflowStyle: 'none',
-                WebkitOverflowScrolling: 'touch'
-              }}
-            >
-              {allPhotos.map((photo, idx) => {
-                const isActive = idx === currentPhotoIndex;
-                return (
-                  <div
-                    key={`${photo.taskId}-${idx}`}
-                    data-active={isActive}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentPhotoIndex(idx);
-                      setCurrentFullscreenTaskId(photo.taskId);
-                      setFullscreenImage(photo.url);
-                    }}
-                    style={{
-                      width: isActive ? '44px' : '32px',
-                      height: '32px',
-                      flexShrink: 0,
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      border: isActive ? '2px solid white' : '1px solid rgba(255,255,255,0.15)',
-                      opacity: isActive ? 1 : 0.5,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <img src={photo.url} alt="" draggable={false} style={{
-                      width: '100%', height: '100%', objectFit: 'cover',
-                      pointerEvents: 'none'
-                    }} />
-                  </div>
-                );
-              })}
+            {/* Thumbnail row with arrows */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '2px 4px 6px', gap: '3px' }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); goToPreviousPhoto(); }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                style={{
+                  width: '24px', height: '52px', flexShrink: 0, borderRadius: '5px',
+                  background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '15px', cursor: 'pointer', padding: 0,
+                }}
+              >‹</button>
+
+              <div
+                ref={thumbStripRef}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+                style={{
+                  display: 'flex', gap: '2px', overflowX: 'auto', flex: 1,
+                  scrollbarWidth: 'none', msOverflowStyle: 'none',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {allPhotos.map((photo, idx) => {
+                  const isActive = idx === currentPhotoIndex;
+                  return (
+                    <div
+                      key={`${photo.taskId}-${idx}`}
+                      data-active={isActive}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentPhotoIndex(idx);
+                        setCurrentFullscreenTaskId(photo.taskId);
+                        setFullscreenImage(photo.url);
+                      }}
+                      style={{
+                        width: '52px', height: '52px', flexShrink: 0,
+                        borderRadius: '4px', overflow: 'hidden',
+                        border: isActive ? '2px solid white' : '2px solid transparent',
+                        opacity: isActive ? 1 : 0.4,
+                        cursor: 'pointer',
+                        transition: 'opacity 0.15s ease, border-color 0.15s ease',
+                      }}
+                    >
+                      <img src={photo.url} alt="" draggable={false} style={{
+                        width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none',
+                      }} />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); goToNextPhoto(); }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                style={{
+                  width: '24px', height: '52px', flexShrink: 0, borderRadius: '5px',
+                  background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '15px', cursor: 'pointer', padding: 0,
+                }}
+              >›</button>
             </div>
 
             {/* Action buttons */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
               padding: '0 12px',
-              paddingBottom: 'max(14px, env(safe-area-inset-bottom))'
+              paddingBottom: 'max(10px, env(safe-area-inset-bottom))'
             }}>
               <button
                 onClick={(e) => { e.stopPropagation(); onClose(); onTaskClick(currentTask); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  flex: 1, height: '40px', fontSize: '13px',
-                  background: 'rgba(255,255,255,0.1)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+                  flex: 1, height: '36px', fontSize: '12px',
+                  background: 'rgba(255,255,255,0.08)', color: 'white',
+                  border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px',
                   cursor: 'pointer', fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
                 }}
-              >
-                📋 {t('common.details')}
-              </button>
+              >📋 {t('common.details')}</button>
 
               <button
                 onClick={(e) => { e.stopPropagation(); onSendToChat(currentTask.id, e); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 disabled={sending[currentTask.id]}
                 style={{
-                  flex: 1, height: '40px', fontSize: '13px',
+                  flex: 1, height: '36px', fontSize: '12px',
                   background: sending[currentTask.id]
-                    ? 'rgba(107,114,128,0.7)'
+                    ? 'rgba(107,114,128,0.6)'
                     : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                   color: 'white',
-                  border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                  borderRadius: '10px',
+                  border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                  borderRadius: '8px',
                   cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
                   fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 8px rgba(37,99,235,0.25)'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 6px rgba(37,99,235,0.2)'
                 }}
-              >
-                {sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}
-              </button>
+              >{sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}</button>
             </div>
           </div>
         );
