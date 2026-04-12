@@ -3,6 +3,9 @@ import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
 import { Task, TaskStatus } from '../../types';
 import { hapticFeedback } from '../../utils/telegram';
+import { api } from '../../services/api';
+import { showAlert } from '../../utils/telegram';
+import WebApp from '@twa-dev/sdk';
 
 interface ElderTaskListProps {
   onTaskClick: (task: Task) => void;
@@ -44,6 +47,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
     allPhotos,
     currentPhotoIndex,
     setCurrentPhotoIndex,
+    currentFullscreenTaskId,
     openFullscreen,
     closeFullscreen,
     loadMoreTasks,
@@ -52,6 +56,33 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
   const isAdminOrLead = userRole === 'Admin' || userRole === 'Lead';
   const groupMap = new Map(groups.map(g => [g.id, g]));
   const filterOrder = getFilterOrder();
+
+  // Get current task for fullscreen viewer actions
+  const currentTask = currentFullscreenTaskId
+    ? tasks.find(t => t.id === currentFullscreenTaskId)
+    : null;
+
+  const handleSendToChat = async () => {
+    if (!currentTask) return;
+    try {
+      await api.sendTaskToChat(currentTask.id);
+      hapticFeedback.success();
+      if (window.Telegram?.WebApp?.initData) {
+        setTimeout(() => WebApp.close(), 300);
+      } else {
+        showAlert('Task sent to chat!');
+      }
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(`Failed to send: ${error.message}`);
+    }
+  };
+
+  const handleGoToDetail = () => {
+    if (currentTask) {
+      onTaskClick(currentTask);
+    }
+  };
 
   const statusFilters: Array<{ key: 'all' | TaskStatus; label: string }> = [
     { key: 'all', label: `${t('taskList.filterAll')}` },
@@ -240,7 +271,6 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   )}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
-
                 {/* Progress bar */}
                 {task.requireSets > 0 && (
                   <div className="elder-progress-container">
@@ -277,7 +307,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
         </div>
       )}
 
-      {/* Fullscreen image viewer */}
+      {/* Fullscreen image viewer with action buttons */}
       {fullscreenImage && (
         <FullImageViewer
           imageUrl={fullscreenImage}
@@ -289,6 +319,8 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
           onImageChange={(url) => {
             data.setFullscreenImage(url);
           }}
+          onGoToDetail={handleGoToDetail}
+          onSendToChat={handleSendToChat}
         />
       )}
     </div>
