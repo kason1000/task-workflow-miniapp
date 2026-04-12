@@ -2,9 +2,8 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
 import { Task, TaskStatus } from '../../types';
-import { hapticFeedback } from '../../utils/telegram';
+import { hapticFeedback, showAlert } from '../../utils/telegram';
 import { api } from '../../services/api';
-import { showAlert } from '../../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 
 interface ElderTaskListProps {
@@ -113,7 +112,6 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
     <div>
       {/* Filters */}
       <div className="elder-filters">
-        {/* Status filter */}
         <div className="elder-filter-label">Filter by Status:</div>
         <div className="elder-filter-group">
           {statusFilters.map(opt => (
@@ -130,7 +128,6 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
           ))}
         </div>
 
-        {/* Archived toggle for Admin/Lead */}
         {isAdminOrLead && (
           <>
             <div style={{ marginTop: '8px' }}>
@@ -151,7 +148,6 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
               </button>
             </div>
 
-            {/* Month filter when archived */}
             {filter.showArchived && (
               <div style={{ marginTop: '8px' }}>
                 <div className="elder-filter-label">Filter by Month:</div>
@@ -173,7 +169,6 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
               </div>
             )}
 
-            {/* Submitter filter when archived */}
             {filter.showArchived && Object.keys(submitterCounts).length > 0 && (
               <div style={{ marginTop: '8px' }}>
                 <div className="elder-filter-label">Filter by Submitter:</div>
@@ -212,6 +207,12 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
           const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
           const isArchived = task.status === 'Archived';
           const group = groupMap.get(task.groupId);
+          const submitterName = task.doneBy
+            ? userNames[task.doneBy]
+            : task.createdBy
+              ? userNames[task.createdBy]
+              : undefined;
+          const submitterLabel = task.doneBy ? 'Uploaded by' : 'Submitted by';
 
           return (
             <div
@@ -227,7 +228,6 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                 onTaskClick(task);
               }}
             >
-              {/* Thumbnail */}
               {thumbUrl ? (
                 <img
                   className="elder-task-thumb"
@@ -242,15 +242,12 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                 <div className="elder-task-thumb-placeholder">?</div>
               )}
 
-              {/* Info */}
               <div className="elder-task-info">
                 <div className="elder-task-title">{task.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  {/* Status badge */}
                   <span className={`elder-status-badge elder-status--${task.status.toLowerCase()}`}>
                     {STATUS_EMOJI[task.status] || ''} {t(`statusLabels.${task.status}`)}
                   </span>
-                  {/* Group badge with color */}
                   {group && (
                     <span
                       className="elder-group-badge"
@@ -264,14 +261,10 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                     </span>
                   )}
                 </div>
-                {/* Meta */}
                 <div className="elder-task-meta">
-                  {task.createdBy && userNames[task.createdBy] && (
-                    <span>By: {userNames[task.createdBy]}</span>
-                  )}
+                  {submitterName && <span>{submitterLabel}: {submitterName}</span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
-                {/* Progress bar */}
                 {task.requireSets > 0 && (
                   <div className="elder-progress-container">
                     <div className="elder-progress-bar">

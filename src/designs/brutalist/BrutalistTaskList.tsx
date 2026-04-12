@@ -51,7 +51,6 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
 
   const groupMap = new Map(groups.map(g => [g.id, g]));
 
-  // Filter options: all + InProgress + each status
   const filterStatuses: Array<{ key: 'all' | 'InProgress' | TaskStatus; label: string }> = [
     { key: 'all', label: 'ALL' },
     { key: 'New', label: 'NEW' },
@@ -61,7 +60,6 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
     { key: 'Completed', label: 'CMP' },
   ];
 
-  // Loading state
   if (loading && tasks.length === 0) {
     return (
       <div className="brutal-loading">
@@ -71,7 +69,6 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="brutal-error">
@@ -112,17 +109,14 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
         </span>
       </div>
 
-      {/* Archived total count */}
       {filter.showArchived && archivedTotalCount !== null && (
         <div className="brutal-archived-count">
           TOTAL ARCHIVED: {archivedTotalCount}
         </div>
       )}
 
-      {/* Secondary filters for archived mode */}
       {filter.showArchived && (
         <div className="brutal-secondary-filters">
-          {/* Month filter */}
           <select
             className="brutal-select"
             value={filter.submittedMonth || ''}
@@ -133,7 +127,6 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
               <option key={opt.value} value={opt.value}>{opt.label.toUpperCase()}</option>
             ))}
           </select>
-          {/* Submitter filter */}
           <select
             className="brutal-select"
             value={filter.doneBy || ''}
@@ -160,6 +153,8 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
             const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
             const pct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
             const group = groupMap.get(task.groupId);
+            const submitterName = task.doneBy ? userNames[task.doneBy] : task.createdBy ? userNames[task.createdBy] : undefined;
+            const submitterLabel = task.doneBy ? 'UPLOADED BY' : 'SUBMITTED BY';
 
             return (
               <div
@@ -167,12 +162,8 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                 className="brutal-card"
                 onClick={() => onTaskClick(task)}
               >
-                {/* Group color accent bar (left side) */}
                 {group?.color && (
-                  <div
-                    className="brutal-group-accent"
-                    style={{ background: group.color }}
-                  />
+                  <div className="brutal-group-accent" style={{ background: group.color }} />
                 )}
 
                 <div className="brutal-card-top">
@@ -181,7 +172,6 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                     <span className={`brutal-card-status ${STATUS_CSS[task.status] || ''}`}>
                       {task.status.toUpperCase()}
                     </span>
-                    {/* Group badge with color */}
                     {group && (
                       <span
                         className="brutal-group-badge"
@@ -210,7 +200,6 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                   )}
                 </div>
 
-                {/* Progress */}
                 {task.requireSets > 0 && (
                   <div className="brutal-progress">
                     <span className="brutal-progress-number">{pct}%</span>
@@ -220,11 +209,8 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                   </div>
                 )}
 
-                {/* Meta */}
                 <div className="brutal-card-meta">
-                  {task.createdBy && userNames[task.createdBy] && (
-                    <span>{userNames[task.createdBy]} / </span>
-                  )}
+                  {submitterName && <span>{submitterLabel} {submitterName} / </span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
               </div>

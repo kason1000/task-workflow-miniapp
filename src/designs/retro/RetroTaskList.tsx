@@ -121,7 +121,7 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
         </button>
       </div>
 
-      {/* Archived sub-filters: month & submitter */}
+      {/* Archived sub-filters */}
       {filter.showArchived && (
         <div className="retro-filter-bar" style={{ borderBottom: '1px solid var(--retro-border)' }}>
           <span className="retro-filter-label" style={{ fontSize: 12 }}>MONTH:</span>
@@ -163,6 +163,8 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
         tasks.map((task, idx) => {
           const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
           const group = groupMap.get(task.groupId);
+          const submitterName = task.doneBy ? userNames[task.doneBy] : task.createdBy ? userNames[task.createdBy] : undefined;
+          const submitterLabel = task.doneBy ? 'Uploaded by' : 'Submitted by';
 
           return (
             <div
@@ -171,15 +173,10 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
               style={{ animationDelay: `${idx * 40}ms` }}
               onClick={() => onTaskClick(task)}
             >
-              {/* Group color accent bar (left side) */}
               {group?.color && (
-                <div
-                  className="retro-group-accent"
-                  style={{ background: group.color }}
-                />
+                <div className="retro-group-accent" style={{ background: group.color }} />
               )}
 
-              {/* Window title bar */}
               <div className="retro-task-card-titlebar">
                 <span>{task.id.slice(0, 8)}.exe</span>
                 <div className="retro-window-buttons">
@@ -189,7 +186,6 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
                 </div>
               </div>
 
-              {/* Card body */}
               <div className="retro-task-card-body">
                 {thumbUrl ? (
                   <img
@@ -210,7 +206,6 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
                     <span className={`retro-status ${STATUS_CSS[task.status]}`}>
                       {STATUS_LABEL[task.status]}
                     </span>
-                    {/* Group badge with color */}
                     {group && (
                       <span
                         className="retro-group-badge"
@@ -230,9 +225,7 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
                   </div>
                   <div className="retro-task-meta">
                     <span>{formatRetroDate(task.createdAt)}</span>
-                    {task.createdBy && userNames[task.createdBy] && (
-                      <span>{userNames[task.createdBy]}</span>
-                    )}
+                    {submitterName && <span>{submitterLabel}: {submitterName}</span>}
                   </div>
                 </div>
               </div>

@@ -81,7 +81,6 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
               {opt.label}
             </button>
           ))}
-          {/* Archived toggle for Admin/Lead */}
           {isAdminOrLead && (
             <button
               className={`zen-filter-link ${filter.showArchived ? 'zen-filter-link--active' : ''}`}
@@ -100,7 +99,6 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
             </button>
           )}
         </div>
-        {/* Secondary filters when archived */}
         {filter.showArchived && isAdminOrLead && (
           <div className="zen-filter-secondary">
             <select
@@ -152,7 +150,9 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
           const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
           const isArchived = task.status === 'Archived';
           const group = groupMap.get(task.groupId);
-          
+          const submitterName = task.doneBy ? userNames[task.doneBy] : task.createdBy ? userNames[task.createdBy] : undefined;
+          const submitterLabel = task.doneBy ? 'Uploaded by' : 'Submitted by';
+
           return (
             <div
               key={task.id}
@@ -162,18 +162,10 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 onTaskClick(task);
               }}
             >
-              {/* Left status line */}
               <div className={`zen-task-status-line zen-task-status-line--${task.status.toLowerCase()}`} />
-              
-              {/* Group color accent bar (if group has color) */}
               {group?.color && (
-                <div
-                  className="zen-group-accent"
-                  style={{ background: group.color }}
-                />
+                <div className="zen-group-accent" style={{ background: group.color }} />
               )}
-              
-              {/* Thumbnail */}
               {thumbUrl ? (
                 <img
                   className="zen-task-thumb"
@@ -188,14 +180,12 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 <div className="zen-task-thumb-placeholder" />
               )}
 
-              {/* Info */}
               <div className="zen-task-info">
                 <div className="zen-task-title">{task.title}</div>
                 <div className="zen-task-status-row">
                   <span className="zen-task-status-text" style={{ color: `var(--zen-status-${task.status.toLowerCase()})` }}>
                     {t(`statusLabels.${task.status}`)}
                   </span>
-                  {/* Group badge with color */}
                   {group && (
                     <span
                       className="zen-group-badge"
@@ -210,13 +200,10 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                   )}
                 </div>
                 <div className="zen-task-meta">
-                  {task.createdBy && userNames[task.createdBy] && (
-                    <span>{userNames[task.createdBy]}</span>
-                  )}
+                  {submitterName && <span>{submitterLabel} {submitterName}</span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
 
-                {/* Progress */}
                 {task.requireSets > 0 && (
                   <div className="zen-progress-container">
                     <div className="zen-progress-bar">
