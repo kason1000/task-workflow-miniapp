@@ -196,24 +196,20 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         
         fetchedTasks = paginatedTasks;
       } else {
-        if (fetchArchived) {
-          // For archived tasks, fetch with a very large page size to get all archived tasks at once
-          const { tasks: allTasks } = await api.getTasks(statusFilter, fetchArchived, 0, 200, 'archivedAt', 'desc'); // Fetch up to 200 archived tasks
-          fetchedTasks = allTasks;
-          
-          // For archived tasks, set hasMore to false since we're showing all at once in this approach
-          setHasMore(false);
-        } else {
-          // Use pagination for non-archived tasks
-          const backendPage = pageNum - 1; // Convert to 0-indexed
-          const pageSize = 20;
-          
-          const { tasks: allTasks } = await api.getTasks(statusFilter, fetchArchived, backendPage, pageSize);
-          fetchedTasks = allTasks;
-          
-          // Update hasMore based on whether we got a full page back
-          setHasMore(fetchedTasks.length === pageSize);
-        }
+        const backendPage = pageNum - 1; // Convert to 0-indexed
+        const pageSize = fetchArchived ? 50 : 20;
+
+        const { tasks: allTasks } = await api.getTasks(
+          statusFilter,
+          fetchArchived,
+          backendPage,
+          pageSize,
+          fetchArchived ? 'archivedAt' : undefined,
+          fetchArchived ? 'desc' : undefined
+        );
+        fetchedTasks = allTasks;
+
+        setHasMore(fetchedTasks.length === pageSize);
       }
       
       // Additional client-side filter for "InProgress" (Viewer only)
@@ -394,13 +390,8 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     await fetchTasks(nextPage);
   };
 
-  // Implement infinite scroll for non-archived tasks
+  // Implement infinite scroll
   useEffect(() => {
-    if (filter.showArchived) {
-      // Don't use infinite scroll for archived tasks - show all at once
-      return;
-    }
-    
     const handleScroll = () => {
       // Check if we're near the bottom of the page
       // Use a smaller threshold to trigger earlier and handle cases where page isn't fully scrollable
@@ -412,7 +403,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadingMore, hasMore, page, filter.showArchived]);
+  }, [loadingMore, hasMore, page]);
 
   const handleThumbnailClick = (task: Task, thumbnailUrl: string, rect: DOMRect, e: React.MouseEvent) => {
     e.stopPropagation();
