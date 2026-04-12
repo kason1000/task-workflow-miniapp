@@ -46,6 +46,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
 
+  // Share state: pre-downloaded files ready for a fresh gesture
+  const [pendingShareFiles, setPendingShareFiles] = useState<File[] | null>(null);
+  const [pendingShareTitle, setPendingShareTitle] = useState('');
+  const [shareProgress, setShareProgress] = useState('');
+
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryInitialSet, setGalleryInitialSet] = useState(0);
@@ -279,98 +284,68 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const shareSetDirect = async (setIndex: number) => {
     hapticFeedback.medium();
 
+    // If files are already prepared, share immediately (fresh gesture)
+    if (pendingShareFiles && pendingShareFiles.length > 0) {
+      try {
+        await navigator.share({ title: pendingShareTitle, files: pendingShareFiles });
+        hapticFeedback.success();
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          showAlert(t('taskDetail.shareFailed', { error: error.message }));
+        }
+      } finally {
+        setPendingShareFiles(null);
+        setShareProgress('');
+      }
+      return;
+    }
+
     try {
       const set = task.sets[setIndex];
-
-      if (!set) {
-        throw new Error(`Set ${setIndex + 1} not found`);
-      }
+      if (!set) throw new Error(`Set ${setIndex + 1} not found`);
 
       setLoading(true);
-
       const files: File[] = [];
+      const totalItems = (set.photos?.length || 0) + (set.video ? 1 : 0);
+      let downloaded = 0;
 
-      if (set.photos && set.photos.length > 0) {
+      if (set.photos) {
         for (let i = 0; i < set.photos.length; i++) {
-          const photo = set.photos[i];
-
-          try {
-            const { fileUrl } = await api.getProxiedMediaUrl(photo.file_id);
-            const response = await fetch(fileUrl, {
-              headers: { 'X-Telegram-InitData': WebApp.initData }
-            });
-
-            if (!response.ok) {
-              throw new Error(`HTTP ${response.status}`);
-            }
-
-            const blob = await response.blob();
-
-            if (blob.size < 100) {
-              throw new Error(`Too small (${blob.size} bytes)`);
-            }
-
-            const file = new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-            files.push(file);
-          } catch (photoError: any) {
-            console.error(`❌ Photo ${i + 1} failed:`, photoError);
-            throw new Error(`Photo ${i + 1}: ${photoError.message}`);
-          }
+          setShareProgress(`${++downloaded}/${totalItems}`);
+          const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
+          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const blob = await response.blob();
+          if (blob.size < 100) throw new Error(`Photo ${i + 1} too small`);
+          files.push(new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
         }
       }
 
       if (set.video) {
-        try {
-          const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-          const response = await fetch(fileUrl, {
-            headers: { 'X-Telegram-InitData': WebApp.initData }
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const blob = await response.blob();
-          const contentType = response.headers.get('content-type') || 'video/mp4';
-
-          if (blob.size < 100) {
-            throw new Error(`Too small (${blob.size} bytes)`);
-          }
-
-          const file = new File([blob], `set${setIndex + 1}_video.mp4`, { type: contentType });
-          files.push(file);
-        } catch (videoError: any) {
-          console.error(`❌ Video failed:`, videoError);
-          throw new Error(`Video: ${videoError.message}`);
-        }
+        setShareProgress(`${++downloaded}/${totalItems}`);
+        const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
+        const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        if (blob.size < 100) throw new Error('Video too small');
+        files.push(new File([blob], `set${setIndex + 1}_video.mp4`, { type: response.headers.get('content-type') || 'video/mp4' }));
       }
 
-      if (files.length === 0) {
-        throw new Error('No files to share');
-      }
+      if (files.length === 0) throw new Error('No files to share');
+      if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
 
-      if (!navigator.share || !navigator.canShare({ files })) {
-        throw new Error('Share not supported');
-      }
-
-      // Call share() BEFORE any setState to preserve user-gesture context
-      const sharePromise = navigator.share({
-        title: `${task.title} - Set ${setIndex + 1}`,
-        files
-      });
+      // Store files and prompt user to tap again (fresh gesture)
+      setPendingShareFiles(files);
+      setPendingShareTitle(`${task.title} - Set ${setIndex + 1}`);
+      setShareProgress('');
       setLoading(false);
-      await sharePromise;
-
-      hapticFeedback.success();
-
     } catch (error: any) {
-      console.error('❌ Share failed:', error);
-
+      console.error('❌ Share prep failed:', error);
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(t('taskDetail.shareFailed', { error: error.message }));
       }
-    } finally {
+      setShareProgress('');
       setLoading(false);
     }
   };
@@ -830,10 +805,33 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             {totalMedia > 0 && !selectionMode && (
               <button
                 onClick={async () => {
+                  // If files ready, share immediately (fresh gesture)
+                  if (pendingShareFiles && pendingShareFiles.length > 0) {
+                    try {
+                      await navigator.share({ title: pendingShareTitle, files: pendingShareFiles });
+                      hapticFeedback.success();
+                    } catch (error: any) {
+                      if (error.name !== 'AbortError') {
+                        showAlert(t('taskDetail.shareFailed', { error: error.message }));
+                      }
+                    } finally {
+                      setPendingShareFiles(null);
+                      setShareProgress('');
+                    }
+                    return;
+                  }
+
                   setLoading(true);
                   hapticFeedback.medium();
                   try {
                     const files: File[] = [];
+                    let downloaded = 0;
+                    let totalItems = 0;
+                    for (let si = 0; si < task.requireSets; si++) {
+                      const set = task.sets[si];
+                      if (!set) continue;
+                      totalItems += (set.photos?.length || 0) + (set.video ? 1 : 0);
+                    }
 
                     for (let si = 0; si < task.requireSets; si++) {
                       const set = task.sets[si];
@@ -841,44 +839,37 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
                       if (set.photos) {
                         for (let i = 0; i < set.photos.length; i++) {
+                          setShareProgress(`${++downloaded}/${totalItems}`);
                           const { fileUrl } = await api.getProxiedMediaUrl(set.photos[i].file_id);
-                          const response = await fetch(fileUrl, {
-                            headers: { 'X-Telegram-InitData': WebApp.initData }
-                          });
+                          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
                           if (!response.ok) throw new Error(`Failed to fetch from set ${si + 1}`);
                           const blob = await response.blob();
-                          const file = new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' });
-                          files.push(file);
+                          files.push(new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
                         }
                       }
 
                       if (set.video) {
+                        setShareProgress(`${++downloaded}/${totalItems}`);
                         const { fileUrl } = await api.getProxiedMediaUrl(set.video.file_id);
-                        const response = await fetch(fileUrl, {
-                          headers: { 'X-Telegram-InitData': WebApp.initData }
-                        });
+                        const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
                         if (!response.ok) throw new Error(`Failed to fetch video from set ${si + 1}`);
                         const blob = await response.blob();
-                        const file = new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' });
-                        files.push(file);
+                        files.push(new File([blob], `set${si + 1}_video.mp4`, { type: 'video/mp4' }));
                       }
                     }
 
                     if (navigator.share && navigator.canShare({ files })) {
-                      const sharePromise = navigator.share({
-                        title: task.title,
-                        files
-                      });
+                      setPendingShareFiles(files);
+                      setPendingShareTitle(task.title);
+                      setShareProgress('');
                       setLoading(false);
-                      await sharePromise;
-                      hapticFeedback.success();
                     }
                   } catch (error: any) {
                     if (error.name !== 'AbortError') {
                       hapticFeedback.error();
                       showAlert(t('taskDetail.shareFailed', { error: error.message }));
                     }
-                  } finally {
+                    setShareProgress('');
                     setLoading(false);
                   }
                 }}
@@ -886,15 +877,16 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 style={{
                   padding: '6px 12px',
                   fontSize: '12px',
-                  background: loading ? '#6b7280' : '#10b981',
+                  background: pendingShareFiles ? '#3b82f6' : loading ? '#6b7280' : '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  animation: pendingShareFiles ? 'pulse 1.5s infinite' : 'none'
                 }}
               >
-                {loading ? '⏳' : `📤 ${totalMedia}`}
+                {pendingShareFiles ? `📤 Tap` : loading ? `⏳ ${shareProgress}` : `📤 ${totalMedia}`}
               </button>
             )}
           </div>
@@ -1000,14 +992,15 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                       style={{
                         padding: '6px 12px',
                         fontSize: '12px',
-                        background: 'var(--tg-theme-button-color)',
-                        color: 'var(--tg-theme-button-text-color)',
+                        background: pendingShareFiles ? '#3b82f6' : 'var(--tg-theme-button-color)',
+                        color: pendingShareFiles ? 'white' : 'var(--tg-theme-button-text-color)',
                         border: 'none',
                         borderRadius: '6px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        animation: pendingShareFiles ? 'pulse 1.5s infinite' : 'none'
                       }}
                     >
-                      📤 {fileCount}
+                      {pendingShareFiles ? '📤 Tap' : loading && shareProgress ? `⏳ ${shareProgress}` : `📤 ${fileCount}`}
                     </button>
                   )}
                 </div>
