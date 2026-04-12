@@ -95,7 +95,6 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
     setTasks([]);
     setHasMore(true);
     setArchivedTotalCount(null);
-    setAllPhotos([]);
     fetchTasks(1);
   }, [filter.status, filter.showArchived, filter.submittedMonth, filter.doneBy, groupId, userRole]);
 
@@ -106,12 +105,21 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       prevRefreshKey.current = refreshKey;
       setPage(1);
       setTasks([]);
-      setAllPhotos([]);
       setHasMore(true);
       setArchivedTotalCount(null);
       fetchTasks(1);
     }
   }, [refreshKey]);
+
+  // Rebuild allPhotos reactively when tasks or thumbnails change
+  useEffect(() => {
+    const photos: Array<{url: string, taskId: string, taskIndex: number}> = [];
+    tasks.forEach((task, i) => {
+      const url = task.createdPhoto?.file_id && thumbnails[task.createdPhoto.file_id];
+      if (url) photos.push({ url, taskId: task.id, taskIndex: i });
+    });
+    setAllPhotos(photos);
+  }, [tasks, thumbnails]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -309,24 +317,8 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
         }
       });
 
-      // Merge new thumbnails into cache
-      const mergedThumbnails = { ...thumbnails, ...newThumbnails };
-      setThumbnails(mergedThumbnails);
-
-      // Build allPhotos from merged cache (not just newThumbnails)
-      for (let i = 0; i < filteredTasks.length; i++) {
-        const task = filteredTasks[i];
-        const url = task.createdPhoto?.file_id && mergedThumbnails[task.createdPhoto.file_id];
-        if (url) {
-          newAllPhotos.push({ url, taskId: task.id, taskIndex: (pageNum === 1 ? i : tasks.length + i) });
-        }
-      }
-
-      if (pageNum === 1) {
-        setAllPhotos(newAllPhotos);
-      } else {
-        setAllPhotos(prev => [...prev, ...newAllPhotos]);
-      }
+      // Merge with functional updater to avoid race conditions
+      setThumbnails(prev => ({ ...prev, ...newThumbnails }));
 
       // Wait for user names if they were being loaded
       if (userNamesPromise) {
