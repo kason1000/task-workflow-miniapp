@@ -30,8 +30,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     showArchived: boolean;
     groupId?: string;
     submittedMonth?: string;
+    doneBy?: number;
   }>({ status: 'all', showArchived: false });
   const [archivedTotalCount, setArchivedTotalCount] = useState<number | null>(null);
+  const [submitterCounts, setSubmitterCounts] = useState<Record<string, number>>({});
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -97,7 +99,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setHasMore(true);
     setArchivedTotalCount(null);
     fetchTasks(1);
-  }, [filter.status, filter.showArchived, filter.groupId, filter.submittedMonth, userRole]);
+  }, [filter.status, filter.showArchived, filter.groupId, filter.submittedMonth, filter.doneBy, userRole]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -202,19 +204,21 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         const backendPage = pageNum - 1;
         const pageSize = fetchArchived ? 50 : 20;
 
-        const { tasks: allTasks, totalCount } = await api.getTasks(
+        const result = await api.getTasks(
           statusFilter,
           fetchArchived,
           backendPage,
           pageSize,
           fetchArchived ? 'submittedAt' : undefined,
           fetchArchived ? 'desc' : undefined,
-          fetchArchived ? filter.submittedMonth : undefined
+          fetchArchived ? filter.submittedMonth : undefined,
+          fetchArchived ? filter.doneBy : undefined
         );
-        fetchedTasks = allTasks;
+        fetchedTasks = result.tasks;
 
-        if (fetchArchived && totalCount !== undefined) {
-          setArchivedTotalCount(totalCount);
+        if (fetchArchived) {
+          if (result.totalCount !== undefined) setArchivedTotalCount(result.totalCount);
+          if (result.submitterCounts) setSubmitterCounts(result.submitterCounts);
         }
         setHasMore(fetchedTasks.length === pageSize);
       }
@@ -259,6 +263,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       filteredTasks.forEach((task: Task) => {
         if (task.createdBy) userIds.add(task.createdBy);
         if (task.doneBy) userIds.add(task.doneBy);
+      });
+      // Also load names for all submitters shown in user filter
+      Object.keys(submitterCounts).forEach(id => userIds.add(parseInt(id)));
+      filteredTasks.forEach((task: Task) => {
         if (task.createdPhoto?.file_id && !thumbnails[task.createdPhoto.file_id]) {
           photoIdsToLoad.add(task.createdPhoto.file_id);
         }
@@ -339,7 +347,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const handleArchiveToggle = () => {
     hapticFeedback.light();
-    setFilter(prev => ({ ...prev, status: 'all', showArchived: !prev.showArchived, submittedMonth: undefined }));
+    setFilter(prev => ({ ...prev, status: 'all', showArchived: !prev.showArchived, submittedMonth: undefined, doneBy: undefined }));
   };
 
   // NEW: Handle group filter
@@ -666,6 +674,43 @@ export function TaskList({ onTaskClick }: TaskListProps) {
               >🔄</button>
             </div>
           </div>
+
+          {/* User filter row (archived view only) */}
+          {filter.showArchived && Object.keys(submitterCounts).length > 0 && (
+            <div style={{
+              display: 'flex', gap: '6px', overflowX: 'auto', marginTop: '6px',
+              scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch', paddingBottom: '2px'
+            }}>
+              <button
+                onClick={() => { setFilter(prev => ({ ...prev, doneBy: undefined })); hapticFeedback.light(); }}
+                style={{
+                  minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
+                  background: !filter.doneBy ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  color: !filter.doneBy ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                  border: 'none', borderRadius: '6px'
+                }}
+              >👥 All</button>
+              {Object.entries(submitterCounts)
+                .sort(([,a], [,b]) => b - a)
+                .map(([userId, count]) => {
+                  const uid = parseInt(userId);
+                  const name = userNames[uid] || `User ${userId}`;
+                  const isActive = filter.doneBy === uid;
+                  return (
+                    <button
+                      key={userId}
+                      onClick={() => { setFilter(prev => ({ ...prev, doneBy: uid })); hapticFeedback.light(); }}
+                      style={{
+                        minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
+                        background: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                        color: isActive ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                        border: 'none', borderRadius: '6px'
+                      }}
+                    >{name} ({count})</button>
+                  );
+                })}
+            </div>
+          )}
         </div>
       </div>
 

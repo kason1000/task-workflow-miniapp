@@ -100,7 +100,7 @@ class ApiService {
   }
 
   // Tasks
-  async getTasks(status?: string, archived?: boolean, page?: number, pageSize?: number, sortBy?: string, sortOrder?: 'asc' | 'desc', submittedMonth?: string) {
+  async getTasks(status?: string, archived?: boolean, page?: number, pageSize?: number, sortBy?: string, sortOrder?: 'asc' | 'desc', submittedMonth?: string, doneBy?: number) {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (archived !== undefined) params.append('archived', archived.toString());
@@ -109,11 +109,13 @@ class ApiService {
     if (sortBy) params.append('sortBy', sortBy);
     if (sortOrder) params.append('sortOrder', sortOrder);
     if (submittedMonth) params.append('submittedMonth', submittedMonth);
+    if (doneBy !== undefined) params.append('doneBy', doneBy.toString());
 
     const response = await this.request<any>(`/tasks?${params.toString()}`);
     return {
       tasks: response.tasks || response,
       totalCount: response.pagination?.totalCount,
+      submitterCounts: response.submitterCounts as Record<string, number> | undefined,
     };
   }
 
