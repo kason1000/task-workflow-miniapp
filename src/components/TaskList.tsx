@@ -309,15 +309,19 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
         }
       });
 
-      // Build allPhotos array
+      // Merge new thumbnails into cache
+      const mergedThumbnails = { ...thumbnails, ...newThumbnails };
+      setThumbnails(mergedThumbnails);
+
+      // Build allPhotos from merged cache (not just newThumbnails)
       for (let i = 0; i < filteredTasks.length; i++) {
         const task = filteredTasks[i];
-        if (task.createdPhoto?.file_id && newThumbnails[task.createdPhoto.file_id]) {
-          newAllPhotos.push({ url: newThumbnails[task.createdPhoto.file_id], taskId: task.id, taskIndex: (pageNum === 1 ? i : tasks.length + i) });
+        const url = task.createdPhoto?.file_id && mergedThumbnails[task.createdPhoto.file_id];
+        if (url) {
+          newAllPhotos.push({ url, taskId: task.id, taskIndex: (pageNum === 1 ? i : tasks.length + i) });
         }
       }
-      
-      setThumbnails(prev => ({ ...prev, ...newThumbnails }));
+
       if (pageNum === 1) {
         setAllPhotos(newAllPhotos);
       } else {
