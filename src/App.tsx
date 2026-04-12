@@ -631,9 +631,9 @@ function App() {
       <div style={{ 
         paddingTop: view === 'detail' || view === 'share' || view === 'groupDetail' || view === 'createGroup' || view === 'groups' ? '60px' : '42px'   // More padding for detail views
       }}>
-        {view === 'list' && (
+        <div style={{ display: view === 'list' ? 'block' : 'none' }}>
           <TaskList onTaskClick={handleTaskClick} groupId={selectedGroupId} refreshKey={refreshKey} />
-        )}
+        </div>
 
         {view === 'detail' && selectedTask && (
           <TaskDetail
