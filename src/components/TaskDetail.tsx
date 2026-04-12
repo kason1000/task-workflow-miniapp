@@ -246,10 +246,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     hapticFeedback.medium();
 
     try {
-      const deletePromises = Array.from(selectedMedia).map(fileId =>
-        api.deleteUpload(task.id, fileId)
-      );
-      await Promise.all(deletePromises);
+      for (const fileId of Array.from(selectedMedia)) {
+        await api.deleteUpload(task.id, fileId);
+      }
       hapticFeedback.success();
       showAlert(t('taskDetail.deleteSelectedSuccess', { count: selectedMedia.size }));
       setSelectedMedia(new Set());
@@ -354,12 +353,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         throw new Error('Share not supported');
       }
 
-      setLoading(false);
-
-      await navigator.share({
+      // Call share() BEFORE any setState to preserve user-gesture context
+      const sharePromise = navigator.share({
         title: `${task.title} - Set ${setIndex + 1}`,
         files
       });
+      setLoading(false);
+      await sharePromise;
 
       hapticFeedback.success();
 
@@ -865,11 +865,12 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                     }
 
                     if (navigator.share && navigator.canShare({ files })) {
-                      setLoading(false);
-                      await navigator.share({
+                      const sharePromise = navigator.share({
                         title: task.title,
                         files
                       });
+                      setLoading(false);
+                      await sharePromise;
                       hapticFeedback.success();
                     }
                   } catch (error: any) {

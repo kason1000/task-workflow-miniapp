@@ -347,13 +347,13 @@ export function GalleryOverlay({
         files.push(file);
       }
       
-      setActionLoading(false);
-      
       if (navigator.share && navigator.canShare({ files })) {
-        await navigator.share({
+        const sharePromise = navigator.share({
           title: `${task.title} - Set ${currentSetIndex + 1}`,
           files
         });
+        setActionLoading(false);
+        await sharePromise;
         hapticFeedback.success();
       }
     } catch (error: any) {
@@ -417,21 +417,17 @@ export function GalleryOverlay({
     hapticFeedback.medium();
     
     try {
-      const deletePromises: Promise<any>[] = [];
-      
       if (set.photos) {
         for (const photo of set.photos) {
           if (photo.file_id !== task.createdPhoto?.file_id) {
-            deletePromises.push(api.deleteUpload(task.id, photo.file_id));
+            await api.deleteUpload(task.id, photo.file_id);
           }
         }
       }
-      
+
       if (set.video) {
-        deletePromises.push(api.deleteUpload(task.id, set.video.file_id));
+        await api.deleteUpload(task.id, set.video.file_id);
       }
-      
-      await Promise.all(deletePromises);
       hapticFeedback.success();
       onTaskUpdated();
       
