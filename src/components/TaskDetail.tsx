@@ -1253,45 +1253,21 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   );
 }
 
-function VideoThumb({ src, size }: { src: string; size: number }) {
-  const [poster, setPoster] = useState<string | null>(null);
-  useEffect(() => {
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = 'metadata';
-    video.src = src;
-    const onSeeked = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = size * 2;
-        canvas.height = size * 2;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          setPoster(canvas.toDataURL('image/jpeg', 0.6));
-        }
-      } catch {}
-      video.removeEventListener('seeked', onSeeked);
-      video.src = '';
-    };
-    video.addEventListener('seeked', onSeeked);
-    video.addEventListener('loadeddata', () => { video.currentTime = 0.1; });
-    video.load();
-    return () => { video.src = ''; };
-  }, [src, size]);
-
+function VideoThumb({ src }: { src: string }) {
   return (
     <div style={{ width: '100%', height: '100%', background: '#1a1a2e', position: 'relative' }}>
-      {poster ? (
-        <img src={poster} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : null}
+      <video
+        src={src}
+        muted
+        playsInline
+        preload="metadata"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+      />
       <div style={{
         position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <div style={{
-          width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)',
+          width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.55)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px',
         }}>▶️</div>
       </div>
@@ -1639,7 +1615,7 @@ function DetailImageViewer({
                         style={{ width: '64px', height: '64px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', border: isActive ? '2px solid white' : '2px solid transparent', opacity: isActive ? 1 : 0.4, cursor: 'pointer', transition: 'opacity 0.15s ease, border-color 0.15s ease', position: 'relative' }}
                       >
                         {isVid ? (
-                          <VideoThumb src={url} size={64} />
+                          <VideoThumb src={url} />
                         ) : (
                           <img src={url} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
                         )}
