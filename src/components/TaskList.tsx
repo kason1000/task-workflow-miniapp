@@ -16,9 +16,10 @@ const statusColors: Record<TaskStatus, string> = {
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
+  groupId?: string;
 }
 
-export function TaskList({ onTaskClick }: TaskListProps) {
+export function TaskList({ onTaskClick, groupId }: TaskListProps) {
   const { t, formatDate } = useLocale();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [filter, setFilter] = useState<{
     status: 'all' | 'InProgress' | TaskStatus;
     showArchived: boolean;
-    groupId?: string;
     submittedMonth?: string;
     doneBy?: number;
   }>({ status: 'all', showArchived: false });
@@ -40,9 +40,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [userRole, setUserRole] = useState<string>('Member');
   const [userNames, setUserNames] = useState<Record<number, string>>({});
   
-  // NEW: Group state
   const [groups, setGroups] = useState<Group[]>([]);
-  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -54,7 +52,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<number>(0);
-  const groupDropdownRef = useRef<HTMLDivElement>(null);
 
   const getFilterOrder = (): TaskStatus[] => {
     if (userRole === 'Member') {
@@ -99,7 +96,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setHasMore(true);
     setArchivedTotalCount(null);
     fetchTasks(1);
-  }, [filter.status, filter.showArchived, filter.groupId, filter.submittedMonth, filter.doneBy, userRole]);
+  }, [filter.status, filter.showArchived, filter.submittedMonth, filter.doneBy, groupId, userRole]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -107,21 +104,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     }
   });
 
-  // NEW: Click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (groupDropdownRef.current && !groupDropdownRef.current.contains(event.target as Node)) {
-        setShowGroupDropdown(false);
-      }
-    };
-
-    if (showGroupDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showGroupDropdown]);
-
-  // NEW: Fetch groups
   const fetchGroups = async () => {
     try {
       const data = await api.getGroups();
@@ -159,9 +141,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
       // NEW: Fetch tasks with group filter
       let fetchedTasks: Task[];
-      if (filter.groupId) {
+      if (groupId) {
         // For group-specific tasks, we'll fetch all and filter, but implement pagination if needed
-        const data = await api.getGroupTasks(filter.groupId);
+        const data = await api.getGroupTasks(groupId);
         fetchedTasks = data.tasks || [];
         
         // Apply status filter client-side
@@ -232,7 +214,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
       }
 
       // Sort by status order if "All" selected (only for first page or non-group view)
-      if (filter.status === 'all' && !filter.showArchived && !filter.groupId && pageNum === 1) {
+      if (filter.status === 'all' && !filter.showArchived && !groupId && pageNum === 1) {
         const statusOrder = getFilterOrder();
         filteredTasks.sort((a: Task, b: Task) => {
           const aIndex = statusOrder.indexOf(a.status);
@@ -350,13 +332,6 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     setFilter(prev => ({ ...prev, status: 'all', showArchived: !prev.showArchived, submittedMonth: undefined, doneBy: undefined }));
   };
 
-  // NEW: Handle group filter
-  const handleGroupFilter = (groupId?: string) => {
-    hapticFeedback.light();
-    setFilter(prev => ({ ...prev, groupId }));
-    setShowGroupDropdown(false);
-  };
-
   const handleTaskClick = (task: Task) => {
     hapticFeedback.medium();
     onTaskClick(task);
@@ -470,7 +445,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const statusOrder = getFilterOrder();
   const canSeeArchived = userRole === 'Admin' || userRole === 'Lead';
-  const selectedGroup = groups.find(g => g.id === filter.groupId);
+  const selectedGroup = groups.find(g => g.id === groupId);
 
   // Generate month options for archive filter (last 6 months)
   const getMonthOptions = () => {
@@ -487,85 +462,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   return (
     <div>
-      {/* Group Selector (title section) */}
-      {groups.length > 0 && (
-        <div style={{
-          position: 'sticky',
-          top: '60px',
-          zIndex: 51,
-          background: 'var(--tg-theme-bg-color)',
-          padding: '8px 16px',
-          marginLeft: '-16px',
-          marginRight: '-16px',
-        }}>
-          <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }} ref={groupDropdownRef}>
-            <button
-              onClick={() => { setShowGroupDropdown(!showGroupDropdown); hapticFeedback.light(); }}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                fontSize: '13px',
-                background: filter.groupId ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                color: filter.groupId ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                border: 'none',
-                borderRadius: '8px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {selectedGroup ? (
-                  <>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: selectedGroup.color || '#3b82f6' }} />
-                    <span>{t('taskList.groupLabel', { name: selectedGroup.name })}</span>
-                  </>
-                ) : (
-                  <span>{t('taskList.allGroups')}</span>
-                )}
-              </div>
-              <span style={{ fontSize: '10px' }}>{showGroupDropdown ? '▲' : '▼'}</span>
-            </button>
-            {showGroupDropdown && (
-              <div style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
-                background: 'var(--tg-theme-bg-color)', border: '1px solid var(--tg-theme-hint-color)',
-                borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: '200px', overflowY: 'auto', zIndex: 100
-              }}>
-                <div onClick={() => handleGroupFilter(undefined)} style={{
-                  padding: '10px 12px', cursor: 'pointer', fontSize: '14px',
-                  background: !filter.groupId ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
-                  borderBottom: '1px solid var(--tg-theme-hint-color)'
-                }}>{t('taskList.allGroups')}</div>
-                {groups.map(group => (
-                  <div key={group.id} onClick={() => handleGroupFilter(group.id)} style={{
-                    padding: '10px 12px', cursor: 'pointer', fontSize: '14px',
-                    background: filter.groupId === group.id ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
-                    borderBottom: '1px solid var(--tg-theme-hint-color)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: group.color || '#3b82f6', border: '1px solid var(--tg-theme-hint-color)' }} />
-                      <span>{group.name}</span>
-                    </div>
-                    {group.isDefault && (
-                      <span style={{ fontSize: '10px', padding: '2px 4px', background: 'var(--tg-theme-button-color)', color: 'var(--tg-theme-button-text-color)', borderRadius: '3px' }}>
-                        {t('taskList.groupBadgeDefault')}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Filter Bar */}
       <div style={{
         position: 'sticky',
-        top: groups.length > 0 ? '100px' : '60px',
+        top: '60px',
         zIndex: 50,
         background: 'var(--tg-theme-bg-color)',
         borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
@@ -731,7 +631,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
             : tasks.length === 1 ? t('taskList.foundOne') : t('taskList.found', { count: tasks.length })}
         </span>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {filter.groupId && selectedGroup && (
+          {groupId && selectedGroup && (
             <span style={{
               background: 'var(--tg-theme-secondary-bg-color)',
               padding: '2px 8px',

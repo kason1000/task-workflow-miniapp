@@ -14,6 +14,7 @@ import { config } from './config';
 import { getAppVersion, getAppVersionSync } from './utils/version';
 import { Users } from 'lucide-react';
 import { useLocale } from './i18n/LocaleContext';
+import { hapticFeedback } from './utils/telegram';
 
 type View = 'list' | 'detail' | 'create' | 'share' | 'gallery' | 'groups' | 'groupDetail' | 'createGroup';
 
@@ -28,9 +29,13 @@ function App() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false); // State for hamburger menu
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [appVersion, setAppVersion] = useState(getAppVersionSync());
-  const hamburgerMenuRef = useRef<HTMLDivElement>(null); // Ref for hamburger menu
+  const hamburgerMenuRef = useRef<HTMLDivElement>(null);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+  const groupDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     console.log('Initializing app...');
@@ -276,6 +281,26 @@ function App() {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Fetch groups for header selector
+  useEffect(() => {
+    if (authenticated) {
+      api.getGroups().then(data => setGroups(data.groups || [])).catch(() => {});
+    }
+  }, [authenticated, refreshKey]);
+
+  // Click outside for group dropdown
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (groupDropdownRef.current && !groupDropdownRef.current.contains(e.target as Node)) {
+        setShowGroupDropdown(false);
+      }
+    };
+    if (showGroupDropdown) {
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }
+  }, [showGroupDropdown]);
+
   // Handle click outside for hamburger menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -347,8 +372,8 @@ function App() {
           margin: '0 auto',
           position: 'relative'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* NEW: Hamburger Menu for Admin Navigation - ONLY show for Admin or Lead */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Hamburger Menu - Admin/Lead on list/groups views */}
             {(view === 'list' || view === 'groups') && (role === 'Admin' || role === 'Lead') && (
               <button
                 onClick={() => setShowHamburgerMenu(!showHamburgerMenu)}
@@ -360,7 +385,6 @@ function App() {
                   borderRadius: '6px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
                   cursor: 'pointer',
                   fontSize: '14px'
                 }}
@@ -368,7 +392,73 @@ function App() {
                 <span>{showHamburgerMenu ? '✕' : '☰'}</span>
               </button>
             )}
-            
+
+            {/* Group Selector - compact, next to hamburger on list view */}
+            {view === 'list' && groups.length > 0 && (
+              <div ref={groupDropdownRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => { setShowGroupDropdown(!showGroupDropdown); hapticFeedback.light(); }}
+                  style={{
+                    padding: '6px 10px',
+                    background: selectedGroupId ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                    color: selectedGroupId ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  {(() => {
+                    const sg = groups.find(g => g.id === selectedGroupId);
+                    return sg ? (
+                      <>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: sg.color || '#3b82f6' }} />
+                        <span>{sg.name}</span>
+                      </>
+                    ) : (
+                      <span>👥 {t('taskList.allGroups').replace('👥 ', '')}</span>
+                    );
+                  })()}
+                  <span style={{ fontSize: '9px' }}>{showGroupDropdown ? '▲' : '▼'}</span>
+                </button>
+                {showGroupDropdown && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, marginTop: '4px',
+                    minWidth: '180px',
+                    background: 'var(--tg-theme-bg-color)', border: '1px solid var(--tg-theme-hint-color)',
+                    borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', maxHeight: '240px', overflowY: 'auto', zIndex: 200
+                  }}>
+                    <div onClick={() => { setSelectedGroupId(undefined); setShowGroupDropdown(false); hapticFeedback.light(); }} style={{
+                      padding: '10px 12px', cursor: 'pointer', fontSize: '13px',
+                      background: !selectedGroupId ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                      borderBottom: '1px solid var(--tg-theme-hint-color)'
+                    }}>{t('taskList.allGroups')}</div>
+                    {groups.map(group => (
+                      <div key={group.id} onClick={() => { setSelectedGroupId(group.id); setShowGroupDropdown(false); hapticFeedback.light(); }} style={{
+                        padding: '10px 12px', cursor: 'pointer', fontSize: '13px',
+                        background: selectedGroupId === group.id ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                        borderBottom: '1px solid var(--tg-theme-hint-color)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: group.color || '#3b82f6' }} />
+                          <span>{group.name}</span>
+                        </div>
+                        {group.isDefault && (
+                          <span style={{ fontSize: '10px', padding: '1px 4px', background: 'var(--tg-theme-button-color)', color: 'var(--tg-theme-button-text-color)', borderRadius: '3px' }}>
+                            {t('taskList.groupBadgeDefault')}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {view !== 'list' && view !== 'groups' && (
               <button
                 onClick={() => {
@@ -543,7 +633,7 @@ function App() {
         paddingTop: view === 'detail' || view === 'share' || view === 'groupDetail' || view === 'createGroup' || view === 'groups' ? '60px' : '42px'   // More padding for detail views
       }}>
         {view === 'list' && (
-          <TaskList key={refreshKey} onTaskClick={handleTaskClick} />
+          <TaskList key={refreshKey} onTaskClick={handleTaskClick} groupId={selectedGroupId} />
         )}
 
         {view === 'detail' && selectedTask && (
