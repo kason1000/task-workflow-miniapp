@@ -18,7 +18,7 @@ interface ThemeContextValue {
   isCustomLayout: boolean;
 }
 
-const STORAGE_KEY = 'app_theme';
+const STORAGE_KEY = 'taskflow_theme';
 
 const THEMES: ThemeInfo[] = [
   { id: 'classic', name: 'Classic', description: 'Original Telegram theme', hasCustomLayout: false },
@@ -37,7 +37,7 @@ const VALID_THEMES = THEMES.map(t => t.id);
 
 function readStoredTheme(): ThemeId {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && VALID_THEMES.includes(stored as ThemeId)) return stored as ThemeId;
   } catch {}
   return 'classic';
@@ -50,7 +50,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = useCallback((next: ThemeId) => {
     setThemeState(next);
-    try { sessionStorage.setItem(STORAGE_KEY, next); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -61,7 +63,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const isCustomLayout = THEMES.find(t => t.id === theme)?.hasCustomLayout ?? false;
 
   const value = useMemo<ThemeContextValue>(() => ({
-    theme, setTheme, themes: THEMES, isCustomLayout,
+    theme,
+    setTheme,
+    themes: THEMES,
+    isCustomLayout,
   }), [theme, setTheme, isCustomLayout]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
