@@ -40,12 +40,48 @@ const statusColors: Record<TaskStatus, string> = {
   Archived: 'badge-archived',
 };
 
+async function fetchFilesAndShare(
+  fileSpecs: Array<{ fileId: string; fileName: string; mimeType: string }>,
+  title: string,
+  timeoutMs: number = 30000,
+  retryIntervalMs: number = 500
+): Promise<boolean> {
+  const files: File[] = [];
+
+  for (const spec of fileSpecs) {
+    const { fileUrl } = await api.getProxiedMediaUrl(spec.fileId);
+    const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (blob.size < 100) throw new Error('File too small');
+    files.push(new File([blob], spec.fileName, { type: spec.mimeType }));
+  }
+
+  if (files.length === 0) throw new Error('No files');
+  if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      await navigator.share({ title, files });
+      return true;
+    } catch (err: any) {
+      if (err.name === 'AbortError') return false;
+      if (err.name === 'NotAllowedError' && Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, retryIntervalMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Share timed out');
+}
+
 export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetailProps) {
   const { t, formatDate } = useLocale();
   const [loading, setLoading] = useState(false);
   const [mediaCache, setMediaCache] = useState<Record<string, string>>({});
   const [loadingMedia, setLoadingMedia] = useState<Set<string>>(new Set());
-  const [blobCache, setBlobCache] = useState<Record<string, Blob>>({});
 
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -279,41 +315,25 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 
   const shareSetDirect = async (setIndex: number) => {
     hapticFeedback.medium();
+    setLoading(true);
 
     try {
       const set = task.sets[setIndex];
-      if (!set) throw new Error(`Set ${setIndex + 1} not found`);
+      if (!set) return;
 
-      const files: File[] = [];
+      const specs: Array<{ fileId: string; fileName: string; mimeType: string }> = [];
+      set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${setIndex + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
+      if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${setIndex + 1}_video.mp4`, mimeType: 'video/mp4' });
 
-      // Build files from blob cache (sync — no gesture timeout)
-      if (set.photos) {
-        for (let i = 0; i < set.photos.length; i++) {
-          const blob = blobCache[set.photos[i].file_id];
-          if (!blob) throw new Error('not_cached');
-          files.push(new File([blob], `set${setIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
-        }
-      }
-      if (set.video) {
-        const blob = blobCache[set.video.file_id];
-        if (!blob) throw new Error('not_cached');
-        files.push(new File([blob], `set${setIndex + 1}_video.mp4`, { type: blob.type || 'video/mp4' }));
-      }
-
-      if (files.length === 0) throw new Error('No files to share');
-      if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
-
-      await navigator.share({ title: `${task.title} - Set ${setIndex + 1}`, files });
-      hapticFeedback.success();
+      const shared = await fetchFilesAndShare(specs, `${task.title} - Set ${setIndex + 1}`);
+      if (shared) hapticFeedback.success();
     } catch (error: any) {
-      if (error.message === 'not_cached') {
-        showAlert(t('taskDetail.shareFailed', { error: 'Files still loading, please wait a moment and try again' }));
-        return;
-      }
       if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(t('taskDetail.shareFailed', { error: error.message }));
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -346,31 +366,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     });
   }, [task.id]);
 
-  // Pre-cache blobs for sharing (runs in background after URLs are loaded)
-  useEffect(() => {
-    const cacheBlobs = async () => {
-      const fileIds: string[] = [];
-      task.sets.forEach(set => {
-        set.photos?.forEach(p => fileIds.push(p.file_id));
-        if (set.video) fileIds.push(set.video.file_id);
-      });
-
-      for (const fileId of fileIds) {
-        if (blobCache[fileId]) continue;
-        try {
-          const { fileUrl } = await api.getProxiedMediaUrl(fileId);
-          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
-          if (response.ok) {
-            const blob = await response.blob();
-            if (blob.size > 100) {
-              setBlobCache(prev => ({ ...prev, [fileId]: blob }));
-            }
-          }
-        } catch {}
-      }
-    };
-    cacheBlobs();
-  }, [task.id]);
 
   const canTransition = (to: TaskStatus): boolean => {
     if (userRole === 'Admin') return true;
@@ -797,35 +792,24 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
               <button
                 onClick={async () => {
                   hapticFeedback.medium();
+                  setLoading(true);
                   try {
-                    const files: File[] = [];
+                    const specs: Array<{ fileId: string; fileName: string; mimeType: string }> = [];
                     for (let si = 0; si < task.requireSets; si++) {
                       const set = task.sets[si];
                       if (!set) continue;
-                      if (set.photos) {
-                        for (let i = 0; i < set.photos.length; i++) {
-                          const blob = blobCache[set.photos[i].file_id];
-                          if (!blob) throw new Error('not_cached');
-                          files.push(new File([blob], `set${si + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
-                        }
-                      }
-                      if (set.video) {
-                        const blob = blobCache[set.video.file_id];
-                        if (!blob) throw new Error('not_cached');
-                        files.push(new File([blob], `set${si + 1}_video.mp4`, { type: blob.type || 'video/mp4' }));
-                      }
+                      set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${si + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
+                      if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${si + 1}_video.mp4`, mimeType: 'video/mp4' });
                     }
-                    if (navigator.share && navigator.canShare({ files })) {
-                      await navigator.share({ title: task.title, files });
-                      hapticFeedback.success();
-                    }
+                    const shared = await fetchFilesAndShare(specs, task.title);
+                    if (shared) hapticFeedback.success();
                   } catch (error: any) {
-                    if (error.message === 'not_cached') {
-                      showAlert(t('taskDetail.shareFailed', { error: 'Files still loading, please wait a moment and try again' }));
-                    } else if (error.name !== 'AbortError') {
+                    if (error.name !== 'AbortError') {
                       hapticFeedback.error();
                       showAlert(t('taskDetail.shareFailed', { error: error.message }));
                     }
+                  } finally {
+                    setLoading(false);
                   }
                 }}
                 disabled={loading}

@@ -43,7 +43,6 @@ export function GalleryOverlay({
   const [imageScale, setImageScale] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [blobCache, setBlobCache] = useState<Record<string, Blob>>({});
   const [isExiting, setIsExiting] = useState(false);
   
   const mediaContainerRef = useRef<HTMLDivElement>(null);
@@ -101,30 +100,6 @@ export function GalleryOverlay({
   useEffect(() => {
     setCurrentMediaIndex(0);
   }, [currentSetIndex]);
-
-  // Pre-cache blobs for sharing
-  useEffect(() => {
-    if (!isOpen) return;
-    const cacheBlobs = async () => {
-      const fileIds: string[] = [];
-      task.sets.forEach(set => {
-        set.photos?.forEach(p => fileIds.push(p.file_id));
-        if (set.video) fileIds.push(set.video.file_id);
-      });
-      for (const fileId of fileIds) {
-        if (blobCache[fileId]) continue;
-        try {
-          const { fileUrl } = await api.getProxiedMediaUrl(fileId);
-          const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
-          if (response.ok) {
-            const blob = await response.blob();
-            if (blob.size > 100) setBlobCache(prev => ({ ...prev, [fileId]: blob }));
-          }
-        } catch {}
-      }
-    };
-    cacheBlobs();
-  }, [isOpen, task.id]);
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -340,35 +315,47 @@ export function GalleryOverlay({
 
   const handleShareCurrentSet = async () => {
     hapticFeedback.medium();
+    setActionLoading(true);
 
     try {
       const set = task.sets[currentSetIndex];
-      const files: File[] = [];
+      const specs: Array<{ fileId: string; fileName: string; mimeType: string }> = [];
+      set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${currentSetIndex + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
+      if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${currentSetIndex + 1}_video.mp4`, mimeType: 'video/mp4' });
 
-      if (set.photos) {
-        for (let i = 0; i < set.photos.length; i++) {
-          const blob = blobCache[set.photos[i].file_id];
-          if (!blob) throw new Error('not_cached');
-          files.push(new File([blob], `set${currentSetIndex + 1}_photo${i + 1}.jpg`, { type: 'image/jpeg' }));
+      const files: File[] = [];
+      for (const spec of specs) {
+        const { fileUrl } = await api.getProxiedMediaUrl(spec.fileId);
+        const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        files.push(new File([blob], spec.fileName, { type: spec.mimeType }));
+      }
+
+      if (!navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
+
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline) {
+        try {
+          await navigator.share({ title: `${task.title} - Set ${currentSetIndex + 1}`, files });
+          hapticFeedback.success();
+          break;
+        } catch (err: any) {
+          if (err.name === 'AbortError') break;
+          if (err.name === 'NotAllowedError' && Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
+          throw err;
         }
       }
-      if (set.video) {
-        const blob = blobCache[set.video.file_id];
-        if (!blob) throw new Error('not_cached');
-        files.push(new File([blob], `set${currentSetIndex + 1}_video.mp4`, { type: blob.type || 'video/mp4' }));
-      }
-
-      if (files.length === 0 || !navigator.share || !navigator.canShare({ files })) throw new Error('Share not supported');
-
-      await navigator.share({ title: `${task.title} - Set ${currentSetIndex + 1}`, files });
-      hapticFeedback.success();
     } catch (error: any) {
-      if (error.message === 'not_cached') {
-        showAlert(t('gallery.shareFailed', { error: 'Files still loading, please wait a moment and try again' }));
-      } else if (error.name !== 'AbortError') {
+      if (error.name !== 'AbortError') {
         hapticFeedback.error();
         showAlert(t('gallery.shareFailed', { error: error.message }));
       }
+    } finally {
+      setActionLoading(false);
     }
   };
 
