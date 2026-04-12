@@ -1,7 +1,7 @@
 /**
  * Shared fullscreen image viewer — used by all designs.
  * Handles: image display, prev/next navigation, close, keyboard (Escape), pinch-zoom.
- * Shows thumbnail strip and task info overlay.
+ * Shows thumbnail strip, task info overlay, and action buttons.
  */
 import { useState, useEffect, useRef } from 'react';
 
@@ -30,6 +30,10 @@ interface FullImageViewerProps {
   overlay?: React.ReactNode;
   /** Custom background color */
   bgColor?: string;
+  /** Callback to go to task detail */
+  onGoToDetail?: () => void;
+  /** Callback to send task to chat */
+  onSendToChat?: () => void;
 }
 
 /** Status colors for the info overlay */
@@ -53,6 +57,8 @@ export function FullImageViewer({
   currentTaskInfo,
   overlay,
   bgColor = 'rgba(0,0,0,0.97)',
+  onGoToDetail,
+  onSendToChat,
 }: FullImageViewerProps) {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -458,6 +464,60 @@ export function FullImageViewer({
                   {taskInfo.progress.completed}/{taskInfo.progress.total}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          {(onGoToDetail || onSendToChat) && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '10px',
+                marginTop: '12px',
+              }}
+            >
+              {onGoToDetail && (
+                <button
+                  onClick={() => {
+                    onGoToDetail();
+                    onClose();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open Detail
+                </button>
+              )}
+              {onSendToChat && (
+                <button
+                  onClick={() => {
+                    onSendToChat();
+                    onClose();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#4a7dff',
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Send to Chat
+                </button>
+              )}
             </div>
           )}
         </div>

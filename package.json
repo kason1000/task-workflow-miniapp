@@ -1,6 +1,6 @@
 {
   "name": "task-workflow-miniapp",
-  "version": "1.2.0006",
+  "version": "1.2.0007",
   "type": "module",
   "scripts": {
     "dev": "vite",

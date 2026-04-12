@@ -186,19 +186,16 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
             <div
               key={task.id}
               className={`elder-task-card ${isArchived ? 'elder-archived-card' : ''}`}
+              style={group?.color ? {
+                '--group-color': group.color,
+                '--group-bg': `${group.color}12`,
+              } as React.CSSProperties : undefined}
+              data-group-color={group?.color || undefined}
               onClick={() => {
                 hapticFeedback.medium();
                 onTaskClick(task);
               }}
             >
-              {/* Group color accent bar (left side) */}
-              {group?.color && (
-                <div
-                  className="elder-group-accent"
-                  style={{ background: group.color }}
-                />
-              )}
-
               {/* Thumbnail */}
               {thumbUrl ? (
                 <img
@@ -217,26 +214,25 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
               {/* Info */}
               <div className="elder-task-info">
                 <div className="elder-task-title">{task.title}</div>
-
-                {/* Status badge */}
-                <span className={`elder-status-badge elder-status--${task.status.toLowerCase()}`}>
-                  {STATUS_EMOJI[task.status] || ''} {t(`statusLabels.${task.status}`)}
-                </span>
-
-                {/* Group badge with color */}
-                {group && (
-                  <span
-                    className="elder-group-badge"
-                    style={group.color ? {
-                      background: `${group.color}18`,
-                      border: `1px solid ${group.color}40`,
-                      color: group.color,
-                    } : {}}
-                  >
-                    {group.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {/* Status badge */}
+                  <span className={`elder-status-badge elder-status--${task.status.toLowerCase()}`}>
+                    {STATUS_EMOJI[task.status] || ''} {t(`statusLabels.${task.status}`)}
                   </span>
-                )}
-
+                  {/* Group badge with color */}
+                  {group && (
+                    <span
+                      className="elder-group-badge"
+                      style={group.color ? {
+                        background: `${group.color}18`,
+                        border: `1px solid ${group.color}40`,
+                        color: group.color,
+                      } : {}}
+                    >
+                      {group.name}
+                    </span>
+                  )}
+                </div>
                 {/* Meta */}
                 <div className="elder-task-meta">
                   {task.createdBy && userNames[task.createdBy] && (
@@ -252,12 +248,10 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                       <div className="elder-progress-fill" style={{ width: `${progressPct}%` }} />
                     </div>
                     <span className="elder-progress-text">
-                      {task.completedSets}/{task.requireSets} ({progressPct}%)
+                      {task.completedSets}/{task.requireSets}
                     </span>
                   </div>
                 )}
-
-                <div className="elder-tap-hint">Tap to open</div>
               </div>
             </div>
           );
@@ -268,7 +262,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
       {hasMore && tasks.length > 0 && (
         <div className="elder-load-more">
           {loadingMore ? (
-            <span style={{ fontSize: '18px', color: 'var(--elder-hint)' }}>Loading more...</span>
+            <span style={{ fontSize: '16px', color: 'var(--elder-hint)' }}>Loading more...</span>
           ) : (
             <button
               className="elder-load-more-btn"
