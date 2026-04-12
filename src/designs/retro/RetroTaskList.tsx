@@ -225,7 +225,7 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
                   </div>
                   <div className="retro-task-meta">
                     <span>{formatRetroDate(task.createdAt)}</span>
-                    {submitterName && <span>{submitterLabel}: {submitterName}</span>}
+                    {submitterName && <span>{submitterName}</span>}
                   </div>
                 </div>
               </div>

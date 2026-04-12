@@ -200,7 +200,7 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                   )}
                 </div>
                 <div className="zen-task-meta">
-                  {submitterName && <span>{submitterLabel} {submitterName}</span>}
+                  {submitterName && <span>{submitterName}</span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
 

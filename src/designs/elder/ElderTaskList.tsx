@@ -262,7 +262,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   )}
                 </div>
                 <div className="elder-task-meta">
-                  {submitterName && <span>{submitterLabel}: {submitterName}</span>}
+                  {submitterName && <span>{submitterName}</span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
                 {task.requireSets > 0 && (

@@ -210,7 +210,7 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                 )}
 
                 <div className="brutal-card-meta">
-                  {submitterName && <span>{submitterLabel} {submitterName} / </span>}
+                  {submitterName && <span>{submitterName} / </span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
               </div>
