@@ -1166,22 +1166,30 @@ function ImageViewer({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+    isTouchMoving.current = true;
+    if (e.touches.length === 2) {
       e.preventDefault();
-      
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
+
+      if (lastTouchDistance.current === null) {
+        const d = Math.hypot(
+          e.touches[1].clientX - e.touches[0].clientX,
+          e.touches[1].clientY - e.touches[0].clientY
+        );
+        lastTouchDistance.current = d;
+        return;
+      }
+
       const distance = Math.hypot(
-        touch2.clientX - touch1.clientX,
-        touch2.clientY - touch1.clientY
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
       );
-      
+
       const scaleChange = distance / lastTouchDistance.current;
       const newScale = Math.min(Math.max(scale * scaleChange, 1), 4);
-      
+
       setScale(newScale);
       lastTouchDistance.current = distance;
-      
+
       if (newScale === 1) {
         setPosition({ x: 0, y: 0 });
       }
@@ -1193,9 +1201,16 @@ function ImageViewer({
     }
   };
 
-  const handleTouchEnd = () => {
+  const isTouchMoving = useRef(false);
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Single-finger tap (no move, no pinch) → close viewer
+    if (e.changedTouches.length === 1 && !isTouchMoving.current && lastTouchDistance.current === null && scale === 1) {
+      handleTap();
+    }
     lastTouchDistance.current = null;
     setIsDragging(false);
+    isTouchMoving.current = false;
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -1210,24 +1225,30 @@ function ImageViewer({
   };
 
   const lastTap = useRef<number>(0);
-  const handleDoubleClick = () => {
-    if (scale > 1) {
-      setScale(1);
-      setPosition({ x: 0, y: 0 });
-    } else {
-      setScale(2);
-    }
-  };
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTap = () => {
     const now = Date.now();
     const timeSince = now - lastTap.current;
-    
-    if (timeSince < 300 && timeSince > 0) {
-      handleDoubleClick();
-    }
-    
     lastTap.current = now;
+
+    if (timeSince < 300 && timeSince > 0) {
+      // Double-tap: toggle zoom
+      if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
+      if (scale > 1) {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+      } else {
+        setScale(2.5);
+      }
+    } else {
+      // Single tap: close after short delay (cancelled if double-tap follows)
+      if (tapTimer.current) clearTimeout(tapTimer.current);
+      tapTimer.current = setTimeout(() => {
+        if (scale === 1) onClose();
+        tapTimer.current = null;
+      }, 300);
+    }
   };
 
   // Navigation between task thumbnails (looping)
@@ -1312,9 +1333,13 @@ function ImageViewer({
       ref={containerRef}
       onClick={(e) => {
         if (e.target === containerRef.current && scale === 1) {
-          onClose();
+          handleTap();
         }
       }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onWheel={handleWheel}
       style={{
         position: 'fixed',
         top: 0,
@@ -1327,13 +1352,13 @@ function ImageViewer({
         alignItems: 'center',
         justifyContent: 'center',
         transition: 'background 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        cursor: scale > 1 ? 'move' : 'pointer',
-        overflow: 'hidden'
+        cursor: scale > 1 ? 'move' : 'default',
+        overflow: 'hidden',
+        touchAction: 'none'
       }}
-      onWheel={handleWheel}
     >
       <div
-        onClick={onClose}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
         style={{
           position: 'absolute',
           top: 'max(16px, env(safe-area-inset-top))',
@@ -1363,20 +1388,16 @@ function ImageViewer({
         ref={imageRef}
         src={imageUrl}
         alt="Fullscreen view"
-        onClick={handleTap}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
         style={{
           position: 'absolute',
           transform: scale > 1 ? `translate(${position.x / scale}px, ${position.y / scale}px) scale(${scale})` : animationStyle.transform,
           transition: isAnimating || (scale === 1 && position.x === 0 && position.y === 0)
-            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             : 'none',
           touchAction: 'none',
           userSelect: 'none',
-          WebKitUserSelect: 'none',
-          pointerEvents: scale > 1 ? 'auto' : 'none',
+          WebkitUserSelect: 'none',
+          pointerEvents: 'none',
           transformOrigin: 'center center',
           ...animationStyle
         }}
