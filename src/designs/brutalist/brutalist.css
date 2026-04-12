@@ -770,3 +770,21 @@
     var(--brutal-bg) 8px
   );
 }
+
+/* ── Group color visual differentiation ── */
+[data-theme="brutalist"] .brutal-group-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+}
+
+[data-theme="brutalist"] .brutal-group-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+}

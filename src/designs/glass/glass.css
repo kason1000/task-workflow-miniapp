@@ -746,3 +746,27 @@
   background: rgba(74, 125, 255, 0.1);
   color: var(--glass-accent);
 }
+
+/* ── Group color visual differentiation ── */
+[data-theme="glass"] .glass-card-group-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: var(--glass-radius) 0 0 var(--glass-radius);
+  opacity: 0.9;
+}
+
+[data-theme="glass"] .glass-group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(74, 125, 255, 0.08);
+  border: 1px solid rgba(74, 125, 255, 0.15);
+  color: var(--glass-accent);
+}

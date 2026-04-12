@@ -15,17 +15,33 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
   const data = useTaskListData(groupId, refreshKey);
 
   const {
-    tasks, loading, loadingMore, error, hasMore,
-    thumbnails, userRole, userNames, groups,
-    archivedTotalCount, submitterCounts,
-    filter, setFilter, getFilterOrder, getMonthOptions,
-    fullscreenImage, isAnimating, allPhotos, currentPhotoIndex,
-    setCurrentPhotoIndex, openFullscreen, closeFullscreen,
+    tasks,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    thumbnails,
+    userRole,
+    userNames,
+    groups,
+    archivedTotalCount,
+    submitterCounts,
+    filter,
+    setFilter,
+    getFilterOrder,
+    getMonthOptions,
+    fullscreenImage,
+    isAnimating,
+    allPhotos,
+    currentPhotoIndex,
+    setCurrentPhotoIndex,
+    openFullscreen,
+    closeFullscreen,
     loadMoreTasks,
   } = data;
 
   const isAdminOrLead = userRole === 'Admin' || userRole === 'Lead';
-  const groupMap = new Map(groups.map(g => [g.id, g.name]));
+  const groupMap = new Map(groups.map(g => [g.id, g]));
   const filterOrder = getFilterOrder();
 
   const statusFilters: Array<{ key: 'all' | TaskStatus; label: string }> = [
@@ -65,7 +81,6 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
               {opt.label}
             </button>
           ))}
-
           {/* Archived toggle for Admin/Lead */}
           {isAdminOrLead && (
             <button
@@ -81,12 +96,10 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 hapticFeedback.light();
               }}
             >
-              Archived
-              {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
+              Archived {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
             </button>
           )}
         </div>
-
         {/* Secondary filters when archived */}
         {filter.showArchived && isAdminOrLead && (
           <div className="zen-filter-secondary">
@@ -105,7 +118,6 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-
             {Object.keys(submitterCounts).length > 0 && (
               <select
                 className="zen-filter-select"
@@ -137,11 +149,10 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
       ) : (
         tasks.map((task) => {
           const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const progressPct = task.requireSets > 0
-            ? Math.round((task.completedSets / task.requireSets) * 100)
-            : 0;
+          const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
           const isArchived = task.status === 'Archived';
-
+          const group = groupMap.get(task.groupId);
+          
           return (
             <div
               key={task.id}
@@ -153,7 +164,15 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
             >
               {/* Left status line */}
               <div className={`zen-task-status-line zen-task-status-line--${task.status.toLowerCase()}`} />
-
+              
+              {/* Group color accent bar (if group has color) */}
+              {group?.color && (
+                <div
+                  className="zen-group-accent"
+                  style={{ background: group.color }}
+                />
+              )}
+              
               {/* Thumbnail */}
               {thumbUrl ? (
                 <img
@@ -172,32 +191,36 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
               {/* Info */}
               <div className="zen-task-info">
                 <div className="zen-task-title">{task.title}</div>
-
-                <span
-                  className="zen-task-status-text"
-                  style={{ color: `var(--zen-status-${task.status.toLowerCase()})` }}
-                >
-                  {t(`statusLabels.${task.status}`)}
-                </span>
-
+                <div className="zen-task-status-row">
+                  <span className="zen-task-status-text" style={{ color: `var(--zen-status-${task.status.toLowerCase()})` }}>
+                    {t(`statusLabels.${task.status}`)}
+                  </span>
+                  {/* Group badge with color */}
+                  {group && (
+                    <span
+                      className="zen-group-badge"
+                      style={group.color ? {
+                        background: `${group.color}18`,
+                        border: `1px solid ${group.color}40`,
+                        color: group.color,
+                      } : {}}
+                    >
+                      {group.name}
+                    </span>
+                  )}
+                </div>
                 <div className="zen-task-meta">
                   {task.createdBy && userNames[task.createdBy] && (
                     <span>{userNames[task.createdBy]}</span>
                   )}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
-                  {groupMap.get(task.groupId) && (
-                    <span>{groupMap.get(task.groupId)}</span>
-                  )}
                 </div>
 
                 {/* Progress */}
                 {task.requireSets > 0 && (
                   <div className="zen-progress-container">
                     <div className="zen-progress-bar">
-                      <div
-                        className="zen-progress-fill"
-                        style={{ width: `${progressPct}%` }}
-                      />
+                      <div className="zen-progress-fill" style={{ width: `${progressPct}%` }} />
                     </div>
                     <span className="zen-progress-text">
                       {task.completedSets}/{task.requireSets}

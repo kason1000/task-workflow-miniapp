@@ -137,15 +137,34 @@ export function useTaskListData(
     }
   }, [refreshKey]);
 
-  // Rebuild allPhotos
+  // Rebuild allPhotos with taskInfo
   useEffect(() => {
-    const photos: Array<{ url: string; taskId: string; taskIndex: number }> = [];
+    const photos: Array<{ url: string; taskId: string; taskIndex: number; taskInfo?: any }> = [];
+    const groupMap = new Map(groups.map(g => [g.id, g]));
     tasks.forEach((task, i) => {
       const url = task.createdPhoto?.file_id && thumbnails[task.createdPhoto.file_id];
-      if (url) photos.push({ url, taskId: task.id, taskIndex: i });
+      if (url) {
+        const group = groupMap.get(task.groupId);
+        photos.push({
+          url,
+          taskId: task.id,
+          taskIndex: i,
+          taskInfo: {
+            title: task.title,
+            status: task.status,
+            groupName: group?.name,
+            groupColor: group?.color,
+            userName: task.createdBy ? userNames[task.createdBy] : undefined,
+            createdAt: task.createdAt,
+            progress: task.requireSets > 0
+              ? { completed: task.completedSets, total: task.requireSets }
+              : undefined,
+          },
+        });
+      }
     });
     setAllPhotos(photos);
-  }, [tasks, thumbnails]);
+  }, [tasks, thumbnails, groups, userNames]);
 
   const fetchTasks = async (pageNum: number = 1) => {
     try {

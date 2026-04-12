@@ -11,12 +11,12 @@ interface ElderTaskListProps {
 }
 
 const STATUS_EMOJI: Record<string, string> = {
-  New: '\u{1F195}',        // NEW
-  Received: '\u{1F4E5}',   // inbox
-  Submitted: '\u{1F4E4}',  // outbox
-  Redo: '\u{1F504}',       // arrows
-  Completed: '\u2705',     // check
-  Archived: '\u{1F4C1}',   // folder
+  New: '\u{1F195}',
+  Received: '\u{1F4E5}',
+  Submitted: '\u{1F4E4}',
+  Redo: '\u{1F504}',
+  Completed: '\u2705',
+  Archived: '\u{1F4C1}',
 };
 
 export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskListProps) {
@@ -24,17 +24,33 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
   const data = useTaskListData(groupId, refreshKey);
 
   const {
-    tasks, loading, loadingMore, error, hasMore,
-    thumbnails, userRole, userNames, groups,
-    archivedTotalCount, submitterCounts,
-    filter, setFilter, getFilterOrder, getMonthOptions,
-    fullscreenImage, isAnimating, allPhotos, currentPhotoIndex,
-    setCurrentPhotoIndex, openFullscreen, closeFullscreen,
+    tasks,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    thumbnails,
+    userRole,
+    userNames,
+    groups,
+    archivedTotalCount,
+    submitterCounts,
+    filter,
+    setFilter,
+    getFilterOrder,
+    getMonthOptions,
+    fullscreenImage,
+    isAnimating,
+    allPhotos,
+    currentPhotoIndex,
+    setCurrentPhotoIndex,
+    openFullscreen,
+    closeFullscreen,
     loadMoreTasks,
   } = data;
 
   const isAdminOrLead = userRole === 'Admin' || userRole === 'Lead';
-  const groupMap = new Map(groups.map(g => [g.id, g.name]));
+  const groupMap = new Map(groups.map(g => [g.id, g]));
   const filterOrder = getFilterOrder();
 
   const statusFilters: Array<{ key: 'all' | TaskStatus; label: string }> = [
@@ -100,8 +116,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   hapticFeedback.light();
                 }}
               >
-                {STATUS_EMOJI.Archived} Archived
-                {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
+                {STATUS_EMOJI.Archived} Archived {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
               </button>
             </div>
 
@@ -163,10 +178,9 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
       ) : (
         tasks.map((task) => {
           const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const progressPct = task.requireSets > 0
-            ? Math.round((task.completedSets / task.requireSets) * 100)
-            : 0;
+          const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
           const isArchived = task.status === 'Archived';
+          const group = groupMap.get(task.groupId);
 
           return (
             <div
@@ -177,6 +191,14 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                 onTaskClick(task);
               }}
             >
+              {/* Group color accent bar (left side) */}
+              {group?.color && (
+                <div
+                  className="elder-group-accent"
+                  style={{ background: group.color }}
+                />
+              )}
+
               {/* Thumbnail */}
               {thumbUrl ? (
                 <img
@@ -201,25 +223,33 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   {STATUS_EMOJI[task.status] || ''} {t(`statusLabels.${task.status}`)}
                 </span>
 
+                {/* Group badge with color */}
+                {group && (
+                  <span
+                    className="elder-group-badge"
+                    style={group.color ? {
+                      background: `${group.color}18`,
+                      border: `1px solid ${group.color}40`,
+                      color: group.color,
+                    } : {}}
+                  >
+                    {group.name}
+                  </span>
+                )}
+
                 {/* Meta */}
                 <div className="elder-task-meta">
                   {task.createdBy && userNames[task.createdBy] && (
                     <span>By: {userNames[task.createdBy]}</span>
                   )}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
-                  {groupMap.get(task.groupId) && (
-                    <span>Group: {groupMap.get(task.groupId)}</span>
-                  )}
                 </div>
 
                 {/* Progress bar */}
                 {task.requireSets > 0 && (
                   <div className="elder-progress-container">
                     <div className="elder-progress-bar">
-                      <div
-                        className="elder-progress-fill"
-                        style={{ width: `${progressPct}%` }}
-                      />
+                      <div className="elder-progress-fill" style={{ width: `${progressPct}%` }} />
                     </div>
                     <span className="elder-progress-text">
                       {task.completedSets}/{task.requireSets} ({progressPct}%)

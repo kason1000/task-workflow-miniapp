@@ -32,16 +32,32 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
   const data = useTaskListData(groupId, refreshKey);
 
   const {
-    tasks, loading, loadingMore, error, hasMore,
-    thumbnails, userNames, groups, filter, setFilter,
-    archivedTotalCount, submitterCounts,
+    tasks,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    thumbnails,
+    userNames,
+    groups,
+    filter,
+    setFilter,
+    archivedTotalCount,
+    submitterCounts,
     getMonthOptions,
-    fullscreenImage, isAnimating, allPhotos, currentPhotoIndex,
-    setCurrentPhotoIndex, setFullscreenImage, setCurrentFullscreenTaskId,
-    loadMoreTasks, openFullscreen, closeFullscreen,
+    fullscreenImage,
+    isAnimating,
+    allPhotos,
+    currentPhotoIndex,
+    setCurrentPhotoIndex,
+    setFullscreenImage,
+    setCurrentFullscreenTaskId,
+    loadMoreTasks,
+    openFullscreen,
+    closeFullscreen,
   } = data;
 
-  const groupMap = new Map(groups.map(g => [g.id, g.name]));
+  const groupMap = new Map(groups.map(g => [g.id, g]));
 
   const filterOptions: Array<{ value: string; label: string }> = [
     { value: 'all', label: t('taskList.filterAll') },
@@ -100,7 +116,6 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-
           <select
             className="glass-select"
             value={filter.doneBy || ''}
@@ -113,7 +128,6 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
               </option>
             ))}
           </select>
-
           {archivedTotalCount !== null && (
             <span style={{ fontSize: 12, color: 'var(--glass-text-secondary)', fontWeight: 500 }}>
               {archivedTotalCount} total
@@ -128,10 +142,8 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
       ) : (
         tasks.map((task, idx) => {
           const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const groupName = groupMap.get(task.groupId);
-          const progressPct = task.requireSets > 0
-            ? Math.round((task.completedSets / task.requireSets) * 100)
-            : 0;
+          const group = groupMap.get(task.groupId);
+          const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
 
           return (
             <div
@@ -140,6 +152,14 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
               style={{ animationDelay: `${Math.min(idx * 50, 500)}ms` }}
               onClick={() => onTaskClick(task)}
             >
+              {/* Group color accent bar (left side) */}
+              {group?.color && (
+                <div
+                  className="glass-card-group-accent"
+                  style={{ background: group.color }}
+                />
+              )}
+              
               <div className="glass-card-body">
                 {thumbUrl ? (
                   <img
@@ -154,7 +174,6 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
                 ) : (
                   <div className="glass-card-thumb-placeholder">📷</div>
                 )}
-
                 <div className="glass-card-info">
                   <div className="glass-card-title">{task.title}</div>
                   <div className="glass-card-meta">
@@ -162,15 +181,24 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
                       <span className="glass-status-dot" />
                       {t(`statusLabels.${task.status}`)}
                     </span>
-                    {groupName && <span>{groupName}</span>}
+                    {/* Group badge with color */}
+                    {group && (
+                      <span
+                        className="glass-group-badge"
+                        style={group.color ? {
+                          background: `${group.color}15`,
+                          border: `1px solid ${group.color}35`,
+                          color: group.color,
+                        } : {}}
+                      >
+                        {group.name}
+                      </span>
+                    )}
                   </div>
                   <div className="glass-card-meta" style={{ marginTop: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div className="glass-progress-track">
-                        <div
-                          className="glass-progress-fill"
-                          style={{ width: `${progressPct}%` }}
-                        />
+                        <div className="glass-progress-fill" style={{ width: `${progressPct}%` }} />
                       </div>
                       <span className="glass-progress-text">
                         {task.completedSets}/{task.requireSets}

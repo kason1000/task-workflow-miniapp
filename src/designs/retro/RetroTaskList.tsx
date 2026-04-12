@@ -32,10 +32,7 @@ function buildProgressSegments(completed: number, total: number) {
   const max = Math.min(total, 8);
   for (let i = 0; i < max; i++) {
     segments.push(
-      <div
-        key={i}
-        className={`retro-progress-segment ${i < completed ? 'filled' : ''}`}
-      />
+      <div key={i} className={`retro-progress-segment ${i < completed ? 'filled' : ''}`} />
     );
   }
   return segments;
@@ -57,16 +54,32 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
   const data = useTaskListData(groupId, refreshKey);
 
   const {
-    tasks, loading, loadingMore, error, hasMore,
-    thumbnails, userNames, groups, filter, setFilter,
-    archivedTotalCount, submitterCounts,
+    tasks,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    thumbnails,
+    userNames,
+    groups,
+    filter,
+    setFilter,
+    archivedTotalCount,
+    submitterCounts,
     getMonthOptions,
-    fullscreenImage, isAnimating, allPhotos, currentPhotoIndex,
-    setCurrentPhotoIndex, setFullscreenImage, setCurrentFullscreenTaskId,
-    loadMoreTasks, openFullscreen, closeFullscreen,
+    fullscreenImage,
+    isAnimating,
+    allPhotos,
+    currentPhotoIndex,
+    setCurrentPhotoIndex,
+    setFullscreenImage,
+    setCurrentFullscreenTaskId,
+    loadMoreTasks,
+    openFullscreen,
+    closeFullscreen,
   } = data;
 
-  const groupMap = new Map(groups.map(g => [g.id, g.name]));
+  const groupMap = new Map(groups.map(g => [g.id, g]));
 
   const filterOptions: Array<{ value: string; label: string }> = [
     { value: 'all', label: 'ALL' },
@@ -122,7 +135,6 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-
           <span className="retro-filter-label" style={{ fontSize: 12, marginLeft: 8 }}>BY:</span>
           <select
             className="retro-select"
@@ -136,7 +148,6 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
               </option>
             ))}
           </select>
-
           {archivedTotalCount !== null && (
             <span style={{ fontFamily: "'VT323', monospace", fontSize: 14, color: 'var(--retro-text-dim)', marginLeft: 8 }}>
               TOTAL: {archivedTotalCount}
@@ -151,7 +162,7 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
       ) : (
         tasks.map((task, idx) => {
           const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const groupName = groupMap.get(task.groupId);
+          const group = groupMap.get(task.groupId);
 
           return (
             <div
@@ -160,6 +171,14 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
               style={{ animationDelay: `${idx * 40}ms` }}
               onClick={() => onTaskClick(task)}
             >
+              {/* Group color accent bar (left side) */}
+              {group?.color && (
+                <div
+                  className="retro-group-accent"
+                  style={{ background: group.color }}
+                />
+              )}
+
               {/* Window title bar */}
               <div className="retro-task-card-titlebar">
                 <span>{task.id.slice(0, 8)}.exe</span>
@@ -185,20 +204,31 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
                 ) : (
                   <div className="retro-thumb-placeholder">?</div>
                 )}
-
                 <div className="retro-task-info">
                   <div className="retro-task-title">{task.title}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                     <span className={`retro-status ${STATUS_CSS[task.status]}`}>
                       {STATUS_LABEL[task.status]}
                     </span>
+                    {/* Group badge with color */}
+                    {group && (
+                      <span
+                        className="retro-group-badge"
+                        style={group.color ? {
+                          background: `${group.color}22`,
+                          border: `1px solid ${group.color}60`,
+                          color: group.color,
+                        } : {}}
+                      >
+                        {group.name}
+                      </span>
+                    )}
                     <div className="retro-progress-bar">
                       {buildProgressSegments(task.completedSets, task.requireSets)}
                       <span className="retro-progress-text">{task.completedSets}/{task.requireSets}</span>
                     </div>
                   </div>
                   <div className="retro-task-meta">
-                    {groupName && <span>{groupName}</span>}
                     <span>{formatRetroDate(task.createdAt)}</span>
                     {task.createdBy && userNames[task.createdBy] && (
                       <span>{userNames[task.createdBy]}</span>

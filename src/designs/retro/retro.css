@@ -721,3 +721,21 @@
 [data-theme="retro"] .retro-hero-img:hover {
   border-color: var(--retro-pink);
 }
+
+/* ── Group color visual differentiation ── */
+[data-theme="retro"] .retro-group-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+[data-theme="retro"] .retro-group-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: 'VT323', monospace;
+  border-radius: 2px;
+  letter-spacing: 0.05em;
+}
