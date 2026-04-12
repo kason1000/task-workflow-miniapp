@@ -223,10 +223,10 @@ function App() {
     }
   };
 
-  const handleBackToList = () => {
+  const handleBackToList = (refresh = false) => {
     setSelectedTask(null);
     setView('list');
-    setRefreshKey(prev => prev + 1);
+    if (refresh) setRefreshKey(prev => prev + 1);
     window.history.pushState({}, '', window.location.pathname);
   };
 
@@ -239,16 +239,18 @@ function App() {
     }
   };
 
-  const handleTaskUpdated = async () => {
+  const handleTaskUpdated = async (goBack = false) => {
     if (selectedTask) {
       try {
         const { task: freshTask } = await api.getTask(selectedTask.id);
         setSelectedTask(freshTask);
       } catch (error) {
         console.error('Failed to refresh task:', error);
+        if (goBack) { handleBackToList(true); return; }
       }
     }
     setRefreshKey(prev => prev + 1);
+    if (goBack) handleBackToList(false);
   };
 
   // NEW: Group navigation handlers
@@ -630,7 +632,7 @@ function App() {
         paddingTop: view === 'detail' || view === 'share' || view === 'groupDetail' || view === 'createGroup' || view === 'groups' ? '60px' : '42px'   // More padding for detail views
       }}>
         {view === 'list' && (
-          <TaskList key={refreshKey} onTaskClick={handleTaskClick} groupId={selectedGroupId} />
+          <TaskList onTaskClick={handleTaskClick} groupId={selectedGroupId} refreshKey={refreshKey} />
         )}
 
         {view === 'detail' && selectedTask && (

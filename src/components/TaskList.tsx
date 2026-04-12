@@ -17,9 +17,10 @@ const statusColors: Record<TaskStatus, string> = {
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
   groupId?: string;
+  refreshKey?: number;
 }
 
-export function TaskList({ onTaskClick, groupId }: TaskListProps) {
+export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
   const { t, formatDate } = useLocale();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +98,19 @@ export function TaskList({ onTaskClick, groupId }: TaskListProps) {
     setArchivedTotalCount(null);
     fetchTasks(1);
   }, [filter.status, filter.showArchived, filter.submittedMonth, filter.doneBy, groupId, userRole]);
+
+  // Refetch data when parent signals refresh (e.g. after task update) — preserves filters
+  const prevRefreshKey = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey !== undefined && refreshKey !== prevRefreshKey.current) {
+      prevRefreshKey.current = refreshKey;
+      setPage(1);
+      setTasks([]);
+      setHasMore(true);
+      setArchivedTotalCount(null);
+      fetchTasks(1);
+    }
+  }, [refreshKey]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
