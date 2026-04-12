@@ -223,22 +223,35 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     requestAnimationFrame(() => requestAnimationFrame(() => setIsAnimating(true)));
   };
 
-  const handleMediaClick = (setIndex: number, mediaIndex: number) => {
-    const allMedia = buildAllTaskPhotos();
-    if (allMedia.length === 0) return;
+  // Build set-only media (no created photo) with fileId tracking
+  const buildSetMedia = (): Array<{ url: string; fileId: string }> => {
+    const items: Array<{ url: string; fileId: string }> = [];
+    task.sets.forEach(set => {
+      set.photos?.forEach(p => { if (mediaCache[p.file_id]) items.push({ url: mediaCache[p.file_id], fileId: p.file_id }); });
+      if (set.video && mediaCache[set.video.file_id]) items.push({ url: mediaCache[set.video.file_id], fileId: set.video.file_id });
+    });
+    return items;
+  };
 
-    // Calculate global index
-    let globalIdx = task.createdPhoto && mediaCache[task.createdPhoto.file_id] ? 1 : 0;
+  const [viewerMediaItems, setViewerMediaItems] = useState<Array<{ url: string; fileId: string }>>([]);
+
+  const handleMediaClick = (setIndex: number, mediaIndex: number) => {
+    const items = buildSetMedia();
+    if (items.length === 0) return;
+
+    let globalIdx = 0;
     for (let i = 0; i < setIndex; i++) {
       const s = task.sets[i];
-      if (s) { globalIdx += (s.photos?.length || 0) + (s.video ? 1 : 0); }
+      if (s) globalIdx += (s.photos?.length || 0) + (s.video ? 1 : 0);
     }
     globalIdx += mediaIndex;
+    if (globalIdx >= items.length) globalIdx = 0;
 
     hapticFeedback.medium();
-    setFullscreenImage(allMedia[globalIdx] || allMedia[0]);
-    setAllTaskPhotos(allMedia);
-    setCurrentPhotoIndex(globalIdx < allMedia.length ? globalIdx : 0);
+    setViewerMediaItems(items);
+    setFullscreenImage(items[globalIdx].url);
+    setAllTaskPhotos(items.map(i => i.url));
+    setCurrentPhotoIndex(globalIdx);
     setViewerMode('media');
     setIsAnimating(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setIsAnimating(true)));
@@ -1230,6 +1243,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           onTaskUpdated={onTaskUpdated}
           onSendToChat={handleSendToChat}
           sending={loading}
+          mediaItems={viewerMediaItems}
+          shareSetDirect={shareSetDirect}
+          userNames={userNames}
+          taskGroup={taskGroup}
         />
       )}
     </div>
@@ -1239,7 +1256,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
 function DetailImageViewer({
   imageUrl, isAnimating, onClose, allPhotos, currentPhotoIndex,
   setCurrentPhotoIndex, setFullscreenImage, mode, task, userRole,
-  onTaskUpdated, onSendToChat, sending,
+  onTaskUpdated, onSendToChat, sending, mediaItems, shareSetDirect,
+  userNames, taskGroup,
 }: {
   imageUrl: string;
   isAnimating: boolean;
@@ -1254,6 +1272,10 @@ function DetailImageViewer({
   onTaskUpdated: () => void;
   onSendToChat: () => void;
   sending: boolean;
+  mediaItems: Array<{ url: string; fileId: string }>;
+  shareSetDirect: (setIndex: number) => void;
+  userNames: Record<number, string>;
+  taskGroup: Group | null;
 }) {
   const { t } = useLocale();
   const [scale, setScale] = useState(1);
@@ -1471,45 +1493,102 @@ function DetailImageViewer({
       }} />
 
       {/* Bottom panel */}
-      <div ref={bottomPanelRef} style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
-        background: 'rgba(0,0,0,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)',
-        opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
-        transition: 'opacity 0.25s ease, transform 0.25s ease', transitionDelay: isVisible ? '0.08s' : '0s',
-      }}>
-        {/* Thumbnail row (media mode only) */}
-        {hasMultiple && (
-          <div style={{ display: 'flex', alignItems: 'center', padding: '8px 6px 6px', gap: '4px' }}>
-            <button onClick={(e) => { e.stopPropagation(); goPrevLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
-              style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
-            >‹</button>
-            <div ref={thumbStripRef} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
-              style={{ display: 'flex', gap: '3px', overflowX: 'auto', flex: 1, scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
-            >
-              {allPhotos.map((url, idx) => {
-                const isActive = idx === currentPhotoIndex;
-                return (
-                  <div key={idx} data-active={isActive} onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(idx); setFullscreenImage(url); }}
-                    style={{ width: '64px', height: '64px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', border: isActive ? '2px solid white' : '2px solid transparent', opacity: isActive ? 1 : 0.4, cursor: 'pointer', transition: 'opacity 0.15s ease, border-color 0.15s ease' }}
-                  >
-                    <img src={url} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={(e) => { e.stopPropagation(); goNextLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
-              style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
-            >›</button>
-          </div>
-        )}
+      {(() => {
+        const statusColors: Record<string, string> = { New: 'badge-new', Received: 'badge-received', Submitted: 'badge-submitted', Redo: 'badge-redo', Completed: 'badge-completed', Archived: 'badge-archived' };
+        const doneName = task.doneBy ? (userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })) : null;
+        const canDelete = (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
+        const currentFileId = mode === 'media' && mediaItems[currentPhotoIndex]?.fileId;
+        const isCreatedPhoto = currentFileId === task.createdPhoto?.file_id;
 
-        {/* Action buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: hasMultiple ? '4px 14px' : '12px 14px', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))' }}>
-          <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
-            style={{ flex: 1, height: '44px', fontSize: '14px', background: sending ? 'rgba(107,114,128,0.6)' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', border: sending ? '1px solid rgba(255,255,255,0.08)' : 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : '0 2px 8px rgba(37,99,235,0.25)' }}
-          >{sending ? '⏳' : '💬'} {t('taskDetail.sendToChat')}</button>
-        </div>
-      </div>
+        const handleDeleteCurrent = async () => {
+          if (!currentFileId || isCreatedPhoto) return;
+          const confirmed = await showConfirm(t('gallery.deleteMediaConfirmPhoto'));
+          if (!confirmed) return;
+          try {
+            await api.deleteUpload(task.id, currentFileId);
+            hapticFeedback.success();
+            onTaskUpdated();
+            onClose();
+          } catch (err: any) {
+            showAlert(t('gallery.deleteFailed', { error: err.message }));
+          }
+        };
+
+        return (
+          <div ref={bottomPanelRef} style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
+            background: 'rgba(0,0,0,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)',
+            opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'opacity 0.25s ease, transform 0.25s ease', transitionDelay: isVisible ? '0.08s' : '0s',
+          }}>
+            {/* Info row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px 8px', overflow: 'hidden' }}>
+              <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '12px', padding: '3px 10px', fontWeight: 600, flexShrink: 0 }}>
+                {t(`statusLabels.${task.status}`)}
+              </span>
+              {taskGroup && (
+                <span style={{ fontSize: '12px', padding: '3px 10px', flexShrink: 0, background: taskGroup.color || '#3b82f6', color: 'white', borderRadius: '10px', fontWeight: 600 }}>
+                  {taskGroup.name}
+                </span>
+              )}
+              {doneName && task.status !== 'New' && (
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  👤 {doneName}
+                </span>
+              )}
+            </div>
+
+            {/* Thumbnail row (media mode only) */}
+            {hasMultiple && (
+              <div style={{ display: 'flex', alignItems: 'center', padding: '2px 6px 6px', gap: '4px' }}>
+                <button onClick={(e) => { e.stopPropagation(); goPrevLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
+                  style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
+                >‹</button>
+                <div ref={thumbStripRef} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
+                  style={{ display: 'flex', gap: '3px', overflowX: 'auto', flex: 1, scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+                >
+                  {allPhotos.map((url, idx) => {
+                    const isActive = idx === currentPhotoIndex;
+                    return (
+                      <div key={idx} data-active={isActive} onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(idx); setFullscreenImage(url); }}
+                        style={{ width: '64px', height: '64px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', border: isActive ? '2px solid white' : '2px solid transparent', opacity: isActive ? 1 : 0.4, cursor: 'pointer', transition: 'opacity 0.15s ease, border-color 0.15s ease' }}
+                      >
+                        <img src={url} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); goNextLocal(); }} onTouchEnd={(e) => e.stopPropagation()}
+                  style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
+                >›</button>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 14px', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))' }}>
+              {mode === 'title' && (
+                <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
+                  style={{ flex: 1, height: '44px', fontSize: '14px', background: sending ? 'rgba(107,114,128,0.6)' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', border: sending ? '1px solid rgba(255,255,255,0.08)' : 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : '0 2px 8px rgba(37,99,235,0.25)' }}
+                >{sending ? '⏳' : '💬'} {t('taskDetail.sendToChat')}</button>
+              )}
+
+              {mode === 'media' && (
+                <>
+                  <button onClick={(e) => { e.stopPropagation(); shareSetDirect(0); }} onTouchEnd={(e) => e.stopPropagation()}
+                    style={{ flex: 1, height: '44px', fontSize: '14px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  >📤 Share</button>
+
+                  {canDelete && currentFileId && !isCreatedPhoto && (
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCurrent(); }} onTouchEnd={(e) => e.stopPropagation()}
+                      style={{ height: '44px', width: '52px', fontSize: '18px', background: 'rgba(239,68,68,0.8)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >🗑️</button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
