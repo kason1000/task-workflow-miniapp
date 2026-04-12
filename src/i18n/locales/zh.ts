@@ -13,6 +13,7 @@ export const zh: Dictionary = {
     userFallback: '用户 {id}',
     userLabel: '用户',
     errorGeneric: '错误：{error}',
+    details: '详情',
   },
   statusLabels: {
     New: '新建',

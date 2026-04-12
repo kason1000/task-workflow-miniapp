@@ -11,6 +11,7 @@ export const en = {
     userFallback: 'User {id}',
     userLabel: 'User',
     errorGeneric: 'Error: {error}',
+    details: 'Details',
   },
   statusLabels: {
     New: 'New',
