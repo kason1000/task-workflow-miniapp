@@ -1331,7 +1331,10 @@ function DetailImageViewer({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const isUI = (e: TouchEvent) => bottomPanelRef.current?.contains(e.target as Node);
+    const isUI = (e: TouchEvent) => {
+      const t = e.target as HTMLElement;
+      return bottomPanelRef.current?.contains(t) || t.tagName === 'VIDEO';
+    };
 
     const onStart = (e: TouchEvent) => {
       if (isUI(e)) return;
@@ -1519,6 +1522,21 @@ function DetailImageViewer({
         const canDelete = (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
         const currentFileId = mode === 'media' && mediaItems[currentPhotoIndex]?.fileId;
         const isCreatedPhoto = currentFileId === task.createdPhoto?.file_id;
+        const multiSets = task.requireSets > 1;
+
+        // Find which set the current media belongs to
+        const getCurrentSetIndex = (): number => {
+          if (!currentFileId) return 0;
+          let count = 0;
+          for (let si = 0; si < task.sets.length; si++) {
+            const s = task.sets[si];
+            for (const p of (s.photos || [])) { if (p.file_id === currentFileId) return si; count++; }
+            if (s.video?.file_id === currentFileId) return si;
+            if (s.video) count++;
+          }
+          return 0;
+        };
+        const currentSetIdx = getCurrentSetIndex();
 
         const handleDeleteCurrent = async () => {
           if (!currentFileId || isCreatedPhoto) return;
@@ -1569,11 +1587,16 @@ function DetailImageViewer({
                 >
                   {allPhotos.map((url, idx) => {
                     const isActive = idx === currentPhotoIndex;
+                    const isVid = mediaItems[idx]?.type === 'video';
                     return (
                       <div key={idx} data-active={isActive} onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(idx); setFullscreenImage(url); }}
-                        style={{ width: '64px', height: '64px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', border: isActive ? '2px solid white' : '2px solid transparent', opacity: isActive ? 1 : 0.4, cursor: 'pointer', transition: 'opacity 0.15s ease, border-color 0.15s ease' }}
+                        style={{ width: '64px', height: '64px', flexShrink: 0, borderRadius: '5px', overflow: 'hidden', border: isActive ? '2px solid white' : '2px solid transparent', opacity: isActive ? 1 : 0.4, cursor: 'pointer', transition: 'opacity 0.15s ease, border-color 0.15s ease', position: 'relative' }}
                       >
-                        <img src={url} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                        {isVid ? (
+                          <div style={{ width: '100%', height: '100%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🎥</div>
+                        ) : (
+                          <img src={url} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+                        )}
                       </div>
                     );
                   })}
@@ -1594,9 +1617,15 @@ function DetailImageViewer({
 
               {mode === 'media' && (
                 <>
-                  <button onClick={(e) => { e.stopPropagation(); shareSetDirect(0); }} onTouchEnd={(e) => e.stopPropagation()}
-                    style={{ flex: 1, height: '44px', fontSize: '14px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                  >📤 Share</button>
+                  <button onClick={(e) => { e.stopPropagation(); shareSetDirect(currentSetIdx); }} onTouchEnd={(e) => e.stopPropagation()}
+                    style={{ flex: 1, height: '44px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                  >📤 {t('gallery.shareSet', { index: currentSetIdx + 1 })}</button>
+
+                  {multiSets && (
+                    <button onClick={(e) => { e.stopPropagation(); for (let i = 0; i < task.requireSets; i++) shareSetDirect(i); }} onTouchEnd={(e) => e.stopPropagation()}
+                      style={{ flex: 1, height: '44px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    >📤 {t('share.shareAllButton').replace('📤 ', '')}</button>
+                  )}
 
                   {canDelete && currentFileId && !isCreatedPhoto && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeleteCurrent(); }} onTouchEnd={(e) => e.stopPropagation()}
