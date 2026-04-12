@@ -21,11 +21,22 @@ try {
   console.log('\n🚀 Publishing to GitHub Pages...');
   execSync('npx gh-pages -d dist', { stdio: 'inherit' });
 
+  // Commit and push to main branch
+  const timestamp = new Date().toISOString();
+  try {
+    execSync('git add .', { stdio: 'inherit' });
+    execSync(`git commit -m "Deployment: [${timestamp}] Production build v${newVersion}"`, { stdio: 'inherit' });
+    execSync('git push origin main', { stdio: 'inherit' });
+    console.log('✅ Pushed to remote');
+  } catch (e) {
+    console.log('ℹ️  Git push skipped:', e.message);
+  }
+
   // Print summary
   console.log('\n' + '='.repeat(50));
   console.log(`✅ Miniapp deployed successfully!`);
   console.log(`📦 Version: ${newVersion}`);
-  console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+  console.log(`📅 Timestamp: ${timestamp}`);
   console.log('='.repeat(50));
 } catch (error) {
   console.error('❌ Deploy failed:', error.message);
