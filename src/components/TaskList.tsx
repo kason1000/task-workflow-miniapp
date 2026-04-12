@@ -1411,7 +1411,7 @@ function ImageViewer({
   const currentTask = tasks.find(t => t.id === currentPhoto?.taskId) || tasks[currentTaskIndex];
 
   // Position image in center of area ABOVE the bottom panel (~170px)
-  const bottomH = 170;
+  const bottomH = 210;
   const areaH = window.innerHeight - bottomH;
   const imgCenterY = areaH / 2;
   const fitForArea = () => {
@@ -1451,21 +1451,21 @@ function ImageViewer({
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10001,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: 'max(10px, env(safe-area-inset-top)) 14px 6px',
+        padding: 'max(14px, env(safe-area-inset-top)) 16px 8px',
         opacity: isVisible ? 1 : 0, transition: 'opacity 0.25s ease',
         transitionDelay: isVisible ? '0.1s' : '0s',
       }}>
-        <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
           {currentPhotoIndex + 1} / {allPhotos.length}
         </span>
         <div
           onClick={(e) => { e.stopPropagation(); onClose(); }}
           onTouchEnd={(e) => e.stopPropagation()}
           style={{
-            width: '30px', height: '30px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.1)', display: 'flex',
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.12)', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
-            fontSize: '15px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0,
+            fontSize: '18px', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', padding: 0,
           }}
         >✕</div>
       </div>
@@ -1511,43 +1511,43 @@ function ImageViewer({
           }}>
             {/* Info row */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 14px 6px', overflow: 'hidden'
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '10px 16px 8px', overflow: 'hidden'
             }}>
               <span className={`badge ${statusColors[currentTask.status]}`} style={{
-                fontSize: '10px', padding: '2px 7px', fontWeight: 600, flexShrink: 0
+                fontSize: '12px', padding: '3px 10px', fontWeight: 600, flexShrink: 0
               }}>
                 {t(`statusLabels.${currentTask.status}`)}
               </span>
               {taskGroup && (
                 <span style={{
-                  fontSize: '10px', padding: '2px 7px', flexShrink: 0,
+                  fontSize: '12px', padding: '3px 10px', flexShrink: 0,
                   background: taskGroup.color || '#3b82f6', color: 'white',
                   borderRadius: '10px', fontWeight: 600
                 }}>{taskGroup.name}</span>
               )}
               {doneName && currentTask.status !== 'New' && (
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   👤 {doneName}
                 </span>
               )}
               {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', flexShrink: 0, marginLeft: 'auto' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', flexShrink: 0, marginLeft: 'auto' }}>
                   {formatDate(currentTask.lastModifiedAt)}
                 </span>
               )}
             </div>
 
             {/* Thumbnail row with arrows */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '2px 4px 6px', gap: '3px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '2px 6px 8px', gap: '4px' }}>
               <button
                 onClick={(e) => { e.stopPropagation(); goToPreviousPhoto(); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  width: '24px', height: '52px', flexShrink: 0, borderRadius: '5px',
-                  background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+                  width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
                   border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '15px', cursor: 'pointer', padding: 0,
+                  fontSize: '20px', cursor: 'pointer', padding: 0,
                 }}
               >‹</button>
 
@@ -1557,7 +1557,7 @@ function ImageViewer({
                 onTouchMove={(e) => e.stopPropagation()}
                 onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  display: 'flex', gap: '2px', overflowX: 'auto', flex: 1,
+                  display: 'flex', gap: '3px', overflowX: 'auto', flex: 1,
                   scrollbarWidth: 'none', msOverflowStyle: 'none',
                   WebkitOverflowScrolling: 'touch',
                 }}
@@ -1575,8 +1575,8 @@ function ImageViewer({
                         setFullscreenImage(photo.url);
                       }}
                       style={{
-                        width: '52px', height: '52px', flexShrink: 0,
-                        borderRadius: '4px', overflow: 'hidden',
+                        width: '64px', height: '64px', flexShrink: 0,
+                        borderRadius: '5px', overflow: 'hidden',
                         border: isActive ? '2px solid white' : '2px solid transparent',
                         opacity: isActive ? 1 : 0.4,
                         cursor: 'pointer',
@@ -1595,29 +1595,29 @@ function ImageViewer({
                 onClick={(e) => { e.stopPropagation(); goToNextPhoto(); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  width: '24px', height: '52px', flexShrink: 0, borderRadius: '5px',
-                  background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+                  width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
                   border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '15px', cursor: 'pointer', padding: 0,
+                  fontSize: '20px', cursor: 'pointer', padding: 0,
                 }}
               >›</button>
             </div>
 
             {/* Action buttons */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '0 12px',
-              paddingBottom: 'max(10px, env(safe-area-inset-bottom))'
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '4px 14px',
+              paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))'
             }}>
               <button
                 onClick={(e) => { e.stopPropagation(); onClose(); onTaskClick(currentTask); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  flex: 1, height: '36px', fontSize: '12px',
-                  background: 'rgba(255,255,255,0.08)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px',
-                  cursor: 'pointer', fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                  flex: 1, height: '44px', fontSize: '14px',
+                  background: 'rgba(255,255,255,0.1)', color: 'white',
+                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+                  cursor: 'pointer', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >📋 {t('common.details')}</button>
 
@@ -1626,17 +1626,17 @@ function ImageViewer({
                 onTouchEnd={(e) => e.stopPropagation()}
                 disabled={sending[currentTask.id]}
                 style={{
-                  flex: 1, height: '36px', fontSize: '12px',
+                  flex: 1, height: '44px', fontSize: '14px',
                   background: sending[currentTask.id]
                     ? 'rgba(107,114,128,0.6)'
                     : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                   color: 'white',
-                  border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                  borderRadius: '8px',
+                  border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                  borderRadius: '10px',
                   cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
-                  fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 6px rgba(37,99,235,0.2)'
+                  fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 8px rgba(37,99,235,0.25)'
                 }}
               >{sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}</button>
             </div>
