@@ -1108,7 +1108,6 @@ function ImageViewer({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const prevFittedRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1255,10 +1254,8 @@ function ImageViewer({
           e.preventDefault();
           g.swipeDeltaX = dx;
           if (imageRef.current) {
-            // Rubber-band resistance at edges
             const w = window.innerWidth;
-            const isAtEdge = (dx > 0 && currentPhotoIndex === 0) || (dx < 0 && currentPhotoIndex === allPhotos.length - 1);
-            const adjustedDx = isAtEdge ? dx * 0.3 : dx;
+            const adjustedDx = dx;
             const progress = Math.min(Math.abs(adjustedDx) / w, 1);
             const imgScale = 1 - progress * 0.08;
             imageRef.current.style.transition = 'none';
@@ -1294,11 +1291,10 @@ function ImageViewer({
         g.isSwiping = false;
         const threshold = window.innerWidth * 0.15;
         const shouldNavigate = Math.abs(g.swipeDeltaX) > threshold;
-        const dir = g.swipeDeltaX < 0 ? 1 : -1; // 1=next, -1=prev
-        const canNav = dir === 1 ? currentPhotoIndex < allPhotos.length - 1 : currentPhotoIndex > 0;
+        const dir = g.swipeDeltaX < 0 ? 1 : -1;
 
         if (imageRef.current) {
-          if (shouldNavigate && canNav) {
+          if (shouldNavigate && allPhotos.length > 1) {
             // Slide out in swipe direction, then switch photo
             const exitX = dir * -window.innerWidth;
             imageRef.current.style.transition = 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease';
@@ -1321,8 +1317,11 @@ function ImageViewer({
 
       if (g.isPanning) {
         g.isPanning = false;
-        setPosition({ x: g.posX, y: g.posY });
-        return;
+        if (g.moved) {
+          setPosition({ x: g.posX, y: g.posY });
+          return;
+        }
+        // Didn't actually move — fall through to tap handling
       }
 
       // Tap handling
@@ -1378,8 +1377,9 @@ function ImageViewer({
   };
 
   const goToPreviousPhoto = () => {
-    if (allPhotos.length <= 1 || currentPhotoIndex <= 0) return;
-    const newIndex = currentPhotoIndex - 1;
+    if (allPhotos.length <= 1) return;
+    let newIndex = currentPhotoIndex - 1;
+    if (newIndex < 0) newIndex = allPhotos.length - 1;
     const targetPhoto = allPhotos[newIndex];
     if (targetPhoto) {
       setCurrentPhotoIndex(newIndex);
@@ -1390,11 +1390,10 @@ function ImageViewer({
 
   const goToNextPhoto = () => {
     if (allPhotos.length <= 1) return;
-    const newIndex = currentPhotoIndex + 1;
+    let newIndex = currentPhotoIndex + 1;
     if (newIndex >= allPhotos.length) {
-      // At end — trigger load more if available
-      if (onLoadMore) onLoadMore();
-      return;
+      if (onLoadMore) { onLoadMore(); return; }
+      newIndex = 0; // loop
     }
     const targetPhoto = allPhotos[newIndex];
     if (targetPhoto) {
@@ -1402,10 +1401,7 @@ function ImageViewer({
       setCurrentFullscreenTaskId(targetPhoto.taskId);
       setFullscreenImage(targetPhoto.url);
     }
-    // Pre-trigger load more when near the end (3 from last)
-    if (newIndex >= allPhotos.length - 3 && onLoadMore) {
-      onLoadMore();
-    }
+    if (newIndex >= allPhotos.length - 3 && onLoadMore) onLoadMore();
   };
 
   const currentPhoto = allPhotos[currentPhotoIndex];
@@ -1423,9 +1419,7 @@ function ImageViewer({
     if (aspect > w / h) return { width: w, height: w / aspect };
     return { width: h * aspect, height: h };
   };
-  const rawFitted = isImageLoaded ? fitForArea() : null;
-  if (rawFitted) prevFittedRef.current = rawFitted;
-  const fitted = rawFitted || prevFittedRef.current;
+  const fitted = isImageLoaded ? fitForArea() : null;
 
   // Scroll active thumbnail into view
   useEffect(() => {
@@ -1483,8 +1477,10 @@ function ImageViewer({
           position: 'absolute',
           left: '50%',
           top: `${imgCenterY}px`,
-          width: fitted.width ? `${fitted.width}px` : undefined,
-          height: fitted.height ? `${fitted.height}px` : undefined,
+          width: fitted ? `${fitted.width}px` : 'auto',
+          height: fitted ? `${fitted.height}px` : 'auto',
+          maxWidth: fitted ? undefined : '100%',
+          maxHeight: fitted ? undefined : `${areaH - 20}px`,
           opacity: isVisible ? 1 : 0,
           transform: isVisible
             ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`
