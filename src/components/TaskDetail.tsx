@@ -1612,7 +1612,7 @@ function DetailImageViewer({
               {mode === 'title' && (
                 <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
                   style={{ flex: 1, height: '44px', fontSize: '14px', background: sending ? 'rgba(107,114,128,0.6)' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', border: sending ? '1px solid rgba(255,255,255,0.08)' : 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : '0 2px 8px rgba(37,99,235,0.25)' }}
-                >{sending ? '⏳' : '💬'} {t('taskDetail.sendToChat')}</button>
+                >{sending ? '⏳ ...' : t('taskDetail.sendToChat')}</button>
               )}
 
               {mode === 'media' && (

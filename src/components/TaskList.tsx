@@ -95,6 +95,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
     setTasks([]);
     setHasMore(true);
     setArchivedTotalCount(null);
+    setAllPhotos([]);
     fetchTasks(1);
   }, [filter.status, filter.showArchived, filter.submittedMonth, filter.doneBy, groupId, userRole]);
 
@@ -105,6 +106,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       prevRefreshKey.current = refreshKey;
       setPage(1);
       setTasks([]);
+      setAllPhotos([]);
       setHasMore(true);
       setArchivedTotalCount(null);
       fetchTasks(1);
@@ -316,7 +318,11 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       }
       
       setThumbnails(prev => ({ ...prev, ...newThumbnails }));
-      setAllPhotos(prev => [...prev, ...newAllPhotos]);
+      if (pageNum === 1) {
+        setAllPhotos(newAllPhotos);
+      } else {
+        setAllPhotos(prev => [...prev, ...newAllPhotos]);
+      }
 
       // Wait for user names if they were being loaded
       if (userNamesPromise) {
