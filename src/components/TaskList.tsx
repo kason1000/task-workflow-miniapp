@@ -777,6 +777,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
           setCurrentFullscreenTaskId={setCurrentFullscreenTaskId}
           userNames={userNames}
           groups={groups}
+          onLoadMore={hasMore ? loadMoreTasks : undefined}
         />
       )}
 
@@ -1083,6 +1084,7 @@ function ImageViewer({
   setCurrentFullscreenTaskId,
   userNames,
   groups,
+  onLoadMore,
 }: {
   imageUrl: string;
   isAnimating: boolean;
@@ -1099,12 +1101,14 @@ function ImageViewer({
   setCurrentFullscreenTaskId: React.Dispatch<React.SetStateAction<string | null>>;
   userNames: Record<number, string>;
   groups: Group[];
+  onLoadMore?: () => void;
 }) {
   const { t, formatDate } = useLocale();
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const prevFittedRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1131,6 +1135,7 @@ function ImageViewer({
     lastTap: 0,
   });
   const thumbStripRef = useRef<HTMLDivElement>(null);
+  const bottomPanelRef = useRef<HTMLDivElement>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -1149,6 +1154,12 @@ function ImageViewer({
     setScale(1);
     setPosition({ x: 0, y: 0 });
     setIsImageLoaded(false);
+    // Reset any inline styles left by gesture system so React takes over
+    if (imageRef.current) {
+      imageRef.current.style.transition = '';
+      imageRef.current.style.transform = '';
+      imageRef.current.style.opacity = '';
+    }
   }, [imageUrl]);
 
   const applyTransform = () => {
@@ -1174,11 +1185,18 @@ function ImageViewer({
     const el = containerRef.current;
     if (!el) return;
 
+    const isInUI = (e: TouchEvent) => {
+      const t = e.target as Node;
+      return (bottomPanelRef.current && bottomPanelRef.current.contains(t));
+    };
+
     const onTouchStart = (e: TouchEvent) => {
       const g = gestureRef.current;
       g.moved = false;
       g.isSwiping = false;
       g.swipeDeltaX = 0;
+
+      if (isInUI(e)) return;
 
       if (e.touches.length === 2) {
         e.preventDefault();
@@ -1203,6 +1221,7 @@ function ImageViewer({
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      if (isInUI(e)) return;
       const g = gestureRef.current;
       g.moved = true;
 
@@ -1256,6 +1275,7 @@ function ImageViewer({
     };
 
     const onTouchEnd = (e: TouchEvent) => {
+      if (isInUI(e)) return;
       const g = gestureRef.current;
 
       if (g.isPinching) {
@@ -1336,7 +1356,7 @@ function ImageViewer({
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
     };
-  }, [onClose]);
+  }, [onClose, currentPhotoIndex, allPhotos.length]);
 
   const getFittedDimensions = () => {
     if (!imageDimensions || !containerRef.current) {
@@ -1358,34 +1378,33 @@ function ImageViewer({
   };
 
   const goToPreviousPhoto = () => {
-    if (allPhotos.length > 1) {
-      let newIndex = currentPhotoIndex - 1;
-      if (newIndex < 0) {
-        newIndex = allPhotos.length - 1; // Loop to last photo
-      }
-      
-      const targetPhoto = allPhotos[newIndex];
-      if (targetPhoto) {
-        setCurrentPhotoIndex(newIndex);
-        setCurrentFullscreenTaskId(targetPhoto.taskId);
-        setFullscreenImage(targetPhoto.url);
-      }
+    if (allPhotos.length <= 1 || currentPhotoIndex <= 0) return;
+    const newIndex = currentPhotoIndex - 1;
+    const targetPhoto = allPhotos[newIndex];
+    if (targetPhoto) {
+      setCurrentPhotoIndex(newIndex);
+      setCurrentFullscreenTaskId(targetPhoto.taskId);
+      setFullscreenImage(targetPhoto.url);
     }
   };
 
   const goToNextPhoto = () => {
-    if (allPhotos.length > 1) {
-      let newIndex = currentPhotoIndex + 1;
-      if (newIndex >= allPhotos.length) {
-        newIndex = 0; // Loop to first photo
-      }
-      
-      const targetPhoto = allPhotos[newIndex];
-      if (targetPhoto) {
-        setCurrentPhotoIndex(newIndex);
-        setCurrentFullscreenTaskId(targetPhoto.taskId);
-        setFullscreenImage(targetPhoto.url);
-      }
+    if (allPhotos.length <= 1) return;
+    const newIndex = currentPhotoIndex + 1;
+    if (newIndex >= allPhotos.length) {
+      // At end — trigger load more if available
+      if (onLoadMore) onLoadMore();
+      return;
+    }
+    const targetPhoto = allPhotos[newIndex];
+    if (targetPhoto) {
+      setCurrentPhotoIndex(newIndex);
+      setCurrentFullscreenTaskId(targetPhoto.taskId);
+      setFullscreenImage(targetPhoto.url);
+    }
+    // Pre-trigger load more when near the end (3 from last)
+    if (newIndex >= allPhotos.length - 3 && onLoadMore) {
+      onLoadMore();
     }
   };
 
@@ -1404,7 +1423,9 @@ function ImageViewer({
     if (aspect > w / h) return { width: w, height: w / aspect };
     return { width: h * aspect, height: h };
   };
-  const fitted = isImageLoaded ? fitForArea() : { width: 0, height: 0 };
+  const rawFitted = isImageLoaded ? fitForArea() : null;
+  if (rawFitted) prevFittedRef.current = rawFitted;
+  const fitted = rawFitted || prevFittedRef.current;
 
   // Scroll active thumbnail into view
   useEffect(() => {
@@ -1480,7 +1501,7 @@ function ImageViewer({
         const doneName = currentTask.doneBy ? (userNames[currentTask.doneBy] || t('common.userFallback', { id: currentTask.doneBy })) : null;
 
         return (
-          <div style={{
+          <div ref={bottomPanelRef} style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
             background: 'rgba(0,0,0,0.95)',
             borderTop: '1px solid rgba(255,255,255,0.06)',
