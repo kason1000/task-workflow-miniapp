@@ -223,17 +223,17 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     requestAnimationFrame(() => requestAnimationFrame(() => setIsAnimating(true)));
   };
 
-  // Build set-only media (no created photo) with fileId tracking
-  const buildSetMedia = (): Array<{ url: string; fileId: string }> => {
-    const items: Array<{ url: string; fileId: string }> = [];
+  // Build set-only media (no created photo) with fileId + type tracking
+  const buildSetMedia = (): Array<{ url: string; fileId: string; type: 'photo' | 'video' }> => {
+    const items: Array<{ url: string; fileId: string; type: 'photo' | 'video' }> = [];
     task.sets.forEach(set => {
-      set.photos?.forEach(p => { if (mediaCache[p.file_id]) items.push({ url: mediaCache[p.file_id], fileId: p.file_id }); });
-      if (set.video && mediaCache[set.video.file_id]) items.push({ url: mediaCache[set.video.file_id], fileId: set.video.file_id });
+      set.photos?.forEach(p => { if (mediaCache[p.file_id]) items.push({ url: mediaCache[p.file_id], fileId: p.file_id, type: 'photo' }); });
+      if (set.video && mediaCache[set.video.file_id]) items.push({ url: mediaCache[set.video.file_id], fileId: set.video.file_id, type: 'video' });
     });
     return items;
   };
 
-  const [viewerMediaItems, setViewerMediaItems] = useState<Array<{ url: string; fileId: string }>>([]);
+  const [viewerMediaItems, setViewerMediaItems] = useState<Array<{ url: string; fileId: string; type: 'photo' | 'video' }>>([]);
 
   const handleMediaClick = (setIndex: number, mediaIndex: number) => {
     const items = buildSetMedia();
@@ -1272,7 +1272,7 @@ function DetailImageViewer({
   onTaskUpdated: () => void;
   onSendToChat: () => void;
   sending: boolean;
-  mediaItems: Array<{ url: string; fileId: string }>;
+  mediaItems: Array<{ url: string; fileId: string; type: 'photo' | 'video' }>;
   shareSetDirect: (setIndex: number) => void;
   userNames: Record<number, string>;
   taskGroup: Group | null;
@@ -1481,16 +1481,36 @@ function DetailImageViewer({
         >✕</div>
       </div>
 
-      {/* Image */}
-      <img ref={imageRef} src={imageUrl} alt="" draggable={false} style={{
-        position: 'absolute', left: '50%', top: `${imgCenterY}px`,
-        width: fitted ? `${fitted.width}px` : 'auto', height: fitted ? `${fitted.height}px` : 'auto',
-        maxWidth: fitted ? undefined : '100%', maxHeight: fitted ? undefined : `${areaH - 20}px`,
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})` : 'translate(-50%, calc(-50% + 20px)) scale(0.92)',
-        transition: disableTransition ? 'none' : 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        transformOrigin: 'center center', objectFit: 'contain', touchAction: 'none', pointerEvents: 'none',
-      }} />
+      {/* Media (image or video) */}
+      {(() => {
+        const isVideo = mode === 'media' && mediaItems[currentPhotoIndex]?.type === 'video';
+        const commonStyle: React.CSSProperties = {
+          position: 'absolute', left: '50%', top: `${imgCenterY}px`,
+          width: fitted ? `${fitted.width}px` : 'auto', height: fitted ? `${fitted.height}px` : 'auto',
+          maxWidth: fitted ? undefined : '100%', maxHeight: fitted ? undefined : `${areaH - 20}px`,
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})` : 'translate(-50%, calc(-50% + 20px)) scale(0.92)',
+          transition: disableTransition ? 'none' : 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          transformOrigin: 'center center', objectFit: 'contain' as const, touchAction: 'none' as const,
+        };
+
+        return isVideo ? (
+          <video
+            key={imageUrl}
+            src={imageUrl}
+            controls
+            playsInline
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            style={{ ...commonStyle, pointerEvents: 'auto', background: 'black' }}
+          />
+        ) : (
+          <img ref={imageRef} src={imageUrl} alt="" draggable={false}
+            style={{ ...commonStyle, pointerEvents: 'none' }}
+          />
+        );
+      })()}
 
       {/* Bottom panel */}
       {(() => {
