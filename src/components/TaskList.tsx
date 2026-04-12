@@ -45,7 +45,6 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
   
   // Fullscreen image viewer state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [thumbnailRect, setThumbnailRect] = useState<DOMRect | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentFullscreenTaskId, setCurrentFullscreenTaskId] = useState<string | null>(null); // Track which task's image is being viewed
   const [allPhotos, setAllPhotos] = useState<Array<{url: string, taskId: string, taskIndex: number}>>([]); // Store all photos for navigation
@@ -412,31 +411,27 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
   const handleThumbnailClick = (task: Task, thumbnailUrl: string, rect: DOMRect, e: React.MouseEvent) => {
     e.stopPropagation();
     hapticFeedback.medium();
-    setThumbnailRect(rect);
     setFullscreenImage(thumbnailUrl);
-    setCurrentFullscreenTaskId(task.id); // Track which task's image is being viewed
-    
-    // Find the index of the clicked photo in the allPhotos array
+    setCurrentFullscreenTaskId(task.id);
+
     const photoIndex = allPhotos.findIndex(photo => photo.url === thumbnailUrl && photo.taskId === task.id);
     if (photoIndex !== -1) {
       setCurrentPhotoIndex(photoIndex);
     }
-    
-    setIsAnimating(true);
-    
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 400);
+
+    setIsAnimating(false);
+    // Trigger enter animation next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setIsAnimating(true));
+    });
   };
 
   const closeFullscreen = () => {
     hapticFeedback.light();
-    setIsAnimating(true);
-    
+    setIsAnimating(false); // triggers exit animation
+
     setTimeout(() => {
       setFullscreenImage(null);
-      setThumbnailRect(null);
-      setIsAnimating(false);
     }, 400);
   };
 
@@ -768,9 +763,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       {fullscreenImage && (
         <ImageViewer
           imageUrl={fullscreenImage}
-          thumbnailRect={thumbnailRect}
           isAnimating={isAnimating}
-          isClosing={isAnimating && fullscreenImage !== null}
           onClose={closeFullscreen}
           tasks={tasks}
           currentTaskIndex={tasks.findIndex(t => t.id === currentFullscreenTaskId)}
@@ -1076,9 +1069,7 @@ function TaskCard({
 
 function ImageViewer({
   imageUrl,
-  thumbnailRect,
   isAnimating,
-  isClosing,
   onClose,
   tasks,
   currentTaskIndex,
@@ -1094,9 +1085,7 @@ function ImageViewer({
   groups,
 }: {
   imageUrl: string;
-  thumbnailRect: DOMRect | null;
   isAnimating: boolean;
-  isClosing: boolean;
   onClose: () => void;
   tasks: Task[];
   currentTaskIndex: number;
@@ -1321,7 +1310,6 @@ function ImageViewer({
     return { width, height };
   };
 
-  // Navigation between task thumbnails (looping)
   const goToPreviousPhoto = () => {
     if (allPhotos.length > 1) {
       let newIndex = currentPhotoIndex - 1;
@@ -1354,51 +1342,12 @@ function ImageViewer({
     }
   };
 
-  const getAnimationStyle = () => {
-    if (!thumbnailRect || !isImageLoaded || !imageDimensions) {
-      return {};
-    }
-
-    const fittedDimensions = getFittedDimensions();
-
-    if (isAnimating && !isClosing) {
-      return {
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        top: `${thumbnailRect.top}px`,
-        left: `${thumbnailRect.left}px`,
-        borderRadius: '8px',
-        objectFit: 'cover' as const
-      };
-    } else if (isAnimating && isClosing) {
-      return {
-        width: `${thumbnailRect.width}px`,
-        height: `${thumbnailRect.height}px`,
-        top: `${thumbnailRect.top}px`,
-        left: `${thumbnailRect.left}px`,
-        borderRadius: '8px',
-        objectFit: 'cover' as const
-      };
-    } else {
-      return {
-        width: `${fittedDimensions.width}px`,
-        height: `${fittedDimensions.height}px`,
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        borderRadius: '0px',
-        objectFit: 'contain' as const
-      };
-    }
-  };
-
-  const animationStyle = getAnimationStyle();
-
-  // Get current photo and corresponding task
   const currentPhoto = allPhotos[currentPhotoIndex];
   const currentTask = tasks.find(t => t.id === currentPhoto?.taskId) || tasks[currentTaskIndex];
-
   const fittedDimensions = isImageLoaded ? getFittedDimensions() : { width: 0, height: 0 };
+
+  // isAnimating=true means "fully visible", false means "entering/exiting"
+  const isVisible = isAnimating;
 
   return (
     <div
@@ -1409,18 +1358,19 @@ function ImageViewer({
         left: 0,
         right: 0,
         bottom: 0,
-        background: isClosing ? 'rgba(0, 0, 0, 0)' : 'rgba(0, 0, 0, 0.95)',
+        background: isVisible ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0)',
         zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'background 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'background 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
       }}
     >
+      {/* Close button */}
       <div
         onClick={(e) => { e.stopPropagation(); onClose(); }}
         onTouchEnd={(e) => e.stopPropagation()}
@@ -1439,8 +1389,10 @@ function ImageViewer({
           color: 'rgba(255,255,255,0.8)',
           cursor: 'pointer',
           zIndex: 10000,
-          opacity: isClosing ? 0 : 1,
-          transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? 'translateY(0)' : 'translateY(-10px)',
+          transition: 'opacity 0.3s ease, transform 0.3s ease',
+          transitionDelay: isVisible ? '0.15s' : '0s',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           backdropFilter: 'blur(20px)',
           padding: 0
@@ -1449,6 +1401,7 @@ function ImageViewer({
         ✕
       </div>
 
+      {/* Image */}
       <img
         ref={imageRef}
         src={imageUrl}
@@ -1460,25 +1413,17 @@ function ImageViewer({
           left: '50%',
           width: isImageLoaded ? `${fittedDimensions.width}px` : undefined,
           height: isImageLoaded ? `${fittedDimensions.height}px` : undefined,
-          transform: isAnimating && thumbnailRect
-            ? undefined
-            : `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
-          transition: isAnimating
-            ? 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible
+            ? `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`
+            : `translate(-50%, calc(-50% + 20px)) scale(0.92)`,
+          transition: scale === 1
+            ? 'opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
             : 'none',
           transformOrigin: 'center center',
           objectFit: 'contain',
           touchAction: 'none',
           pointerEvents: 'none',
-          ...(isAnimating && thumbnailRect ? {
-            width: `${thumbnailRect.width}px`,
-            height: `${thumbnailRect.height}px`,
-            top: `${thumbnailRect.top}px`,
-            left: `${thumbnailRect.left}px`,
-            transform: 'none',
-            borderRadius: '8px',
-            objectFit: 'cover' as const
-          } : {})
         }}
       />
 
@@ -1499,8 +1444,10 @@ function ImageViewer({
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
             background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.92) 100%)',
             paddingTop: '48px',
-            opacity: isClosing ? 0 : 1,
-            transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 0.3s ease, transform 0.3s ease',
+            transitionDelay: isVisible ? '0.1s' : '0s'
           }}>
             {/* Info card */}
             <div style={{
