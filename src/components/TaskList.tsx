@@ -28,8 +28,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const [filter, setFilter] = useState<{
     status: 'all' | 'InProgress' | TaskStatus;
     showArchived: boolean;
-    groupId?: string;  // NEW: Group filter
+    groupId?: string;
+    submittedMonth?: string;
   }>({ status: 'all', showArchived: false });
+  const [archivedTotalCount, setArchivedTotalCount] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -92,9 +94,10 @@ export function TaskList({ onTaskClick }: TaskListProps) {
     // Reset pagination when filter changes
     setPage(1);
     setTasks([]);
-    setHasMore(true); // Reset hasMore for new filter
+    setHasMore(true);
+    setArchivedTotalCount(null);
     fetchTasks(1);
-  }, [filter.status, filter.showArchived, filter.groupId, userRole]);
+  }, [filter.status, filter.showArchived, filter.groupId, filter.submittedMonth, userRole]);
 
   useEffect(() => {
     if (scrollContainerRef.current && scrollPositionRef.current > 0) {
@@ -196,19 +199,23 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         
         fetchedTasks = paginatedTasks;
       } else {
-        const backendPage = pageNum - 1; // Convert to 0-indexed
+        const backendPage = pageNum - 1;
         const pageSize = fetchArchived ? 50 : 20;
 
-        const { tasks: allTasks } = await api.getTasks(
+        const { tasks: allTasks, totalCount } = await api.getTasks(
           statusFilter,
           fetchArchived,
           backendPage,
           pageSize,
-          fetchArchived ? 'archivedAt' : undefined,
-          fetchArchived ? 'desc' : undefined
+          fetchArchived ? 'submittedAt' : undefined,
+          fetchArchived ? 'desc' : undefined,
+          fetchArchived ? filter.submittedMonth : undefined
         );
         fetchedTasks = allTasks;
 
+        if (fetchArchived && totalCount !== undefined) {
+          setArchivedTotalCount(totalCount);
+        }
         setHasMore(fetchedTasks.length === pageSize);
       }
       
@@ -332,7 +339,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
 
   const handleArchiveToggle = () => {
     hapticFeedback.light();
-    setFilter(prev => ({ ...prev, status: 'all', showArchived: !prev.showArchived }));
+    setFilter(prev => ({ ...prev, status: 'all', showArchived: !prev.showArchived, submittedMonth: undefined }));
   };
 
   // NEW: Handle group filter
@@ -457,272 +464,206 @@ export function TaskList({ onTaskClick }: TaskListProps) {
   const canSeeArchived = userRole === 'Admin' || userRole === 'Lead';
   const selectedGroup = groups.find(g => g.id === filter.groupId);
 
+  // Generate month options for archive filter (last 6 months)
+  const getMonthOptions = () => {
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+      months.push({ value, label });
+    }
+    return months;
+  };
+
   return (
     <div>
-      {/* Fixed Filter Bar */}
+      {/* Group Selector (title section) */}
+      {groups.length > 0 && (
+        <div style={{
+          position: 'sticky',
+          top: '60px',
+          zIndex: 51,
+          background: 'var(--tg-theme-bg-color)',
+          padding: '8px 16px',
+          marginLeft: '-16px',
+          marginRight: '-16px',
+        }}>
+          <div style={{ maxWidth: '600px', margin: '0 auto', position: 'relative' }} ref={groupDropdownRef}>
+            <button
+              onClick={() => { setShowGroupDropdown(!showGroupDropdown); hapticFeedback.light(); }}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: '13px',
+                background: filter.groupId ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                color: filter.groupId ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                border: 'none',
+                borderRadius: '8px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {selectedGroup ? (
+                  <>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: selectedGroup.color || '#3b82f6' }} />
+                    <span>{t('taskList.groupLabel', { name: selectedGroup.name })}</span>
+                  </>
+                ) : (
+                  <span>{t('taskList.allGroups')}</span>
+                )}
+              </div>
+              <span style={{ fontSize: '10px' }}>{showGroupDropdown ? '▲' : '▼'}</span>
+            </button>
+            {showGroupDropdown && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                background: 'var(--tg-theme-bg-color)', border: '1px solid var(--tg-theme-hint-color)',
+                borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxHeight: '200px', overflowY: 'auto', zIndex: 100
+              }}>
+                <div onClick={() => handleGroupFilter(undefined)} style={{
+                  padding: '10px 12px', cursor: 'pointer', fontSize: '14px',
+                  background: !filter.groupId ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                  borderBottom: '1px solid var(--tg-theme-hint-color)'
+                }}>{t('taskList.allGroups')}</div>
+                {groups.map(group => (
+                  <div key={group.id} onClick={() => handleGroupFilter(group.id)} style={{
+                    padding: '10px 12px', cursor: 'pointer', fontSize: '14px',
+                    background: filter.groupId === group.id ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                    borderBottom: '1px solid var(--tg-theme-hint-color)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: group.color || '#3b82f6', border: '1px solid var(--tg-theme-hint-color)' }} />
+                      <span>{group.name}</span>
+                    </div>
+                    {group.isDefault && (
+                      <span style={{ fontSize: '10px', padding: '2px 4px', background: 'var(--tg-theme-button-color)', color: 'var(--tg-theme-button-text-color)', borderRadius: '3px' }}>
+                        {t('taskList.groupBadgeDefault')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Filter Bar */}
       <div style={{
         position: 'sticky',
-        top: '60px',
+        top: groups.length > 0 ? '100px' : '60px',
         zIndex: 50,
         background: 'var(--tg-theme-bg-color)',
         borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        padding: '12px 16px',
+        padding: '8px 16px',
         marginLeft: '-16px',
         marginRight: '-16px',
         marginBottom: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          {/* NEW: Group Filter Dropdown */}
-          {groups.length > 0 && (
-            <div style={{ marginBottom: '8px', position: 'relative' }} ref={groupDropdownRef}>
-              <button
-                onClick={() => {
-                  setShowGroupDropdown(!showGroupDropdown);
-                  hapticFeedback.light();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  background: filter.groupId 
-                    ? 'var(--tg-theme-button-color)' 
-                    : 'var(--tg-theme-secondary-bg-color)',
-                  color: filter.groupId
-                    ? 'var(--tg-theme-button-text-color)'
-                    : 'var(--tg-theme-text-color)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  cursor: 'pointer'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {selectedGroup ? (
-                    <>
-                      <div style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '4px',
-                        backgroundColor: selectedGroup.color || '#3b82f6',
-                        border: '1px solid var(--tg-theme-hint-color)'
-                      }} />
-                      <span>{t('taskList.groupLabel', { name: selectedGroup.name })}</span>
-                    </>
-                  ) : (
-                    <span>{t('taskList.allGroups')}</span>
-                  )}
-                </div>
-                <span style={{ fontSize: '12px' }}>
-                  {showGroupDropdown ? '▲' : '▼'}
-                </span>
-              </button>
-
-              {/* Dropdown Menu */}
-              {showGroupDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: '4px',
-                  background: 'var(--tg-theme-bg-color)',
-                  border: '1px solid var(--tg-theme-hint-color)',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  zIndex: 100
-                }}>
-                  <div
-                    onClick={() => handleGroupFilter(undefined)}
-                    style={{
-                      padding: '10px 12px',
-                      cursor: 'pointer',
-                      background: !filter.groupId ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
-                      borderBottom: '1px solid var(--tg-theme-hint-color)',
-                      fontSize: '14px'
-                    }}
-                  >
-                    {t('taskList.allGroups')}
-                  </div>
-                  
-                  {groups.map(group => (
-                    <div
-                      key={group.id}
-                      onClick={() => handleGroupFilter(group.id)}
-                      style={{
-                        padding: '10px 12px',
-                        cursor: 'pointer',
-                        background: filter.groupId === group.id 
-                          ? 'var(--tg-theme-secondary-bg-color)' 
-                          : 'transparent',
-                        borderBottom: '1px solid var(--tg-theme-hint-color)',
-                        fontSize: '14px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '4px',
-                          backgroundColor: group.color || '#3b82f6', // Default color if none set
-                          border: '1px solid var(--tg-theme-hint-color)'
-                        }} />
-                        <span>{group.name}</span>
-                      </div>
-                      {group.isDefault && (
-                        <span style={{
-                          fontSize: '10px',
-                          padding: '2px 4px',
-                          background: 'var(--tg-theme-button-color)',
-                          color: 'var(--tg-theme-button-text-color)',
-                          borderRadius: '3px'
-                        }}>
-                          {t('taskList.groupBadgeDefault')}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Status Filters Row */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {/* Scrollable Status Filters */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <div
               ref={scrollContainerRef}
               style={{
-                display: 'flex',
-                gap: '8px',
-                overflowX: 'auto',
-                flex: 1,
-                scrollbarWidth: 'thin',
-                WebkitOverflowScrolling: 'touch',
-                paddingBottom: '4px'
+                display: 'flex', gap: '6px', overflowX: 'auto', flex: 1,
+                scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch', paddingBottom: '4px'
               }}
             >
-              <button
-                onClick={() => handleStatusFilter()}
-                style={{
-                  minWidth: 'auto',
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  background: filter.status === 'all' && !filter.showArchived
-                    ? 'var(--tg-theme-button-color)'
-                    : 'var(--tg-theme-secondary-bg-color)',
-                  color: filter.status === 'all' && !filter.showArchived
-                    ? 'var(--tg-theme-button-text-color)'
-                    : 'var(--tg-theme-text-color)',
-                  border: 'none',
-                  borderRadius: '8px'
-                }}
-              >
-                {t('taskList.filterAll')}
-              </button>
+              {filter.showArchived ? (
+                <>
+                  {/* Month filter for archive view */}
+                  <button
+                    onClick={() => { setFilter(prev => ({ ...prev, submittedMonth: undefined })); hapticFeedback.light(); }}
+                    style={{
+                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
+                      background: !filter.submittedMonth ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                      color: !filter.submittedMonth ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                      border: 'none', borderRadius: '8px'
+                    }}
+                  >All</button>
+                  {getMonthOptions().map(m => (
+                    <button
+                      key={m.value}
+                      onClick={() => { setFilter(prev => ({ ...prev, submittedMonth: m.value })); hapticFeedback.light(); }}
+                      style={{
+                        minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
+                        background: filter.submittedMonth === m.value ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                        color: filter.submittedMonth === m.value ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                        border: 'none', borderRadius: '8px'
+                      }}
+                    >{m.label}</button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleStatusFilter()}
+                    style={{
+                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
+                      background: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                      color: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                      border: 'none', borderRadius: '8px'
+                    }}
+                  >{t('taskList.filterAll')}</button>
 
-              {userRole === 'Viewer' && (
-                <button
-                  onClick={() => handleStatusFilter('InProgress')}
-                  style={{
-                    minWidth: 'auto',
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: filter.status === 'InProgress'
-                      ? 'var(--tg-theme-button-color)'
-                      : 'var(--tg-theme-secondary-bg-color)',
-                    color: filter.status === 'InProgress'
-                      ? 'var(--tg-theme-button-text-color)'
-                      : 'var(--tg-theme-text-color)',
-                    border: 'none',
-                    borderRadius: '8px'
-                  }}
-                >
-                  {t('taskList.filterInProgress')}
-                </button>
+                  {userRole === 'Viewer' && (
+                    <button
+                      onClick={() => handleStatusFilter('InProgress')}
+                      style={{
+                        minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
+                        background: filter.status === 'InProgress' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                        color: filter.status === 'InProgress' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                        border: 'none', borderRadius: '8px'
+                      }}
+                    >{t('taskList.filterInProgress')}</button>
+                  )}
+
+                  {statusOrder.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => handleStatusFilter(status)}
+                      style={{
+                        minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
+                        background: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
+                        color: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                        border: 'none', borderRadius: '8px'
+                      }}
+                    >{t(`statusLabels.${status}`)}</button>
+                  ))}
+                </>
               )}
-
-              {statusOrder.map((status) => (
-                <button
-                  key={status}
-                  onClick={() => handleStatusFilter(status)}
-                  style={{
-                    minWidth: 'auto',
-                    padding: '8px 16px',
-                    fontSize: '14px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: filter.status === status && !filter.showArchived
-                      ? 'var(--tg-theme-button-color)'
-                      : 'var(--tg-theme-secondary-bg-color)',
-                    color: filter.status === status && !filter.showArchived
-                      ? 'var(--tg-theme-button-text-color)'
-                      : 'var(--tg-theme-text-color)',
-                    border: 'none',
-                    borderRadius: '8px'
-                  }}
-                >
-                  {t(`statusLabels.${status}`)}
-                </button>
-              ))}
             </div>
 
-            {/* Fixed Right Action Buttons */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '8px',
-              flexShrink: 0,
-              paddingLeft: '8px',
-              borderLeft: '1px solid var(--tg-theme-hint-color)'
-            }}>
+            {/* Compact action buttons */}
+            <div style={{ display: 'flex', gap: '4px', flexShrink: 0, paddingLeft: '6px', borderLeft: '1px solid var(--tg-theme-hint-color)' }}>
               {canSeeArchived && (
                 <button
                   onClick={handleArchiveToggle}
                   style={{
-                    minWidth: 'auto',
-                    padding: '8px 12px',
-                    fontSize: '18px',
-                    background: filter.showArchived
-                      ? 'var(--tg-theme-button-color)'
-                      : 'transparent',
-                    color: filter.showArchived
-                      ? 'var(--tg-theme-button-text-color)'
-                      : 'var(--tg-theme-text-color)',
-                    border: 'none',
-                    borderRadius: '8px'
+                    minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
+                    background: filter.showArchived ? 'var(--tg-theme-button-color)' : 'transparent',
+                    color: filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                    border: 'none', borderRadius: '6px', lineHeight: 1
                   }}
                   title={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
-                >
-                  🗃️
-                </button>
+                >🗃️</button>
               )}
-
               <button
                 onClick={handleRefresh}
                 style={{
-                  minWidth: 'auto',
-                  padding: '8px 12px',
-                  fontSize: '18px',
-                  background: 'transparent',
-                  color: 'var(--tg-theme-text-color)',
-                  border: 'none',
-                  borderRadius: '8px'
+                  minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
+                  background: 'transparent', color: 'var(--tg-theme-text-color)',
+                  border: 'none', borderRadius: '6px', lineHeight: 1
                 }}
                 title={t('taskList.refreshTitle')}
-              >
-                🔄
-              </button>
+              >🔄</button>
             </div>
           </div>
         </div>
@@ -740,7 +681,9 @@ export function TaskList({ onTaskClick }: TaskListProps) {
         gap: '8px'
       }}>
         <span>
-          {tasks.length === 1 ? t('taskList.foundOne') : t('taskList.found', { count: tasks.length })}
+          {filter.showArchived && archivedTotalCount !== null
+            ? t('taskList.found', { count: archivedTotalCount })
+            : tasks.length === 1 ? t('taskList.foundOne') : t('taskList.found', { count: tasks.length })}
         </span>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {filter.groupId && selectedGroup && (
@@ -810,6 +753,7 @@ export function TaskList({ onTaskClick }: TaskListProps) {
                     onThumbnailClick={(taskObj, url, rect, e) => handleThumbnailClick(taskObj, url, rect, e)}
                     t={t}
                     formatDate={formatDate}
+                    isArchived={filter.showArchived}
                   />
                 </div>
 
@@ -937,6 +881,7 @@ function TaskCard({
   onThumbnailClick,
   t,
   formatDate,
+  isArchived,
 }: {
   task: Task;
   thumbnailUrl?: string;
@@ -945,6 +890,7 @@ function TaskCard({
   onThumbnailClick: (task: Task, url: string, rect: DOMRect, e: React.MouseEvent) => void;
   t: (key: string, params?: Record<string, string | number | boolean>) => string;
   formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+  isArchived?: boolean;
 }) {
   const thumbnailRef = useRef<HTMLDivElement>(null);
 
@@ -1090,60 +1036,77 @@ function TaskCard({
             </div>
           )}
 
-          <div style={{ marginBottom: '2px' }}>
+          {isArchived ? (
+            /* Archived view: show submitter + submitted date, no progress bar */
             <div style={{
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '12px',
+              gap: '6px',
+              fontSize: '11px',
               color: 'var(--tg-theme-hint-color)',
-              marginBottom: '1px',
-              gap: '4px'
+              alignItems: 'center'
             }}>
-              <span>{t('taskList.progress')}</span>
-              {doneName && task.status !== 'New' && task.status !== 'Received' && (
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  textAlign: 'center',
-                  fontSize: '12px'
+              {doneName && <span>{t('taskList.doneBy', { name: doneName })}</span>}
+              {(task as any).submittedAt && <span>📅 {formatDate((task as any).submittedAt)}</span>}
+            </div>
+          ) : (
+            /* Active view: progress bar + date */
+            <>
+              <div style={{ marginBottom: '2px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '12px',
+                  color: 'var(--tg-theme-hint-color)',
+                  marginBottom: '1px',
+                  gap: '4px'
                 }}>
-                  {t('taskList.doneBy', { name: doneName })}
-                </span>
-              )}
-              <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
-                {completedSets}/{task.requireSets}
-              </span>
-            </div>
-            <div style={{
-              height: '5px',
-              background: 'var(--tg-theme-bg-color)',
-              borderRadius: '2px',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${progress}%`,
-                background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
-                transition: 'width 0.3s',
-              }} />
-            </div>
-          </div>
+                  <span>{t('taskList.progress')}</span>
+                  {doneName && task.status !== 'New' && task.status !== 'Received' && (
+                    <span style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                      textAlign: 'center',
+                      fontSize: '12px'
+                    }}>
+                      {t('taskList.doneBy', { name: doneName })}
+                    </span>
+                  )}
+                  <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
+                    {completedSets}/{task.requireSets}
+                  </span>
+                </div>
+                <div style={{
+                  height: '5px',
+                  background: 'var(--tg-theme-bg-color)',
+                  borderRadius: '2px',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${progress}%`,
+                    background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
+                    transition: 'width 0.3s',
+                  }} />
+                </div>
+              </div>
 
-          <div style={{
-            display: 'flex',
-            gap: '4px',
-            fontSize: '11px',
-            color: 'var(--tg-theme-hint-color)',
-            flexWrap: 'wrap',
-            alignItems: 'center'
-          }}>
-            {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-              <span>📅 {formatDate(task.lastModifiedAt)}</span>
-            )}
-          </div>
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+                fontSize: '11px',
+                color: 'var(--tg-theme-hint-color)',
+                flexWrap: 'wrap',
+                alignItems: 'center'
+              }}>
+                {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
+                  <span>📅 {formatDate(task.lastModifiedAt)}</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

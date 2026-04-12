@@ -59,6 +59,8 @@ export interface Task {
   // Optional fields
   lastModifiedBy?: number;
   lastModifiedAt?: string;
+  submittedAt?: string;
+  archivedAt?: string;
   telegramChatId?: number;
   telegramMessageId?: number;
   telegramCards?: Record<string, {
