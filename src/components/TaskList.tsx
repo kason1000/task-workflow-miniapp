@@ -1109,7 +1109,6 @@ function ImageViewer({
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // All gesture state in refs for 60fps (no re-renders during gesture)
   const gestureRef = useRef({
     scale: 1,
     posX: 0,
@@ -1122,11 +1121,16 @@ function ImageViewer({
     startPosY: 0,
     isPinching: false,
     isPanning: false,
+    isSwiping: false,
     panStartX: 0,
     panStartY: 0,
+    swipeStartX: 0,
+    swipeStartY: 0,
+    swipeDeltaX: 0,
     moved: false,
     lastTap: 0,
   });
+  const thumbStripRef = useRef<HTMLDivElement>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -1173,6 +1177,8 @@ function ImageViewer({
     const onTouchStart = (e: TouchEvent) => {
       const g = gestureRef.current;
       g.moved = false;
+      g.isSwiping = false;
+      g.swipeDeltaX = 0;
 
       if (e.touches.length === 2) {
         e.preventDefault();
@@ -1186,6 +1192,8 @@ function ImageViewer({
         g.startPosX = g.posX;
         g.startPosY = g.posY;
       } else if (e.touches.length === 1) {
+        g.swipeStartX = e.touches[0].clientX;
+        g.swipeStartY = e.touches[0].clientY;
         if (g.scale > 1) {
           g.isPanning = true;
           g.panStartX = e.touches[0].clientX - g.posX;
@@ -1206,11 +1214,8 @@ function ImageViewer({
         const ratio = dist / g.startDistance;
         const newScale = Math.min(Math.max(g.startScale * ratio, 0.5), 5);
 
-        // Zoom toward pinch center
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
 
         if (g.startScale > 0) {
           const scaleDelta = newScale / g.startScale;
@@ -1220,6 +1225,23 @@ function ImageViewer({
 
         g.scale = newScale;
         applyTransform();
+      } else if (e.touches.length === 1 && g.scale <= 1 && !g.isPinching) {
+        // Horizontal swipe at scale 1 → navigate photos
+        const dx = e.touches[0].clientX - g.swipeStartX;
+        const dy = e.touches[0].clientY - g.swipeStartY;
+        if (!g.isSwiping && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+          g.isSwiping = true;
+        }
+        if (g.isSwiping) {
+          e.preventDefault();
+          g.swipeDeltaX = dx;
+          if (imageRef.current) {
+            const opacity = Math.max(0.3, 1 - Math.abs(dx) / window.innerWidth);
+            imageRef.current.style.transition = 'none';
+            imageRef.current.style.transform = `translate(calc(-50% + ${dx}px), -50%) scale(1)`;
+            imageRef.current.style.opacity = String(opacity);
+          }
+        }
       } else if (e.touches.length === 1 && g.isPanning && g.scale > 1) {
         e.preventDefault();
         g.posX = e.touches[0].clientX - g.panStartX;
@@ -1233,7 +1255,6 @@ function ImageViewer({
 
       if (g.isPinching) {
         g.isPinching = false;
-        // Snap back if zoomed out below 1
         if (g.scale < 1) {
           animateToRest(1, 0, 0);
         } else {
@@ -1243,37 +1264,45 @@ function ImageViewer({
         return;
       }
 
+      // Swipe complete → navigate
+      if (g.isSwiping) {
+        g.isSwiping = false;
+        const threshold = window.innerWidth * 0.2;
+        if (imageRef.current) {
+          imageRef.current.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+          imageRef.current.style.opacity = '1';
+          imageRef.current.style.transform = 'translate(-50%, -50%) scale(1)';
+        }
+        if (Math.abs(g.swipeDeltaX) > threshold) {
+          if (g.swipeDeltaX < 0) goToNextPhoto();
+          else goToPreviousPhoto();
+        }
+        g.swipeDeltaX = 0;
+        return;
+      }
+
       if (g.isPanning) {
         g.isPanning = false;
         setPosition({ x: g.posX, y: g.posY });
         return;
       }
 
-      // Single-finger tap (no movement)
-      if (!g.moved && e.changedTouches.length === 1 && g.scale <= 1) {
+      // Tap handling
+      if (!g.moved && e.changedTouches.length === 1) {
         const now = Date.now();
         const timeSince = now - g.lastTap;
         g.lastTap = now;
 
         if (timeSince < 300 && timeSince > 0) {
-          // Double-tap → zoom in
           if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
-          animateToRest(2.5, 0, 0);
+          if (g.scale > 1) animateToRest(1, 0, 0);
+          else animateToRest(2.5, 0, 0);
         } else {
-          // Single tap → close (after delay for double-tap check)
           if (tapTimer.current) clearTimeout(tapTimer.current);
           tapTimer.current = setTimeout(() => {
-            onClose();
+            if (gestureRef.current.scale <= 1) onClose();
             tapTimer.current = null;
           }, 280);
-        }
-      } else if (!g.moved && e.changedTouches.length === 1 && g.scale > 1) {
-        // Double-tap to zoom out
-        const now = Date.now();
-        const timeSince = now - g.lastTap;
-        g.lastTap = now;
-        if (timeSince < 300 && timeSince > 0) {
-          animateToRest(1, 0, 0);
         }
       }
 
@@ -1345,6 +1374,16 @@ function ImageViewer({
   const currentPhoto = allPhotos[currentPhotoIndex];
   const currentTask = tasks.find(t => t.id === currentPhoto?.taskId) || tasks[currentTaskIndex];
   const fittedDimensions = isImageLoaded ? getFittedDimensions() : { width: 0, height: 0 };
+
+  // Scroll active thumbnail into view
+  useEffect(() => {
+    if (thumbStripRef.current) {
+      const active = thumbStripRef.current.querySelector('[data-active="true"]') as HTMLElement;
+      if (active) {
+        active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [currentPhotoIndex]);
 
   // isAnimating=true means "fully visible", false means "entering/exiting"
   const isVisible = isAnimating;
@@ -1432,157 +1471,134 @@ function ImageViewer({
         if (!currentTask) return null;
         const taskGroup = groups.find(g => g.id === currentTask.groupId);
         const doneName = currentTask.doneBy ? (userNames[currentTask.doneBy] || t('common.userFallback', { id: currentTask.doneBy })) : null;
-        const completedSets = currentTask.sets.filter(set => {
-          const hasPhotos = set.photos.length >= 3;
-          const hasVideo = currentTask.labels.video ? !!set.video : true;
-          return hasPhotos && hasVideo;
-        }).length;
-        const progress = Math.round((completedSets / currentTask.requireSets) * 100);
 
         return (
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
-            background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.92) 100%)',
-            paddingTop: '48px',
+            background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.95) 100%)',
+            paddingTop: '40px',
             opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+            transform: isVisible ? 'translateY(0)' : 'translateY(16px)',
             transition: 'opacity 0.3s ease, transform 0.3s ease',
             transitionDelay: isVisible ? '0.1s' : '0s'
           }}>
-            {/* Info card */}
+            {/* Info row — single compact line */}
             <div style={{
-              margin: '0 12px 10px',
-              padding: '12px 14px',
-              background: 'rgba(255,255,255,0.08)',
-              borderRadius: '14px',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.1)'
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '0 14px 8px', flexWrap: 'nowrap', overflow: 'hidden'
             }}>
-              {/* Row 1: badges */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                <span className={`badge ${statusColors[currentTask.status]}`} style={{
-                  fontSize: '10px', padding: '2px 8px', fontWeight: 600, letterSpacing: '0.3px'
-                }}>
-                  {t(`statusLabels.${currentTask.status}`)}
-                </span>
-                {taskGroup && (
-                  <span style={{
-                    fontSize: '10px', padding: '2px 8px',
-                    background: taskGroup.color || '#3b82f6', color: 'white',
-                    borderRadius: '10px', fontWeight: 600, letterSpacing: '0.3px',
-                    display: 'flex', alignItems: 'center', gap: '4px'
-                  }}>
-                    {taskGroup.name}
-                  </span>
-                )}
+              <span className={`badge ${statusColors[currentTask.status]}`} style={{
+                fontSize: '10px', padding: '2px 7px', fontWeight: 600, flexShrink: 0
+              }}>
+                {t(`statusLabels.${currentTask.status}`)}
+              </span>
+              {taskGroup && (
                 <span style={{
-                  marginLeft: 'auto', fontSize: '10px', color: 'rgba(255,255,255,0.4)',
-                  fontWeight: 500, fontVariantNumeric: 'tabular-nums'
+                  fontSize: '10px', padding: '2px 7px', flexShrink: 0,
+                  background: taskGroup.color || '#3b82f6', color: 'white',
+                  borderRadius: '10px', fontWeight: 600
                 }}>
-                  {currentPhotoIndex + 1} / {allPhotos.length}
+                  {taskGroup.name}
                 </span>
-              </div>
-
-              {/* Row 2: progress bar */}
-              <div style={{
-                height: '3px', borderRadius: '2px',
-                background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '8px'
-              }}>
-                <div style={{
-                  height: '100%', borderRadius: '2px',
-                  width: `${progress}%`,
-                  background: progress === 100 ? '#34d399' : '#60a5fa',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-
-              {/* Row 3: meta line */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                fontSize: '11px', color: 'rgba(255,255,255,0.55)', fontWeight: 400
-              }}>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {completedSets}/{currentTask.requireSets} sets
+              )}
+              {doneName && currentTask.status !== 'New' && (
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  👤 {doneName}
                 </span>
-                {doneName && currentTask.status !== 'New' && (
-                  <>
-                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>
-                      {doneName}
-                    </span>
-                  </>
-                )}
-                {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
-                  <>
-                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-                    <span>{formatDate(currentTask.lastModifiedAt)}</span>
-                  </>
-                )}
-              </div>
+              )}
+              {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', flexShrink: 0, marginLeft: 'auto' }}>
+                  {formatDate(currentTask.lastModifiedAt)}
+                </span>
+              )}
             </div>
 
-            {/* Actions row */}
+            {/* Thumbnail strip */}
+            <div
+              ref={thumbStripRef}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+              style={{
+                display: 'flex', gap: '3px', overflowX: 'auto',
+                padding: '0 14px 10px',
+                scrollbarWidth: 'none', msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {allPhotos.map((photo, idx) => {
+                const isActive = idx === currentPhotoIndex;
+                return (
+                  <div
+                    key={`${photo.taskId}-${idx}`}
+                    data-active={isActive}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentPhotoIndex(idx);
+                      setCurrentFullscreenTaskId(photo.taskId);
+                      setFullscreenImage(photo.url);
+                    }}
+                    style={{
+                      width: isActive ? '44px' : '32px',
+                      height: '32px',
+                      flexShrink: 0,
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      border: isActive ? '2px solid white' : '1px solid rgba(255,255,255,0.15)',
+                      opacity: isActive ? 1 : 0.5,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <img src={photo.url} alt="" draggable={false} style={{
+                      width: '100%', height: '100%', objectFit: 'cover',
+                      pointerEvents: 'none'
+                    }} />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action buttons */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '0 12px 16px',
-              paddingBottom: 'max(16px, env(safe-area-inset-bottom))'
+              padding: '0 12px',
+              paddingBottom: 'max(14px, env(safe-area-inset-bottom))'
             }}>
               <button
-                onClick={goToPreviousPhoto}
+                onClick={(e) => { e.stopPropagation(); onClose(); onTaskClick(currentTask); }}
+                onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  width: '42px', height: '42px', borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)',
-                  border: '1px solid rgba(255,255,255,0.08)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  fontSize: '16px', cursor: 'pointer', flexShrink: 0
-                }}
-              >‹</button>
-
-              <button
-                onClick={() => { onClose(); onTaskClick(currentTask); }}
-                style={{
-                  flex: 1, height: '42px', fontSize: '13px',
+                  flex: 1, height: '40px', fontSize: '13px',
                   background: 'rgba(255,255,255,0.1)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px',
+                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
                   cursor: 'pointer', fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
                 }}
               >
-                <span style={{ fontSize: '15px' }}>📋</span>
-                <span>{t('common.details')}</span>
+                📋 {t('common.details')}
               </button>
 
               <button
-                onClick={(e) => onSendToChat(currentTask.id, e)}
+                onClick={(e) => { e.stopPropagation(); onSendToChat(currentTask.id, e); }}
+                onTouchEnd={(e) => e.stopPropagation()}
                 disabled={sending[currentTask.id]}
                 style={{
-                  flex: 1, height: '42px', fontSize: '13px',
+                  flex: 1, height: '40px', fontSize: '13px',
                   background: sending[currentTask.id]
                     ? 'rgba(107,114,128,0.7)'
                     : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                   color: 'white',
                   border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                  borderRadius: '12px',
+                  borderRadius: '10px',
                   cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
                   fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 8px rgba(37,99,235,0.3)'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 8px rgba(37,99,235,0.25)'
                 }}
               >
-                <span style={{ fontSize: '15px' }}>{sending[currentTask.id] ? '⏳' : '💬'}</span>
-                <span>{t('taskList.sendButton')}</span>
+                {sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}
               </button>
-
-              <button
-                onClick={goToNextPhoto}
-                style={{
-                  width: '42px', height: '42px', borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)',
-                  border: '1px solid rgba(255,255,255,0.08)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  fontSize: '16px', cursor: 'pointer', flexShrink: 0
-                }}
-              >›</button>
             </div>
           </div>
         );
