@@ -1,0 +1,108 @@
+/*
+ * SUNSET THEME — Warm Cream with Coral/Orange Accents
+ * Inspired by golden hour warmth
+ * Font: Plus Jakarta Sans
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+[data-theme="sunset"] {
+  --tg-theme-bg-color: #fef7ed;
+  --tg-theme-text-color: #292524;
+  --tg-theme-hint-color: #a8a29e;
+  --tg-theme-link-color: #ea580c;
+  --tg-theme-button-color: #ea580c;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #fff7ed;
+}
+
+[data-theme="sunset"] body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+[data-theme="sunset"] button {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="sunset"] button:hover:not(:disabled) {
+  opacity: 1;
+  box-shadow: 0 0 16px rgba(234, 88, 12, 0.15);
+}
+
+[data-theme="sunset"] .card {
+  background: #ffffff;
+  border: 1px solid rgba(234, 88, 12, 0.1);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+}
+
+[data-theme="sunset"] .card:hover {
+  border-color: rgba(234, 88, 12, 0.25);
+}
+
+[data-theme="sunset"] input,
+[data-theme="sunset"] textarea,
+[data-theme="sunset"] select {
+  background: #ffffff;
+  border: 1px solid rgba(234, 88, 12, 0.15);
+  color: var(--tg-theme-text-color);
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+[data-theme="sunset"] input:focus,
+[data-theme="sunset"] textarea:focus {
+  border-color: #ea580c;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.12);
+}
+
+[data-theme="sunset"] .badge {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+[data-theme="sunset"] .badge-new { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
+[data-theme="sunset"] .badge-received { background: rgba(234, 88, 12, 0.12); color: #c2410c; }
+[data-theme="sunset"] .badge-submitted { background: rgba(139, 92, 246, 0.12); color: #7c3aed; }
+[data-theme="sunset"] .badge-redo { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+[data-theme="sunset"] .badge-completed { background: rgba(16, 185, 129, 0.12); color: #059669; }
+[data-theme="sunset"] .badge-archived { background: rgba(168, 162, 158, 0.15); color: #78716c; }
+
+[data-theme="sunset"] .btn-ghost {
+  background: transparent;
+  color: #78716c;
+  border: 1px solid rgba(234, 88, 12, 0.15);
+}
+
+[data-theme="sunset"] .btn-ghost:hover:not(:disabled) {
+  border-color: #ea580c;
+  color: #ea580c;
+}
+
+[data-theme="sunset"] .btn-danger { background: #dc2626; color: white; }
+[data-theme="sunset"] .btn-success { background: #059669; color: white; }
+
+[data-theme="sunset"] .text-muted {
+  color: var(--tg-theme-hint-color);
+}
+
+[data-theme="sunset"] ::-webkit-scrollbar {
+  width: 5px;
+}
+
+[data-theme="sunset"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="sunset"] ::-webkit-scrollbar-thumb {
+  background: rgba(234, 88, 12, 0.2);
+  border-radius: 3px;
+}

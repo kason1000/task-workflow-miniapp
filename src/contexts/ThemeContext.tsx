@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-export type ThemeId = 'classic' | 'noir' | 'aurora' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
+export type ThemeId = 'classic' | 'dark' | 'ocean' | 'sunset' | 'forest' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
 
 interface ThemeInfo {
   id: ThemeId;
@@ -22,8 +22,10 @@ const STORAGE_KEY = 'taskflow_theme';
 
 const THEMES: ThemeInfo[] = [
   { id: 'classic', name: 'Classic', description: 'Original Telegram theme', hasCustomLayout: false },
-  { id: 'noir', name: 'Noir', description: 'Dark cinematic interface', hasCustomLayout: false },
-  { id: 'aurora', name: 'Aurora', description: 'Vibrant gradient experience', hasCustomLayout: false },
+  { id: 'dark', name: 'Dark', description: 'Dark mode for comfortable viewing', hasCustomLayout: false },
+  { id: 'ocean', name: 'Ocean', description: 'Deep navy with cyan accents', hasCustomLayout: false },
+  { id: 'sunset', name: 'Sunset', description: 'Warm cream with coral accents', hasCustomLayout: false },
+  { id: 'forest', name: 'Forest', description: 'Dark green with emerald accents', hasCustomLayout: false },
   { id: 'mosaic', name: 'Mosaic', description: 'Photo-first editorial gallery', hasCustomLayout: true },
   { id: 'command', name: 'Command', description: 'Retro terminal dashboard', hasCustomLayout: true },
   { id: 'elder', name: 'Easy View', description: 'Large text, simple layout for everyone', hasCustomLayout: true },
@@ -35,12 +37,23 @@ const THEMES: ThemeInfo[] = [
 
 const VALID_THEMES = THEMES.map(t => t.id);
 
+function detectDefaultTheme(): ThemeId {
+  // Default to Easy View for Chinese language users
+  try {
+    const lang = navigator.language || '';
+    if (lang.startsWith('zh')) return 'elder';
+    const tgLang = window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
+    if (tgLang && (tgLang === 'zh' || tgLang.startsWith('zh-') || tgLang.startsWith('zh_'))) return 'elder';
+  } catch {}
+  return 'classic';
+}
+
 function readStoredTheme(): ThemeId {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && VALID_THEMES.includes(stored as ThemeId)) return stored as ThemeId;
   } catch {}
-  return 'classic';
+  return detectDefaultTheme();
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);

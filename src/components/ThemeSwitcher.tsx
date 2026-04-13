@@ -3,8 +3,10 @@ import { useLocale } from '../i18n/LocaleContext';
 
 const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }> = {
   classic: { icon: '☀️', bg: '#ffffff', accent: '#2481cc' },
-  noir: { icon: '🌑', bg: '#0a0a0c', accent: '#c9a84c' },
-  aurora: { icon: '🌌', bg: '#0f0f1a', accent: '#7c6cf0' },
+  dark: { icon: '🌑', bg: '#1a1a2e', accent: '#3b82f6', tag: 'NEW' },
+  ocean: { icon: '🌊', bg: '#0c1929', accent: '#22d3ee', tag: 'NEW' },
+  sunset: { icon: '🌅', bg: '#fef7ed', accent: '#ea580c', tag: 'NEW' },
+  forest: { icon: '🌲', bg: '#0a1f0a', accent: '#34d399', tag: 'NEW' },
   mosaic: { icon: '🖼️', bg: '#faf8f5', accent: '#c45d3e', tag: 'NEW' },
   command: { icon: '⌨️', bg: '#080808', accent: '#39ff14', tag: 'NEW' },
   elder: { icon: '👴', bg: '#fffef7', accent: '#1a6b3c', tag: 'NEW' },

@@ -9,8 +9,8 @@ function ThemeTestConsumer() {
     <div>
       <span data-testid="theme">{theme}</span>
       <span data-testid="count">{themes.length}</span>
-      <button data-testid="set-noir" onClick={() => setTheme('noir')}>Noir</button>
-      <button data-testid="set-aurora" onClick={() => setTheme('aurora')}>Aurora</button>
+      <button data-testid="set-dark" onClick={() => setTheme('dark')}>Dark</button>
+      <button data-testid="set-ocean" onClick={() => setTheme('ocean')}>Ocean</button>
       <button data-testid="set-classic" onClick={() => setTheme('classic')}>Classic</button>
     </div>
   );
@@ -27,35 +27,35 @@ describe('ThemeContext', () => {
     expect(screen.getByTestId('theme').textContent).toBe('classic');
   });
 
-  it('has 10 themes available', () => {
+  it('has 12 themes available', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('count').textContent).toBe('10');
+    expect(screen.getByTestId('count').textContent).toBe('12');
   });
 
-  it('switches to noir theme', () => {
+  it('switches to dark theme', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    act(() => { screen.getByTestId('set-noir').click(); });
-    expect(screen.getByTestId('theme').textContent).toBe('noir');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('noir');
+    act(() => { screen.getByTestId('set-dark').click(); });
+    expect(screen.getByTestId('theme').textContent).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('switches to aurora theme', () => {
+  it('switches to ocean theme', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    act(() => { screen.getByTestId('set-aurora').click(); });
-    expect(screen.getByTestId('theme').textContent).toBe('aurora');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('aurora');
+    act(() => { screen.getByTestId('set-ocean').click(); });
+    expect(screen.getByTestId('theme').textContent).toBe('ocean');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('ocean');
   });
 
   it('persists theme to localStorage', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    act(() => { screen.getByTestId('set-noir').click(); });
-    expect(localStorage.getItem('taskflow_theme')).toBe('noir');
+    act(() => { screen.getByTestId('set-dark').click(); });
+    expect(localStorage.getItem('taskflow_theme')).toBe('dark');
   });
 
   it('reads theme from localStorage on mount', () => {
-    localStorage.setItem('taskflow_theme', 'aurora');
+    localStorage.setItem('taskflow_theme', 'ocean');
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    expect(screen.getByTestId('theme').textContent).toBe('aurora');
+    expect(screen.getByTestId('theme').textContent).toBe('ocean');
   });
 
   it('falls back to classic for invalid stored theme', () => {
@@ -66,7 +66,7 @@ describe('ThemeContext', () => {
 
   it('switches back to classic', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
-    act(() => { screen.getByTestId('set-noir').click(); });
+    act(() => { screen.getByTestId('set-dark').click(); });
     act(() => { screen.getByTestId('set-classic').click(); });
     expect(screen.getByTestId('theme').textContent).toBe('classic');
     expect(document.documentElement.getAttribute('data-theme')).toBe('classic');

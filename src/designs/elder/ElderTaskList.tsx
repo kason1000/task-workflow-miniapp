@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
 import { prepareTaskCard, getSubmitterFilterOptions } from '../shared/taskDisplayData';
-import { Task, TaskStatus } from '../../types';
+import { Task, TaskStatus, Group } from '../../types';
 import { hapticFeedback, showAlert } from '../../utils/telegram';
 import { api } from '../../services/api';
 import WebApp from '@twa-dev/sdk';
@@ -11,6 +12,8 @@ interface ElderTaskListProps {
   onTaskClick: (task: Task) => void;
   groupId?: string;
   refreshKey?: number;
+  groups?: Group[];
+  onGroupFilterChange?: (groupId: string | undefined) => void;
 }
 
 const STATUS_EMOJI: Record<string, string> = {
@@ -22,9 +25,10 @@ const STATUS_EMOJI: Record<string, string> = {
   Archived: '\u{1F4C1}',
 };
 
-export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskListProps) {
+export function ElderTaskList({ onTaskClick, groupId, refreshKey, groups: propGroups, onGroupFilterChange }: ElderTaskListProps) {
   const { t, formatDate } = useLocale();
   const data = useTaskListData(groupId, refreshKey);
+  const [sending, setSending] = useState<Record<string, boolean>>({});
 
   const {
     tasks,
@@ -51,10 +55,10 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
     openFullscreen,
     closeFullscreen,
     loadMoreTasks,
+    handleRefresh,
   } = data;
 
   const isAdminOrLead = userRole === 'Admin' || userRole === 'Lead';
-  const groupMap = new Map(groups.map(g => [g.id, g]));
   const filterOrder = getFilterOrder();
 
   // Get current task for fullscreen viewer actions
@@ -62,20 +66,28 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
     ? tasks.find(t => t.id === currentFullscreenTaskId)
     : null;
 
-  const handleSendToChat = async () => {
-    if (!currentTask) return;
+  const handleSendToChat = async (taskId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
-      await api.sendTaskToChat(currentTask.id);
+      setSending(prev => ({ ...prev, [taskId]: true }));
+      await api.sendTaskToChat(taskId);
       hapticFeedback.success();
       if (window.Telegram?.WebApp?.initData) {
         setTimeout(() => WebApp.close(), 300);
       } else {
-        showAlert('Task sent to chat!');
+        showAlert(t('taskList.sendToChatSuccess'));
+        setSending(prev => ({ ...prev, [taskId]: false }));
       }
     } catch (error: any) {
       hapticFeedback.error();
-      showAlert(`Failed to send: ${error.message}`);
+      showAlert(t('taskList.sendToChatFailed', { error: error.message }));
+      setSending(prev => ({ ...prev, [taskId]: false }));
     }
+  };
+
+  const handleFullscreenSendToChat = async () => {
+    if (!currentTask) return;
+    await handleSendToChat(currentTask.id);
   };
 
   const handleGoToDetail = () => {
@@ -83,6 +95,10 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
       onTaskClick(currentTask);
     }
   };
+
+  // Find currently selected group for badge display
+  const allGroups = propGroups || groups;
+  const selectedGroup = groupId ? allGroups.find(g => g.id === groupId) : null;
 
   const statusFilters: Array<{ key: 'all' | TaskStatus; label: string }> = [
     { key: 'all', label: `${t('taskList.filterAll')}` },
@@ -113,6 +129,38 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
     <div>
       {/* Filters */}
       <div className="elder-filters">
+        {/* Refresh button */}
+        <button
+          className="elder-refresh-btn"
+          onClick={() => {
+            handleRefresh();
+            hapticFeedback.medium();
+          }}
+        >
+          {t('taskList.refreshTitle')}
+        </button>
+
+        {/* Group filter badge */}
+        {selectedGroup && (
+          <div className="elder-group-filter-badge">
+            <div style={{
+              width: '14px', height: '14px', borderRadius: '50%',
+              background: selectedGroup.color || '#3b82f6', flexShrink: 0,
+            }} />
+            <span style={{ flex: 1, fontSize: '18px', fontWeight: 700 }}>{selectedGroup.name}</span>
+            <button
+              className="elder-group-filter-dismiss"
+              onClick={() => {
+                onGroupFilterChange?.(undefined);
+                hapticFeedback.light();
+              }}
+              aria-label="Clear group filter"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="elder-filter-label">{t('taskList.filterByStatus')}</div>
         <div className="elder-filter-group">
           {statusFilters.map(opt => (
@@ -196,6 +244,15 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
         )}
       </div>
 
+      {/* Task count */}
+      <div className="elder-task-count">
+        {filter.showArchived && archivedTotalCount !== null
+          ? t('taskList.found', { count: archivedTotalCount })
+          : tasks.length === 1
+            ? t('taskList.foundOne')
+            : t('taskList.found', { count: tasks.length })}
+      </div>
+
       {/* Task list */}
       {tasks.length === 0 ? (
         <div className="elder-empty">
@@ -268,6 +325,17 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                     </span>
                   </div>
                 )}
+
+                {/* Send to Chat button */}
+                {!d.isArchived && (
+                  <button
+                    className="elder-send-btn"
+                    onClick={(e) => handleSendToChat(task.id, e)}
+                    disabled={sending[task.id]}
+                  >
+                    {sending[task.id] ? '⏳ ...' : `💬 ${t('taskList.sendButton')}`}
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -306,7 +374,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
             data.setFullscreenImage(url);
           }}
           onGoToDetail={handleGoToDetail}
-          onSendToChat={handleSendToChat}
+          onSendToChat={handleFullscreenSendToChat}
         />
       )}
     </div>

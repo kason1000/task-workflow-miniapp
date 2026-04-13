@@ -174,17 +174,22 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
               alignItems: 'center'
             }}>
               <span>{t('groupDetail.idLabel', { id: group.id })}</span>
-              {group.isDefault && (
-                <span style={{
-                  background: 'var(--tg-theme-button-color)',
-                  color: 'var(--tg-theme-button-text-color)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '11px'
-                }}>
-                  {t('groupDetail.defaultBadge')}
-                </span>
-              )}
+              {group.isDefault && (() => {
+                const gc = group.color || '#3b82f6';
+                return (
+                  <span style={{
+                    background: `${gc}18`,
+                    color: gc,
+                    border: `1px solid ${gc}30`,
+                    padding: '2px 7px',
+                    borderRadius: '10px',
+                    fontSize: '10px',
+                    fontWeight: 600
+                  }}>
+                    {t('groupDetail.defaultBadge')}
+                  </span>
+                );
+              })()}
 
               <div style={{
                 display: 'flex',
@@ -197,9 +202,8 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                   style={{
                     width: '16px',
                     height: '16px',
-                    borderRadius: '4px',
-                    backgroundColor: group.color || '#3b82f6',
-                    border: '1px solid var(--tg-theme-hint-color)'
+                    borderRadius: '50%',
+                    backgroundColor: group.color || '#3b82f6'
                   }}
                 />
                 {canManage && (
@@ -209,7 +213,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                     style={{
                       background: 'transparent',
                       border: '1px solid var(--tg-theme-hint-color)',
-                      borderRadius: '4px',
+                      borderRadius: '10px',
                       padding: '2px 6px',
                       fontSize: '10px',
                       color: 'var(--tg-theme-text-color)',
@@ -281,9 +285,8 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                 style={{
                   width: '20px',
                   height: '20px',
-                  borderRadius: '4px',
-                  backgroundColor: group.color || '#3b82f6',
-                  border: '1px solid var(--tg-theme-hint-color)'
+                  borderRadius: '50%',
+                  backgroundColor: group.color || '#3b82f6'
                 }}
               />
               <span style={{ fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
@@ -324,9 +327,10 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
           <div style={{
             marginTop: '12px',
             padding: '10px',
-            background: '#10b981',
-            color: 'white',
-            borderRadius: '6px',
+            background: '#10b98118',
+            color: '#10b981',
+            border: '1px solid #10b98130',
+            borderRadius: '10px',
             fontSize: '13px',
             display: 'flex',
             alignItems: 'center',
@@ -379,10 +383,11 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                       {t('groupDetail.memberLabel', { id: member.userId })}
                     </span>
                     <span style={{
-                      fontSize: '12px',
-                      padding: '2px 6px',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      padding: '2px 7px',
                       background: 'var(--tg-theme-secondary-bg-color)',
-                      borderRadius: '4px',
+                      borderRadius: '10px',
                       color: 'var(--tg-theme-hint-color)'
                     }}>
                       {t(`roles.${member.role}`)}

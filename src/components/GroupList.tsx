@@ -118,7 +118,9 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
               cursor: 'pointer',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              borderLeft: `4px solid ${(group.color || '#3b82f6')}80`,
+              borderRadius: '12px 8px 8px 12px'
             }}
           >
             <div style={{ flex: 1 }}>
@@ -130,24 +132,28 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
                 gap: '8px'
               }}>
                 <div style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '4px',
-                  backgroundColor: group.color || '#3b82f6',
-                  border: '1px solid var(--tg-theme-hint-color)'
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: group.color || '#3b82f6'
                 }} />
                 {group.name}
-                {group.isDefault && (
-                  <span style={{
-                    fontSize: '11px',
-                    padding: '2px 6px',
-                    background: 'var(--tg-theme-button-color)',
-                    color: 'var(--tg-theme-button-text-color)',
-                    borderRadius: '4px'
-                  }}>
-                    {t('groupList.defaultBadge')}
-                  </span>
-                )}
+                {group.isDefault && (() => {
+                  const gc = group.color || '#3b82f6';
+                  return (
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      padding: '2px 7px',
+                      background: `${gc}18`,
+                      color: gc,
+                      border: `1px solid ${gc}30`,
+                      borderRadius: '10px'
+                    }}>
+                      {t('groupList.defaultBadge')}
+                    </span>
+                  );
+                })()}
               </div>
               <div style={{
                 fontSize: '13px',

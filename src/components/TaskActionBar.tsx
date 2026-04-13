@@ -56,7 +56,8 @@ export function TaskActionBar({
             color: 'var(--tg-theme-button-text-color)',
             fontWeight: '600',
             padding: '12px',
-            fontSize: '15px'
+            fontSize: '15px',
+            borderRadius: '10px'
           }}
         >
           {t('taskDetail.sendToChat')}
@@ -66,7 +67,7 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Received')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px' }}
           >
             {t('taskDetail.receive')}
           </button>
@@ -76,7 +77,7 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('New')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
+            style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b', borderRadius: '10px' }}
           >
             {t('taskDetail.moveToNew')}
           </button>
@@ -86,7 +87,7 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Submitted')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
+            style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981', borderRadius: '10px' }}
           >
             {t('taskDetail.submit')}
           </button>
@@ -96,7 +97,7 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Redo')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b' }}
+            style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b', borderRadius: '10px' }}
           >
             {t('taskDetail.redo')}
           </button>
@@ -106,7 +107,7 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Completed')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981' }}
+            style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981', borderRadius: '10px' }}
           >
             {t('taskDetail.complete')}
           </button>
@@ -117,7 +118,7 @@ export function TaskActionBar({
             <button
               onClick={onArchive}
               disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#6b7280' }}
+              style={{ flex: '1 1 calc(50% - 4px)', background: '#6b7280', borderRadius: '10px' }}
             >
               {t('taskDetail.archive')}
             </button>
@@ -128,7 +129,7 @@ export function TaskActionBar({
           <button
             onClick={onRestore}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#3b82f6' }}
+            style={{ flex: '1 1 calc(50% - 4px)', background: '#3b82f6', borderRadius: '10px' }}
           >
             {t('taskDetail.restore')}
           </button>
@@ -138,7 +139,7 @@ export function TaskActionBar({
           <button
             onClick={onDelete}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#ef4444', fontSize: '13px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', background: '#ef4444', fontSize: '13px', borderRadius: '10px' }}
           >
             {t('taskDetail.delete')}
           </button>

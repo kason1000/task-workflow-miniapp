@@ -1,7 +1,16 @@
 import { useRef } from 'react';
 import { Task, Group } from '../types';
 import WebApp from '@twa-dev/sdk';
-import { statusColors, getGroupColor } from '../utils/taskStyles';
+import { getGroupColor } from '../utils/taskStyles';
+
+const STATUS_COLORS: Record<string, string> = {
+  New: '#3b82f6',
+  Received: '#f59e0b',
+  Submitted: '#8b5cf6',
+  Redo: '#ef4444',
+  Completed: '#10b981',
+  Archived: '#6b7280',
+};
 
 interface TaskInfoCardProps {
   task: Task;
@@ -37,8 +46,8 @@ export function TaskInfoCard({
       className="card"
       style={{
         ...(taskGroup && taskGroup.color ? {
-          border: `2px solid ${taskGroup.color}`,
-          borderRadius: '8px'
+          borderLeft: `4px solid ${taskGroup.color}80`,
+          borderRadius: '12px 8px 8px 12px'
         } : {})
       }}
     >
@@ -93,36 +102,45 @@ export function TaskInfoCard({
             <h3 style={{ fontSize: '16px', margin: 0, flex: 1, marginRight: '8px' }}>
               📋 {task.title}
             </h3>
-            <span className={`badge ${statusColors[task.status]}`}>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 600,
+              padding: '2px 7px',
+              borderRadius: '10px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              background: `${STATUS_COLORS[task.status] || '#6b7280'}18`,
+              color: STATUS_COLORS[task.status] || '#6b7280',
+              border: `1px solid ${STATUS_COLORS[task.status] || '#6b7280'}30`,
+            }}>
               {t(`statusLabels.${task.status}`)}
             </span>
           </div>
 
           {/* Group Information */}
-          {taskGroup && (
-            <div style={{
-              marginBottom: '8px',
-              padding: '6px 8px',
-              borderRadius: '6px',
-              background: 'var(--tg-theme-secondary-bg-color)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <div style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                backgroundColor: getGroupColor(taskGroup.id, taskGroup.color)
-              }}></div>
-              <span style={{
-                fontSize: '12px',
-                color: 'var(--tg-theme-hint-color)'
-              }}>
-                👥 {taskGroup.name}
-              </span>
-            </div>
-          )}
+          {taskGroup && (() => {
+            const gc = getGroupColor(taskGroup.id, taskGroup.color);
+            return (
+              <div style={{ marginBottom: '8px' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  whiteSpace: 'nowrap',
+                  background: `${gc}18`,
+                  color: gc,
+                  border: `1px solid ${gc}30`,
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: gc }} />
+                  {taskGroup.name}
+                </span>
+              </div>
+            );
+          })()}
 
           <div style={{
             fontSize: '13px',

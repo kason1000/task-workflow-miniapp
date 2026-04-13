@@ -1,0 +1,108 @@
+/*
+ * DARK THEME — Dark Mode
+ * Clean dark interface for comfortable viewing
+ * Font: Plus Jakarta Sans
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+[data-theme="dark"] {
+  --tg-theme-bg-color: #1a1a2e;
+  --tg-theme-text-color: #e4e4e7;
+  --tg-theme-hint-color: #71717a;
+  --tg-theme-link-color: #60a5fa;
+  --tg-theme-button-color: #3b82f6;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #252540;
+}
+
+[data-theme="dark"] body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+[data-theme="dark"] button {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] button:hover:not(:disabled) {
+  opacity: 1;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .card {
+  background: var(--tg-theme-secondary-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+}
+
+[data-theme="dark"] .card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: #16162b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--tg-theme-text-color);
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .badge {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+[data-theme="dark"] .badge-new { background: rgba(59, 130, 246, 0.2); color: #93bbfd; }
+[data-theme="dark"] .badge-received { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+[data-theme="dark"] .badge-submitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+[data-theme="dark"] .badge-redo { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+[data-theme="dark"] .badge-completed { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+[data-theme="dark"] .badge-archived { background: rgba(113, 113, 122, 0.2); color: #a1a1aa; }
+
+[data-theme="dark"] .btn-ghost {
+  background: transparent;
+  color: #a1a1aa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .btn-ghost:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .btn-danger { background: #dc2626; color: white; }
+[data-theme="dark"] .btn-success { background: #059669; color: white; }
+
+[data-theme="dark"] .text-muted {
+  color: var(--tg-theme-hint-color);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 5px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}

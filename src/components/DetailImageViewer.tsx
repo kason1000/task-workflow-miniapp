@@ -270,7 +270,7 @@ export function DetailImageViewer({
 
       {/* Bottom panel */}
       {(() => {
-        const statusColors: Record<string, string> = { New: 'badge-new', Received: 'badge-received', Submitted: 'badge-submitted', Redo: 'badge-redo', Completed: 'badge-completed', Archived: 'badge-archived' };
+        const STATUS_COLORS: Record<string, string> = { New: '#3b82f6', Received: '#f59e0b', Submitted: '#8b5cf6', Redo: '#ef4444', Completed: '#10b981', Archived: '#6b7280' };
         const doneName = task.doneBy ? (userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })) : null;
         const canDelete = (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
         const currentFileId = mode === 'media' && mediaItems[currentPhotoIndex]?.fileId;
@@ -314,14 +314,30 @@ export function DetailImageViewer({
           }}>
             {/* Info row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px 8px', overflow: 'hidden' }}>
-              <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '12px', padding: '3px 10px', fontWeight: 600, flexShrink: 0 }}>
+              <span style={{
+                fontSize: '10px', fontWeight: 600, padding: '2px 7px',
+                borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0,
+                background: `${STATUS_COLORS[task.status] || '#6b7280'}18`,
+                color: STATUS_COLORS[task.status] || '#6b7280',
+                border: `1px solid ${STATUS_COLORS[task.status] || '#6b7280'}30`,
+              }}>
                 {t(`statusLabels.${task.status}`)}
               </span>
-              {taskGroup && (
-                <span style={{ fontSize: '12px', padding: '3px 10px', flexShrink: 0, background: taskGroup.color || '#3b82f6', color: 'white', borderRadius: '10px', fontWeight: 600 }}>
-                  {taskGroup.name}
-                </span>
-              )}
+              {taskGroup && (() => {
+                const gc = taskGroup.color || '#3b82f6';
+                return (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+                    borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0,
+                    background: `${gc}18`, color: gc,
+                    border: `1px solid ${gc}30`,
+                  }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: gc }} />
+                    {taskGroup.name}
+                  </span>
+                );
+              })()}
               {doneName && task.status !== 'New' && (
                 <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   👤 {doneName}

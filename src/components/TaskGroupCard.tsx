@@ -12,8 +12,15 @@ interface TaskGroupCardProps {
 export function TaskGroupCard({ displayData, taskGroup, loadingGroup, t }: TaskGroupCardProps) {
   if (loadingGroup || !taskGroup) return null;
 
+  const gc = taskGroup.color || '#6b7280';
+
   return (
-    <div className="card">
+    <div className="card" style={{
+      ...(taskGroup.color ? {
+        borderLeft: `4px solid ${gc}80`,
+        borderRadius: '12px 8px 8px 12px'
+      } : {})
+    }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -62,14 +69,28 @@ export function TaskGroupCard({ displayData, taskGroup, loadingGroup, t }: TaskG
                 ? t('taskDetail.groupMemberCount', { count: taskGroup.members.length })
                 : t('taskDetail.groupMemberCountPlural', { count: taskGroup.members.length })}
             </span>
-            {taskGroup.telegramChatId && <span>{t('taskDetail.groupLinkedBadge')}</span>}
+            {taskGroup.telegramChatId && (
+              <span style={{
+                background: `${gc}18`,
+                color: gc,
+                border: `1px solid ${gc}30`,
+                padding: '2px 7px',
+                borderRadius: '10px',
+                fontSize: '10px',
+                fontWeight: 600
+              }}>
+                {t('taskDetail.groupLinkedBadge')}
+              </span>
+            )}
             {taskGroup.isDefault && (
               <span style={{
-                background: 'var(--tg-theme-button-color)',
-                color: 'var(--tg-theme-button-text-color)',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                fontSize: '10px'
+                background: `${gc}18`,
+                color: gc,
+                border: `1px solid ${gc}30`,
+                padding: '2px 7px',
+                borderRadius: '10px',
+                fontSize: '10px',
+                fontWeight: 600
               }}>
                 {t('taskDetail.groupDefaultBadge')}
               </span>

@@ -394,6 +394,7 @@ function App() {
           onGroupsClick={handleGroupsClick}
           onLogout={handleLogout}
           onThemeClick={() => setShowThemeSwitcher(true)}
+          onGroupFilterChange={(gid: string | undefined) => { setSelectedGroupId(gid); setView('list'); }}
         />
         {showThemeSwitcher && (
           <ThemeSwitcher onClose={() => setShowThemeSwitcher(false)} />

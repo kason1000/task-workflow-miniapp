@@ -1,0 +1,108 @@
+/*
+ * OCEAN THEME — Deep Navy with Cyan Accents
+ * Inspired by deep sea aesthetics
+ * Font: Plus Jakarta Sans
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+[data-theme="ocean"] {
+  --tg-theme-bg-color: #0c1929;
+  --tg-theme-text-color: #e2e8f0;
+  --tg-theme-hint-color: #64748b;
+  --tg-theme-link-color: #22d3ee;
+  --tg-theme-button-color: #0891b2;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #132038;
+}
+
+[data-theme="ocean"] body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+[data-theme="ocean"] button {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="ocean"] button:hover:not(:disabled) {
+  opacity: 1;
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.15);
+}
+
+[data-theme="ocean"] .card {
+  background: var(--tg-theme-secondary-bg-color);
+  border: 1px solid rgba(34, 211, 238, 0.08);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+}
+
+[data-theme="ocean"] .card:hover {
+  border-color: rgba(34, 211, 238, 0.25);
+}
+
+[data-theme="ocean"] input,
+[data-theme="ocean"] textarea,
+[data-theme="ocean"] select {
+  background: #091320;
+  border: 1px solid rgba(34, 211, 238, 0.12);
+  color: var(--tg-theme-text-color);
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+[data-theme="ocean"] input:focus,
+[data-theme="ocean"] textarea:focus {
+  border-color: #22d3ee;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+}
+
+[data-theme="ocean"] .badge {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+[data-theme="ocean"] .badge-new { background: rgba(8, 145, 178, 0.3); color: #67e8f9; }
+[data-theme="ocean"] .badge-received { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+[data-theme="ocean"] .badge-submitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+[data-theme="ocean"] .badge-redo { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+[data-theme="ocean"] .badge-completed { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
+[data-theme="ocean"] .badge-archived { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+[data-theme="ocean"] .btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid rgba(34, 211, 238, 0.12);
+}
+
+[data-theme="ocean"] .btn-ghost:hover:not(:disabled) {
+  border-color: #22d3ee;
+  color: #22d3ee;
+}
+
+[data-theme="ocean"] .btn-danger { background: #dc2626; color: white; }
+[data-theme="ocean"] .btn-success { background: #0891b2; color: white; }
+
+[data-theme="ocean"] .text-muted {
+  color: var(--tg-theme-hint-color);
+}
+
+[data-theme="ocean"] ::-webkit-scrollbar {
+  width: 5px;
+}
+
+[data-theme="ocean"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="ocean"] ::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.2);
+  border-radius: 3px;
+}

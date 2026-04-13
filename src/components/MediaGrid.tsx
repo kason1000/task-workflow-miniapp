@@ -98,7 +98,7 @@ export function MediaGrid({
                     background: 'var(--tg-theme-button-color)',
                     color: 'var(--tg-theme-button-text-color)',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '10px',
                     cursor: 'pointer'
                   }}
                 >
@@ -198,7 +198,7 @@ export function MediaGrid({
                             color: 'white',
                             fontSize: '10px',
                             padding: '2px 6px',
-                            borderRadius: '4px',
+                            borderRadius: '10px',
                             fontWeight: 600
                           }}>
                             {(media.photoIndex ?? 0) + 1}

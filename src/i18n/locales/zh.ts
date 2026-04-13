@@ -65,6 +65,7 @@ export const zh: Dictionary = {
     filterInProgress: '🔄 进行中',
     filterArchivedBadge: '🗃️ 已归档',
     allGroups: '👥 全部分组',
+    filterByGroup: '按分组筛选',
     groupLabel: '👥 {name}',
     showArchivedTitle: '显示已归档',
     showActiveTitle: '显示活动',

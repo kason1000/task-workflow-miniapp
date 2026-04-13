@@ -1,0 +1,108 @@
+/*
+ * FOREST THEME — Dark Green with Emerald Accents
+ * Inspired by deep forest canopy
+ * Font: Plus Jakarta Sans
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+[data-theme="forest"] {
+  --tg-theme-bg-color: #0a1f0a;
+  --tg-theme-text-color: #d4e7d4;
+  --tg-theme-hint-color: #5a7a5a;
+  --tg-theme-link-color: #34d399;
+  --tg-theme-button-color: #059669;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #132613;
+}
+
+[data-theme="forest"] body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+[data-theme="forest"] button {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="forest"] button:hover:not(:disabled) {
+  opacity: 1;
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.15);
+}
+
+[data-theme="forest"] .card {
+  background: var(--tg-theme-secondary-bg-color);
+  border: 1px solid rgba(52, 211, 153, 0.08);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+}
+
+[data-theme="forest"] .card:hover {
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+[data-theme="forest"] input,
+[data-theme="forest"] textarea,
+[data-theme="forest"] select {
+  background: #071507;
+  border: 1px solid rgba(52, 211, 153, 0.12);
+  color: var(--tg-theme-text-color);
+  border-radius: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+[data-theme="forest"] input:focus,
+[data-theme="forest"] textarea:focus {
+  border-color: #34d399;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.15);
+}
+
+[data-theme="forest"] .badge {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+[data-theme="forest"] .badge-new { background: rgba(59, 130, 246, 0.2); color: #93bbfd; }
+[data-theme="forest"] .badge-received { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+[data-theme="forest"] .badge-submitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+[data-theme="forest"] .badge-redo { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+[data-theme="forest"] .badge-completed { background: rgba(52, 211, 153, 0.25); color: #6ee7b7; }
+[data-theme="forest"] .badge-archived { background: rgba(90, 122, 90, 0.2); color: #8aaa8a; }
+
+[data-theme="forest"] .btn-ghost {
+  background: transparent;
+  color: #8aaa8a;
+  border: 1px solid rgba(52, 211, 153, 0.12);
+}
+
+[data-theme="forest"] .btn-ghost:hover:not(:disabled) {
+  border-color: #34d399;
+  color: #34d399;
+}
+
+[data-theme="forest"] .btn-danger { background: #dc2626; color: white; }
+[data-theme="forest"] .btn-success { background: #059669; color: white; }
+
+[data-theme="forest"] .text-muted {
+  color: var(--tg-theme-hint-color);
+}
+
+[data-theme="forest"] ::-webkit-scrollbar {
+  width: 5px;
+}
+
+[data-theme="forest"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="forest"] ::-webkit-scrollbar-thumb {
+  background: rgba(52, 211, 153, 0.2);
+  border-radius: 3px;
+}

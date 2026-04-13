@@ -97,7 +97,7 @@ export function TaskFilterBar({
                     minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
                     background: !filter.submittedMonth ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                     color: !filter.submittedMonth ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                    border: 'none', borderRadius: '8px'
+                    border: 'none', borderRadius: '10px'
                   }}
                 >All</button>
                 {getMonthOptions().map(m => (
@@ -109,7 +109,7 @@ export function TaskFilterBar({
                       minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
                       background: filter.submittedMonth === m.value ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                       color: filter.submittedMonth === m.value ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '8px'
+                      border: 'none', borderRadius: '10px'
                     }}
                   >{m.label}</button>
                 ))}
@@ -123,7 +123,7 @@ export function TaskFilterBar({
                     minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
                     background: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                     color: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                    border: 'none', borderRadius: '8px'
+                    border: 'none', borderRadius: '10px'
                   }}
                 >{t('taskList.filterAll')}</button>
 
@@ -135,7 +135,7 @@ export function TaskFilterBar({
                       minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
                       background: filter.status === 'InProgress' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                       color: filter.status === 'InProgress' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '8px'
+                      border: 'none', borderRadius: '10px'
                     }}
                   >{t('taskList.filterInProgress')}</button>
                 )}
@@ -149,7 +149,7 @@ export function TaskFilterBar({
                       minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
                       background: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                       color: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '8px'
+                      border: 'none', borderRadius: '10px'
                     }}
                   >{t(`statusLabels.${status}`)}</button>
                 ))}
@@ -167,7 +167,7 @@ export function TaskFilterBar({
                   minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
                   background: filter.showArchived ? 'var(--tg-theme-button-color)' : 'transparent',
                   color: filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                  border: 'none', borderRadius: '6px', lineHeight: 1
+                  border: 'none', borderRadius: '10px', lineHeight: 1
                 }}
                 title={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
               >🗃️</button>
@@ -178,7 +178,7 @@ export function TaskFilterBar({
               style={{
                 minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
                 background: 'transparent', color: 'var(--tg-theme-text-color)',
-                border: 'none', borderRadius: '6px', lineHeight: 1
+                border: 'none', borderRadius: '10px', lineHeight: 1
               }}
               title={t('taskList.refreshTitle')}
             >🔄</button>
@@ -198,7 +198,7 @@ export function TaskFilterBar({
                 minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
                 background: !filter.doneBy ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                 color: !filter.doneBy ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                border: 'none', borderRadius: '6px'
+                border: 'none', borderRadius: '10px'
               }}
             >👥 All</button>
             {Object.entries(submitterCounts)
@@ -217,7 +217,7 @@ export function TaskFilterBar({
                       minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
                       background: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
                       color: isActive ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '6px'
+                      border: 'none', borderRadius: '10px'
                     }}
                   >{name} ({count})</button>
                 );

@@ -1,9 +1,12 @@
+import { useState, useRef } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
 import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { Task } from '../../types';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
+import { api } from '../../services/api';
+import WebApp from '@twa-dev/sdk';
 
 interface ElderDetailProps {
   task: Task;
@@ -30,9 +33,27 @@ const TRANSITION_LABELS: Record<string, { label: string; emoji: string; style: s
   Archived: { label: 'Archive This Task', emoji: '\u{1F4C1}', style: 'elder-action-btn--outline' },
 };
 
+async function downloadFiles(
+  fileSpecs: Array<{ fileId: string; fileName: string; mimeType: string }>
+): Promise<File[]> {
+  const files: File[] = [];
+  for (const spec of fileSpecs) {
+    const { fileUrl } = await api.getProxiedMediaUrl(spec.fileId);
+    const response = await fetch(fileUrl, { headers: { 'X-Telegram-InitData': WebApp.initData } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    files.push(new File([blob], spec.fileName, { type: spec.mimeType }));
+  }
+  return files;
+}
+
 export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDetailProps) {
   const { t, formatDate } = useLocale();
   const detail = useTaskDetailData(task, userRole, onTaskUpdated, onBack);
+  const [loading, setLoading] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
+  const cachedShareRef = useRef<{ files: File[]; title: string } | null>(null);
 
   const {
     mediaCache,
@@ -67,6 +88,114 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
     if (!confirmed) return;
     hapticFeedback.heavy();
     await handleDelete();
+  };
+
+  // Send to Chat handler
+  const handleSendToChat = async () => {
+    setLoading(true);
+    hapticFeedback.medium();
+    try {
+      await api.sendTaskToChat(task.id);
+      hapticFeedback.success();
+      if (window.Telegram?.WebApp?.initData) {
+        setTimeout(() => WebApp.close(), 300);
+      } else {
+        showAlert(t('taskDetail.sendToChatSuccess'));
+        setLoading(false);
+      }
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(t('taskDetail.sendFailed', { error: error.message }));
+      setLoading(false);
+    }
+  };
+
+  // Selection mode handlers
+  const toggleMediaSelection = (fileId: string) => {
+    setSelectedMedia(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId);
+      } else {
+        newSet.add(fileId);
+      }
+      return newSet;
+    });
+    hapticFeedback.light();
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedMedia.size === 0) return;
+    const confirmed = await showConfirm(t('taskDetail.deleteSelectedConfirm', { count: selectedMedia.size }));
+    if (!confirmed) return;
+    setLoading(true);
+    hapticFeedback.medium();
+    try {
+      for (const fileId of Array.from(selectedMedia)) {
+        await api.deleteUpload(task.id, fileId);
+      }
+      hapticFeedback.success();
+      showAlert(t('taskDetail.deleteSelectedSuccess', { count: selectedMedia.size }));
+      setSelectedMedia(new Set());
+      setSelectionMode(false);
+      onTaskUpdated();
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Share set handler
+  const shareSet = async (setIndex: number) => {
+    hapticFeedback.medium();
+
+    if (cachedShareRef.current) {
+      try {
+        await navigator.share({ title: cachedShareRef.current.title, files: cachedShareRef.current.files });
+        hapticFeedback.success();
+      } catch (e: any) {
+        if (e.name !== 'AbortError') showAlert(t('taskDetail.shareFailed', { error: e.message }));
+      }
+      cachedShareRef.current = null;
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const set = task.sets[setIndex];
+      if (!set) return;
+
+      const specs: Array<{ fileId: string; fileName: string; mimeType: string }> = [];
+      set.photos?.forEach((p, i) => specs.push({ fileId: p.file_id, fileName: `set${setIndex + 1}_photo${i + 1}.jpg`, mimeType: 'image/jpeg' }));
+      if (set.video) specs.push({ fileId: set.video.file_id, fileName: `set${setIndex + 1}_video.mp4`, mimeType: 'video/mp4' });
+
+      const title = `${task.title} - Set ${setIndex + 1}`;
+      const files = await downloadFiles(specs);
+
+      if (!navigator.share || !navigator.canShare({ files })) {
+        showAlert(t('taskDetail.shareFailed', { error: 'Share not supported on this device' }));
+        return;
+      }
+
+      try {
+        await navigator.share({ title, files });
+        hapticFeedback.success();
+      } catch (e: any) {
+        if (e.name === 'AbortError') return;
+        if (e.name === 'NotAllowedError') {
+          cachedShareRef.current = { files, title };
+          return;
+        }
+        throw e;
+      }
+    } catch (error: any) {
+      hapticFeedback.error();
+      showAlert(t('taskDetail.shareFailed', { error: error.message }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -107,6 +236,24 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
         </div>
       )}
 
+      {/* Progress display (prominent) */}
+      {d.requireSets > 0 && (
+        <div className="elder-detail-section">
+          <div className="elder-detail-section-title">{t('taskDetail.progress')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="elder-progress-bar" style={{ flex: 1, height: '16px' }}>
+              <div className="elder-progress-fill" style={{ width: `${d.progressPercent}%` }} />
+            </div>
+            <span style={{ fontSize: '22px', fontWeight: 700, color: 'var(--elder-text)', whiteSpace: 'nowrap' }}>
+              {d.progressLabel} ({d.progressPercent}%)
+            </span>
+          </div>
+          <div style={{ fontSize: '18px', color: 'var(--elder-hint)', marginTop: '8px' }}>
+            {t('taskDetail.setsProgress', { done: d.completedSets, total: d.requireSets })}
+          </div>
+        </div>
+      )}
+
       {/* Info section */}
       <div className="elder-detail-section">
         <div className="elder-detail-section-title">{t('taskDetail.info')}</div>
@@ -134,25 +281,6 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
             </span>
           </div>
         )}
-        {d.groupName && (
-          <div className="elder-detail-row">
-            <span className="elder-detail-label">{t('taskDetail.group')}</span>
-            <span className="elder-detail-value">{d.groupName}</span>
-          </div>
-        )}
-        {d.requireSets > 0 && (
-          <div className="elder-detail-row">
-            <span className="elder-detail-label">{t('taskDetail.progress')}</span>
-            <div className="elder-progress-container">
-              <div className="elder-progress-bar">
-                <div className="elder-progress-fill" style={{ width: `${d.progressPercent}%` }} />
-              </div>
-              <span className="elder-progress-text">
-                {d.progressLabel} ({d.progressPercent}%)
-              </span>
-            </div>
-          </div>
-        )}
         {task.submittedAt && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">{t('taskDetail.submittedDate')}</span>
@@ -169,34 +297,147 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
         )}
       </div>
 
+      {/* Group info card */}
+      {taskGroup && (
+        <div className="elder-detail-section" style={{
+          borderLeft: `6px solid ${taskGroup.color || '#3b82f6'}`,
+          background: `${taskGroup.color || '#3b82f6'}08`,
+        }}>
+          <div className="elder-detail-section-title">{t('taskDetail.group')}</div>
+          <div className="elder-detail-row">
+            <span className="elder-detail-label">{t('taskDetail.group')}</span>
+            <span className="elder-detail-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '16px', height: '16px', borderRadius: '50%',
+                background: taskGroup.color || '#3b82f6', flexShrink: 0,
+              }} />
+              {d.groupName}
+            </span>
+          </div>
+          {d.groupLeadCount !== undefined && d.groupLeadCount > 0 && (
+            <div className="elder-detail-row">
+              <span className="elder-detail-label">
+                {d.groupLeadCount === 1
+                  ? t('taskDetail.groupLeadCount', { count: d.groupLeadCount })
+                  : t('taskDetail.groupLeadCountPlural', { count: d.groupLeadCount })}
+              </span>
+            </div>
+          )}
+          {d.groupMemberCount !== undefined && d.groupMemberCount > 0 && (
+            <div className="elder-detail-row">
+              <span className="elder-detail-label">
+                {d.groupMemberCount === 1
+                  ? t('taskDetail.groupMemberCount', { count: d.groupMemberCount })
+                  : t('taskDetail.groupMemberCountPlural', { count: d.groupMemberCount })}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Photo sets */}
       {task.sets && task.sets.length > 0 && (
         <div className="elder-detail-section">
-          <div className="elder-detail-section-title">{t('taskDetail.photosAndVideos')}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div className="elder-detail-section-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
+              {t('taskDetail.photosAndVideos')}
+            </div>
+            {/* Selection mode toggle */}
+            {d.canDeleteMedia && d.totalMediaCount > 0 && (
+              <button
+                className={`elder-action-btn ${selectionMode ? 'elder-action-btn--danger' : 'elder-action-btn--outline'}`}
+                style={{ width: 'auto', minHeight: '48px', fontSize: '16px', padding: '8px 16px' }}
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  setSelectedMedia(new Set());
+                  hapticFeedback.light();
+                }}
+              >
+                {selectionMode ? t('taskDetail.selectCancel') : t('taskDetail.selectStart')}
+              </button>
+            )}
+          </div>
+
+          {/* Delete selected bar */}
+          {selectionMode && selectedMedia.size > 0 && (
+            <div className="elder-selection-bar">
+              <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>
+                {t('taskDetail.selectedCount', { count: selectedMedia.size })}
+              </span>
+              <button
+                className="elder-action-btn elder-action-btn--outline"
+                style={{ width: 'auto', background: '#fff', color: 'var(--elder-danger)', borderColor: '#fff', minHeight: '48px' }}
+                onClick={handleDeleteSelected}
+                disabled={loading}
+              >
+                {t('taskDetail.deleteSelected')}
+              </button>
+            </div>
+          )}
+
           {task.sets.map((set, setIdx) => {
             const allMedia = [
               ...(set.photos || []).map(p => ({ fileId: p.file_id, type: 'photo' as const })),
               ...(set.video ? [{ fileId: set.video.file_id, type: 'video' as const }] : []),
             ];
             if (allMedia.length === 0) return null;
+
+            const setIsComplete = d.sets[setIdx]?.isComplete;
+
             return (
               <div key={setIdx} style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '12px' }}>
-                  {t('taskDetail.setOf', { index: setIdx + 1, total: task.requireSets })}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '20px', fontWeight: 700 }}>
+                    {t('taskDetail.setOf', { index: setIdx + 1, total: task.requireSets })}
+                    {setIsComplete && <span style={{ marginLeft: '8px' }}>✅</span>}
+                  </div>
+                  {/* Share set button */}
+                  {!selectionMode && allMedia.length > 0 && (
+                    <button
+                      className="elder-action-btn elder-action-btn--secondary"
+                      style={{ width: 'auto', minHeight: '48px', fontSize: '16px', padding: '8px 16px' }}
+                      onClick={() => shareSet(setIdx)}
+                      disabled={loading}
+                    >
+                      {loading ? '⏳' : `📤 ${t('taskDetail.shareSet', { index: setIdx + 1 })}`}
+                    </button>
+                  )}
                 </div>
                 <div className="elder-media-grid">
                   {allMedia.map((item) => {
                     const url = getMediaUrl(item.fileId);
+                    const isSelected = selectedMedia.has(item.fileId);
                     return (
                       <div key={item.fileId} style={{ position: 'relative' }}>
+                        {selectionMode && (
+                          <div
+                            className="elder-selection-checkbox"
+                            style={{
+                              background: isSelected ? 'var(--elder-danger)' : 'rgba(255,255,255,0.9)',
+                              color: isSelected ? '#fff' : 'var(--elder-hint)',
+                            }}
+                            onClick={() => toggleMediaSelection(item.fileId)}
+                          >
+                            {isSelected ? '✓' : ''}
+                          </div>
+                        )}
                         {url ? (
                           item.type === 'video' ? (
                             <div style={{ position: 'relative', display: 'inline-block' }}>
                               <video
                                 src={url}
                                 className="elder-media-thumb"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => window.open(url, '_blank')}
+                                style={{
+                                  cursor: selectionMode ? 'pointer' : 'pointer',
+                                  opacity: selectionMode && isSelected ? 0.6 : 1,
+                                }}
+                                onClick={() => {
+                                  if (selectionMode) {
+                                    toggleMediaSelection(item.fileId);
+                                  } else {
+                                    window.open(url, '_blank');
+                                  }
+                                }}
                               />
                               <span className="elder-video-badge">Play</span>
                             </div>
@@ -205,10 +446,17 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
                               className="elder-media-thumb"
                               src={url}
                               alt={`Set ${setIdx + 1}`}
+                              style={{
+                                opacity: selectionMode && isSelected ? 0.6 : 1,
+                              }}
                               onClick={() => {
-                                const idx = allMediaUrls.indexOf(url);
-                                setFullscreenImage(url);
-                                if (idx >= 0) setCurrentMediaIndex(idx);
+                                if (selectionMode) {
+                                  toggleMediaSelection(item.fileId);
+                                } else {
+                                  const idx = allMediaUrls.indexOf(url);
+                                  setFullscreenImage(url);
+                                  if (idx >= 0) setCurrentMediaIndex(idx);
+                                }
                               }}
                             />
                           )
@@ -226,41 +474,50 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       )}
 
       {/* Action buttons */}
-      {availableTransitions.length > 0 && (
-        <div className="elder-actions">
-          <div style={{ fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>
-            {t('taskDetail.actions')}
-          </div>
-          {availableTransitions.map(status => {
-            const config = TRANSITION_LABELS[status] || {
-              label: status,
-              emoji: '',
-              style: 'elder-action-btn--outline',
-            };
-            return (
-              <button
-                key={status}
-                className={`elder-action-btn ${config.style}`}
-                onClick={() => doTransition(status)}
-                disabled={transitioning}
-              >
-                {config.emoji} {config.label}
-              </button>
-            );
-          })}
-          {/* Delete for Admin */}
-          {userRole === 'Admin' && (
-            <button
-              className="elder-action-btn elder-action-btn--danger"
-              onClick={doDelete}
-              disabled={transitioning}
-              style={{ marginTop: '16px' }}
-            >
-              {t('taskDetail.deleteTask')}
-            </button>
-          )}
+      <div className="elder-actions">
+        <div style={{ fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>
+          {t('taskDetail.actions')}
         </div>
-      )}
+
+        {/* Send to Chat — primary action */}
+        <button
+          className="elder-action-btn elder-action-btn--secondary"
+          onClick={handleSendToChat}
+          disabled={transitioning || loading}
+          style={{ fontSize: '20px', minHeight: '56px' }}
+        >
+          {t('taskDetail.sendToChat')}
+        </button>
+
+        {availableTransitions.map(status => {
+          const config = TRANSITION_LABELS[status] || {
+            label: status,
+            emoji: '',
+            style: 'elder-action-btn--outline',
+          };
+          return (
+            <button
+              key={status}
+              className={`elder-action-btn ${config.style}`}
+              onClick={() => doTransition(status)}
+              disabled={transitioning || loading}
+            >
+              {config.emoji} {config.label}
+            </button>
+          );
+        })}
+        {/* Delete for Admin */}
+        {userRole === 'Admin' && (
+          <button
+            className="elder-action-btn elder-action-btn--danger"
+            onClick={doDelete}
+            disabled={transitioning || loading}
+            style={{ marginTop: '16px' }}
+          >
+            {t('taskDetail.deleteTask')}
+          </button>
+        )}
+      </div>
 
       {/* Task ID footer */}
       <div style={{
@@ -287,7 +544,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       )}
 
       {/* Loading overlay */}
-      {transitioning && (
+      {(transitioning || loading) && (
         <div style={{
           position: 'fixed',
           inset: 0,

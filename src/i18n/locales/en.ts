@@ -63,6 +63,7 @@ export const en = {
     filterInProgress: '🔄 In Progress',
     filterArchivedBadge: '🗃️ Archived',
     allGroups: '👥 All Groups',
+    filterByGroup: 'Filter by Group',
     groupLabel: '👥 {name}',
     showArchivedTitle: 'Show Archived',
     showActiveTitle: 'Show Active',
