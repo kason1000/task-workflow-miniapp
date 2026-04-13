@@ -20,6 +20,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [editingColor, setEditingColor] = useState(false);
+  const [userNames, setUserNames] = useState<Record<number, string>>({});
 
   useEffect(() => {
     fetchGroup();
@@ -31,6 +32,17 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
       setError(null);
       const data = await api.getGroup(groupId);
       setGroup(data.group);
+
+      // Fetch real names for all members + leads
+      const allIds = new Set<number>();
+      data.group.members?.forEach((m: any) => allIds.add(m.userId));
+      data.group.leadUserIds?.forEach((id: number) => allIds.add(id));
+      if (allIds.size > 0) {
+        try {
+          const { userNames: names } = await api.getUserNames(Array.from(allIds));
+          setUserNames(names);
+        } catch {}
+      }
     } catch (error: any) {
       console.error('Failed to fetch group:', error);
       setError(error.message);
@@ -366,7 +378,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                   }}>
                     {getRoleIcon(member.role)}
                     <span style={{ fontWeight: '500' }}>
-                      {t('groupDetail.memberLabel', { id: member.userId })}
+                      {(userNames[member.userId] && !userNames[member.userId].startsWith('User ')) ? userNames[member.userId] : `#${member.userId}`}
                     </span>
                     <span style={{
                       fontSize: '10px',
