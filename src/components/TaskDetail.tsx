@@ -372,22 +372,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   }, [task.id]);
 
 
+  // Transition logic from shared layer — no inline business logic
   const canTransition = (to: TaskStatus): boolean => {
-    if (userRole === 'Admin') return true;
-
-    const transitions: Record<string, string[]> = {
-      'New->Received': ['Member', 'Lead', 'Admin'],
-      'Received->New': ['Lead', 'Admin'],
-      'Received->Submitted': ['Member', 'Lead', 'Admin'],
-      'Submitted->Redo': ['Lead', 'Admin'],
-      'Submitted->Completed': ['Lead', 'Admin'],
-      'Archived->Completed': ['Admin'],
-      'Redo->Submitted': ['Member', 'Lead', 'Admin'],
-    };
-
-    const key = `${task.status}->${to}`;
-    const allowedRoles = transitions[key];
-    return allowedRoles ? allowedRoles.includes(userRole) : false;
+    return displayData.availableTransitions?.includes(to) ?? false;
   };
 
   const handleTransition = async (to: TaskStatus) => {
@@ -497,13 +484,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     }
   };
 
-  const totalPhotos = task.sets.reduce((sum, set) => sum + (set.photos?.length || 0), 0);
-  const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
-  const totalMedia = totalPhotos + totalVideos;
-
   // All display logic centralized — no computation in UI
   const displayData = prepareTaskDetail(task, userNames, taskGroup, userRole);
 
+  const totalMedia = displayData.totalMediaCount;
   const isArchived = displayData.isArchived;
   const canDeleteMedia = displayData.canDeleteMedia;
   const createdPhotoUrl = task.createdPhoto ? mediaCache[task.createdPhoto.file_id] : undefined;

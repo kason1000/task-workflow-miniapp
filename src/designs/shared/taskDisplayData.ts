@@ -4,6 +4,7 @@
  * No UI file should contain business logic, name resolution, or data computation.
  */
 import { Task, TaskStatus, Group } from '../../types';
+import { canTransitionTo } from './transitionHelpers';
 
 // ============================================================
 // Types — pre-computed display data for UI components
@@ -90,6 +91,9 @@ export interface TaskDetailDisplay {
 
   // Permissions
   canDeleteMedia: boolean;
+
+  // Transitions — which statuses can the current user transition to
+  availableTransitions: string[];
 }
 
 // ============================================================
@@ -243,6 +247,7 @@ export function prepareTaskDetail(
     totalMediaCount,
     sets,
     canDeleteMedia: userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member',
+    availableTransitions: canTransitionTo(task.status, userRole),
   };
 }
 

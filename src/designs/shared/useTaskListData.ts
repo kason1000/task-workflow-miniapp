@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
+import { prepareTaskCard } from './taskDisplayData';
 
 export interface TaskFilter {
   status: 'all' | 'InProgress' | TaskStatus;
@@ -137,27 +138,26 @@ export function useTaskListData(
     }
   }, [refreshKey]);
 
-  // Rebuild allPhotos with taskInfo
+  // Rebuild allPhotos using centralized display data
   useEffect(() => {
     const photos: Array<{ url: string; taskId: string; taskIndex: number; taskInfo?: any }> = [];
-    const groupMap = new Map(groups.map(g => [g.id, g]));
     tasks.forEach((task, i) => {
       const url = task.createdPhoto?.file_id && thumbnails[task.createdPhoto.file_id];
       if (url) {
-        const group = groupMap.get(task.groupId);
+        const d = prepareTaskCard(task, userNames, groups);
         photos.push({
           url,
           taskId: task.id,
           taskIndex: i,
           taskInfo: {
-            title: task.title,
-            status: task.status,
-            groupName: group?.name,
-            groupColor: group?.color,
-            userName: task.createdBy ? userNames[task.createdBy] : undefined,
-            createdAt: task.createdAt,
-            progress: task.requireSets > 0
-              ? { completed: task.completedSets, total: task.requireSets }
+            title: d.title,
+            status: d.status,
+            groupName: d.groupName,
+            groupColor: d.groupColor,
+            userName: d.createdByName,
+            createdAt: d.createdAt,
+            progress: d.requireSets > 0
+              ? { completed: d.completedSets, total: d.requireSets }
               : undefined,
           },
         });

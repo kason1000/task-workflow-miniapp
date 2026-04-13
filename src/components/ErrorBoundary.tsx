@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react';
+import { t, resolveLocaleFromLanguageCode } from '../i18n/index';
 
 interface Props {
   children: ReactNode;
@@ -42,7 +43,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>:(</div>
-          <h2 style={{ margin: '0 0 8px', fontSize: '18px' }}>Something went wrong</h2>
+          <h2 style={{ margin: '0 0 8px', fontSize: '18px' }}>{t(resolveLocaleFromLanguageCode(navigator.language), 'errorBoundary.title')}</h2>
           <p style={{ margin: '0 0 24px', color: '#6b7280', fontSize: '14px' }}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
@@ -58,7 +59,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 cursor: 'pointer',
               }}
             >
-              Try Again
+              {t(resolveLocaleFromLanguageCode(navigator.language), 'errorBoundary.tryAgain')}
             </button>
             <button
               onClick={this.handleReload}
@@ -72,7 +73,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 cursor: 'pointer',
               }}
             >
-              Reload App
+              {t(resolveLocaleFromLanguageCode(navigator.language), 'errorBoundary.reload')}
             </button>
           </div>
         </div>

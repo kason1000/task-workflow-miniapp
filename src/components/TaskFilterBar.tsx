@@ -205,7 +205,8 @@ export function TaskFilterBar({
               .sort(([,a], [,b]) => b - a)
               .map(([userId, count]) => {
                 const uid = parseInt(userId);
-                const name = userNames[uid] || `User ${userId}`;
+                const resolvedName = userNames[uid];
+                const name = (resolvedName && !resolvedName.startsWith('User ')) ? resolvedName : `#${userId}`;
                 const isActive = filter.doneBy === uid;
                 return (
                   <button

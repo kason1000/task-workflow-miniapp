@@ -1,4 +1,5 @@
 import { useTheme, type ThemeId } from '../contexts/ThemeContext';
+import { useLocale } from '../i18n/LocaleContext';
 
 const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }> = {
   classic: { icon: '☀️', bg: '#ffffff', accent: '#2481cc' },
@@ -15,6 +16,7 @@ const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; 
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
   const { theme, setTheme, themes } = useTheme();
+  const { t } = useLocale();
 
   return (
     <div
@@ -49,28 +51,28 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           marginBottom: '6px',
           color: 'var(--tg-theme-text-color)',
         }}>
-          Choose Design
+          {t('themeSwitcher.title')}
         </div>
         <div style={{
           fontSize: '12px',
           color: 'var(--tg-theme-hint-color)',
           marginBottom: '18px',
         }}>
-          Themes change colors. Designs change the entire experience.
+          {t('themeSwitcher.subtitle')}
         </div>
 
         {/* CSS-only themes */}
         <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Color Themes
+          {t('themeSwitcher.colorThemes')}
         </div>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          {themes.filter(t => !t.hasCustomLayout).map(t => {
-            const v = themeVisuals[t.id];
-            const isActive = theme === t.id;
+          {themes.filter(th => !th.hasCustomLayout).map(th => {
+            const v = themeVisuals[th.id];
+            const isActive = theme === th.id;
             return (
               <button
-                key={t.id}
-                onClick={() => { setTheme(t.id); onClose(); }}
+                key={th.id}
+                onClick={() => { setTheme(th.id); onClose(); }}
                 style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                   padding: '12px 8px', borderRadius: '14px',
@@ -85,7 +87,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
                   boxShadow: isActive ? `0 0 12px ${v.accent}40` : 'none',
                 }}>{v.icon}</div>
-                <div style={{ fontSize: '12px', fontWeight: 600 }}>{t.name}</div>
+                <div style={{ fontSize: '12px', fontWeight: 600 }}>{th.name}</div>
               </button>
             );
           })}
@@ -93,16 +95,16 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
 
         {/* Full UI designs */}
         <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Full UI Designs
+          {t('themeSwitcher.fullDesigns')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {themes.filter(t => t.hasCustomLayout).map(t => {
-            const v = themeVisuals[t.id];
-            const isActive = theme === t.id;
+          {themes.filter(th => th.hasCustomLayout).map(th => {
+            const v = themeVisuals[th.id];
+            const isActive = theme === th.id;
             return (
               <button
-                key={t.id}
-                onClick={() => { setTheme(t.id); onClose(); }}
+                key={th.id}
+                onClick={() => { setTheme(th.id); onClose(); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   padding: '14px 16px', borderRadius: '14px', width: '100%',
@@ -121,7 +123,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
 
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {t.name}
+                    {th.name}
                     {v.tag && (
                       <span style={{
                         fontSize: '9px', fontWeight: 700, padding: '2px 6px',
@@ -130,10 +132,10 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                       }}>{v.tag}</span>
                     )}
                     {isActive && (
-                      <span style={{ fontSize: '11px', color: v.accent, fontWeight: 500 }}>Active</span>
+                      <span style={{ fontSize: '11px', color: v.accent, fontWeight: 500 }}>{t('themeSwitcher.active')}</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>{t.description}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>{th.description}</div>
                 </div>
 
                 {isActive && (

@@ -275,4 +275,24 @@ export const zh: Dictionary = {
     shareAllButton: '📤 分享所有组',
     shareFailed: '分享失败：{error}',
   },
+  errorBoundary: {
+    title: '出了点问题',
+    tryAgain: '重试',
+    reload: '重新加载',
+  },
+  createTaskForm: {
+    back: '← 返回',
+    title: '📸 发送照片给机器人',
+    subtitle: '每张照片将创建一个单独的任务',
+    tips: '💡 提示：',
+    tip1: '发送 1 张照片 = 1 个新任务',
+    tip2: '发送 5 张照片 = 5 个新任务',
+  },
+  themeSwitcher: {
+    title: '选择设计',
+    subtitle: '主题改变颜色，设计改变整个体验。',
+    colorThemes: '颜色主题',
+    fullDesigns: '完整 UI 设计',
+    active: '当前',
+  },
 };

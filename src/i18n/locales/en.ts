@@ -273,6 +273,26 @@ export const en = {
     shareAllButton: '📤 Share All Sets',
     shareFailed: 'Failed to share: {error}',
   },
+  errorBoundary: {
+    title: 'Something went wrong',
+    tryAgain: 'Try Again',
+    reload: 'Reload App',
+  },
+  createTaskForm: {
+    back: '← Back',
+    title: '📸 Send Photos to the Bot',
+    subtitle: 'Each photo will create a separate task',
+    tips: '💡 Tips:',
+    tip1: 'Send 1 photo = 1 new task',
+    tip2: 'Send 5 photos = 5 new tasks',
+  },
+  themeSwitcher: {
+    title: 'Choose Design',
+    subtitle: 'Themes change colors. Designs change the entire experience.',
+    colorThemes: 'Color Themes',
+    fullDesigns: 'Full UI Designs',
+    active: 'Active',
+  },
 };
 
 export type Dictionary = typeof en;

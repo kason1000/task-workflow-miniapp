@@ -452,9 +452,9 @@ export function GalleryOverlay({
 
   const getUploaderName = (userId: number): string => {
     if (WebApp.initDataUnsafe?.user?.id === userId) {
-      return WebApp.initDataUnsafe.user.first_name || t('common.userFallback', { id: userId });
+      return WebApp.initDataUnsafe.user.first_name || '';
     }
-    return t('common.userFallback', { id: userId });
+    return '';
   };
 
   if (!isOpen) return null;
@@ -462,7 +462,8 @@ export function GalleryOverlay({
 
   const currentUrl = mediaCache[currentMedia.fileId];
   const isCreatedPhoto = currentMedia.fileId === task.createdPhoto?.file_id;
-  const canDelete = !isCreatedPhoto && (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
+  const canDeleteRole = userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member';
+  const canDelete = !isCreatedPhoto && canDeleteRole;
 
   return createPortal(
     <div
