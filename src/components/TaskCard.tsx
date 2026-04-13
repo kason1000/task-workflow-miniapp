@@ -89,9 +89,34 @@ export const TaskCard = React.memo(function TaskCard({
               </span>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', display: 'flex', gap: '5px', alignItems: 'center', marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', display: 'flex', gap: '5px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
             {d.submitterName && <span>{d.submitterName}</span>}
             {d.submittedAt && <span>· {formatDate(d.submittedAt, { month: 'short', day: 'numeric' })}</span>}
+            {(d.hasVideo || d.requireSets > 1) && (
+              <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', marginLeft: 'auto' }}>
+                {d.hasVideo && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '2px',
+                    fontSize: '9px', fontWeight: 600, padding: '1px 5px',
+                    borderRadius: '6px',
+                    background: 'var(--tg-theme-secondary-bg-color)',
+                    color: 'var(--tg-theme-hint-color)',
+                  }}>
+                    <Video size={9} /> vid
+                  </span>
+                )}
+                {d.requireSets > 1 && (
+                  <span style={{
+                    fontSize: '9px', fontWeight: 600, padding: '1px 5px',
+                    borderRadius: '6px',
+                    background: 'var(--tg-theme-secondary-bg-color)',
+                    color: 'var(--tg-theme-hint-color)',
+                  }}>
+                    {d.requireSets}sets
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         </div>
       </div>
