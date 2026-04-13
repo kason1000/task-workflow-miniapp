@@ -150,8 +150,8 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
           const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
           const isArchived = task.status === 'Archived';
           const group = groupMap.get(task.groupId);
-          const submitterName = task.doneBy ? userNames[task.doneBy] : task.createdBy ? userNames[task.createdBy] : undefined;
-          const submitterLabel = task.doneBy ? 'Uploaded by' : 'Submitted by';
+          const rawName = task.doneBy ? userNames[task.doneBy] : undefined;
+          const submitterName = rawName && !rawName.startsWith('User ') ? rawName : undefined;
 
           return (
             <div

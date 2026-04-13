@@ -18,7 +18,7 @@ function ThemeTestConsumer() {
 
 describe('ThemeContext', () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
   });
 
@@ -46,20 +46,20 @@ describe('ThemeContext', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('aurora');
   });
 
-  it('persists theme to sessionStorage', () => {
+  it('persists theme to localStorage', () => {
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
     act(() => { screen.getByTestId('set-noir').click(); });
-    expect(sessionStorage.getItem('app_theme')).toBe('noir');
+    expect(localStorage.getItem('taskflow_theme')).toBe('noir');
   });
 
-  it('reads theme from sessionStorage on mount', () => {
-    sessionStorage.setItem('app_theme', 'aurora');
+  it('reads theme from localStorage on mount', () => {
+    localStorage.setItem('taskflow_theme', 'aurora');
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
     expect(screen.getByTestId('theme').textContent).toBe('aurora');
   });
 
   it('falls back to classic for invalid stored theme', () => {
-    sessionStorage.setItem('app_theme', 'invalid');
+    localStorage.setItem('taskflow_theme', 'invalid');
     render(<ThemeProvider><ThemeTestConsumer /></ThemeProvider>);
     expect(screen.getByTestId('theme').textContent).toBe('classic');
   });

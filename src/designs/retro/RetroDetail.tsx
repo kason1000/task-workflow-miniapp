@@ -1,3 +1,4 @@
+import { resolveUserName } from '../shared/transitionHelpers';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
@@ -133,7 +134,7 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
               <div className="retro-detail-prop-row">
                 <span className="retro-detail-prop-key">Done By</span>
                 <span className="retro-detail-prop-value">
-                  {task.doneByName || userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })}
+                  {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
                 </span>
               </div>
             )}

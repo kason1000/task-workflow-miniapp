@@ -163,8 +163,8 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
         tasks.map((task, idx) => {
           const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
           const group = groupMap.get(task.groupId);
-          const submitterName = task.doneBy ? userNames[task.doneBy] : task.createdBy ? userNames[task.createdBy] : undefined;
-          const submitterLabel = task.doneBy ? 'Uploaded by' : 'Submitted by';
+          const rawName = task.doneBy ? userNames[task.doneBy] : undefined;
+          const submitterName = rawName && !rawName.startsWith('User ') ? rawName : undefined;
 
           return (
             <div

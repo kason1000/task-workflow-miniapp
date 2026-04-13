@@ -1,3 +1,4 @@
+import { resolveUserName } from '../shared/transitionHelpers';
 import { Task } from '../../types';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
@@ -147,7 +148,7 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
           <div className="brutal-detail-kv">
             <div className="brutal-detail-key">DONE BY</div>
             <div className="brutal-detail-value">
-              {task.doneByName || userNames[task.doneBy] || `USER ${task.doneBy}`}
+              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
             </div>
           </div>
         )}

@@ -1,3 +1,4 @@
+import { resolveUserName } from '../shared/transitionHelpers';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
@@ -120,7 +121,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
           <div className="glass-detail-row">
             <span className="glass-detail-label">Done By</span>
             <span className="glass-detail-value">
-              {task.doneByName || userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })}
+              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
             </span>
           </div>
         )}

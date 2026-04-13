@@ -1,3 +1,4 @@
+import { resolveUserName } from '../shared/transitionHelpers';
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
@@ -186,7 +187,7 @@ export function MosaicDetail({ task, userRole, onBack, onTaskUpdated }: MosaicDe
             <div className="mosaic-detail-meta-item">
               <span className="mosaic-detail-meta-label">{t('taskDetail.submitter') || 'Submitter'}</span>
               <span className="mosaic-detail-meta-value">
-                {task.doneByName || userNames[task.doneBy] || `User ${task.doneBy}`}
+                {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
               </span>
             </div>
           )}

@@ -83,7 +83,7 @@ export const en = {
     set: 'Set {index}',
     createdBy: '👤 {name} • 📅 {date}',
     submittedBy: '✅ Submitted by {name}',
-    uploadedBy: '📤 Uploaded by: {names}',
+    uploadedBy: '📤 Uploaded by {names}',
     selectCancel: '✕ Cancel',
     selectStart: '☑️ Select',
     selectedCount: '{count} selected',

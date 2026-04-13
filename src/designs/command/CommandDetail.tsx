@@ -1,3 +1,4 @@
+import { resolveUserName } from '../shared/transitionHelpers';
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
@@ -262,7 +263,7 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
           <div className="cmd-detail-row">
             <span className="cmd-detail-key">DONE BY</span>
             <span className="cmd-detail-value">
-              {task.doneByName || userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })}
+              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
             </span>
           </div>
         )}

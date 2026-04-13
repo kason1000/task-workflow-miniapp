@@ -46,6 +46,23 @@ export const STATUS_LABELS: Record<string, string> = {
   Archived: 'Archived',
 };
 
+/**
+ * Resolve a display name for a user, filtering out "User 123..." fallbacks.
+ * Priority: userNames API lookup > task.doneByName > fallback.
+ * Returns undefined if no real name is available.
+ */
+export function resolveUserName(
+  userId: number | null | undefined,
+  userNames: Record<number, string>,
+  taskDoneByName?: string | null,
+): string | undefined {
+  if (!userId) return undefined;
+  const fromApi = userNames[userId];
+  if (fromApi && !fromApi.startsWith('User ')) return fromApi;
+  if (taskDoneByName && !taskDoneByName.startsWith('User ')) return taskDoneByName;
+  return undefined;
+}
+
 export const STATUS_SHORT: Record<string, string> = {
   New: 'NEW',
   Received: 'RCV',

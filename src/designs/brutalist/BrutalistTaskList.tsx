@@ -153,8 +153,8 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
             const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
             const pct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
             const group = groupMap.get(task.groupId);
-            const submitterName = task.doneBy ? userNames[task.doneBy] : task.createdBy ? userNames[task.createdBy] : undefined;
-            const submitterLabel = task.doneBy ? 'UPLOADED BY' : 'SUBMITTED BY';
+            const rawName = task.doneBy ? userNames[task.doneBy] : undefined;
+            const submitterName = rawName && !rawName.startsWith('User ') ? rawName : undefined;
 
             return (
               <div

@@ -115,13 +115,31 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
             {formatDate(task.createdAt, { year: 'numeric', month: 'long', day: 'numeric' })}
           </span>
         </div>
+        {task.createdBy && (
+          <div className="elder-detail-row">
+            <span className="elder-detail-label">Created By</span>
+            <span className="elder-detail-value">
+              {(userNames[task.createdBy] && !userNames[task.createdBy].startsWith('User '))
+                ? userNames[task.createdBy]
+                : '—'}
+            </span>
+          </div>
+        )}
         {task.doneBy && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">
-              {task.status === 'Submitted' || task.status === 'Redo' ? 'Submitted By' : 'Uploaded By'}
+              {task.status === 'Submitted' || task.status === 'Redo' ? 'Submitted By' : 'Done By'}
             </span>
             <span className="elder-detail-value">
-              {task.doneByName || userNames[task.doneBy]}
+              {(() => {
+                // Prefer real name from userNames, then doneByName, filter out "User 123..." fallbacks
+                const fromApi = userNames[task.doneBy!];
+                const fromTask = task.doneByName;
+                const name = (fromApi && !fromApi.startsWith('User ')) ? fromApi
+                  : (fromTask && !fromTask.startsWith('User ')) ? fromTask
+                  : '—';
+                return name;
+              })()}
             </span>
           </div>
         )}

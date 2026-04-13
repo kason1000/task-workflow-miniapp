@@ -1,3 +1,4 @@
+import { resolveUserName } from '../shared/transitionHelpers';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
@@ -110,7 +111,7 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
           <div className="zen-detail-row">
             <span className="zen-detail-label">Submitter</span>
             <span className="zen-detail-value">
-              {task.doneByName || userNames[task.doneBy] || `User ${task.doneBy}`}
+              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
             </span>
           </div>
         )}

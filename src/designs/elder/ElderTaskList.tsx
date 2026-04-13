@@ -185,7 +185,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   <option value="">All Submitters</option>
                   {Object.entries(submitterCounts).map(([userId, count]) => (
                     <option key={userId} value={userId}>
-                      {userNames[parseInt(userId)] || `User ${userId}`} ({count})
+                      {userNames[parseInt(userId)] || userId} ({count})
                     </option>
                   ))}
                 </select>
@@ -207,12 +207,9 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
           const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
           const isArchived = task.status === 'Archived';
           const group = groupMap.get(task.groupId);
-          const submitterName = task.doneBy
-            ? userNames[task.doneBy]
-            : task.createdBy
-              ? userNames[task.createdBy]
-              : undefined;
-          const submitterLabel = task.doneBy ? 'Uploaded by' : 'Submitted by';
+          // Only show name if someone has submitted/uploaded — not for new/received tasks
+          const submitterName = task.doneBy ? userNames[task.doneBy] : undefined;
+          // Never show "User 123..." fallback — only real names
 
           return (
             <div
@@ -262,7 +259,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   )}
                 </div>
                 <div className="elder-task-meta">
-                  {submitterName && <span>{submitterName}</span>}
+                  {submitterName && !submitterName.startsWith('User ') && <span>{submitterName}</span>}
                   <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
                 {task.requireSets > 0 && (
