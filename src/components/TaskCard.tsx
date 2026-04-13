@@ -53,15 +53,16 @@ export const TaskCard = React.memo(function TaskCard({
 
   // ---- Archived card: compact single-row ----
   if (archived) {
-    const groupColor = d.groupColor || 'var(--tg-theme-hint-color)';
+    const gc = d.groupColor || '#6b7280';
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
         padding: '8px 10px',
         borderRadius: '10px',
-        background: 'var(--tg-theme-secondary-bg-color)',
-        borderLeft: `3px solid ${groupColor}`,
+        background: `var(--tg-theme-secondary-bg-color)`,
+        borderLeft: `4px solid ${gc}`,
         marginBottom: '6px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
       }}>
         {/* Small thumbnail */}
         <div
@@ -108,24 +109,21 @@ export const TaskCard = React.memo(function TaskCard({
   }
 
   // ---- Active card: fixed height, rich content ----
-  const groupTint = d.groupColor || statusColor;
+  const gc = d.groupColor || statusColor;
   return (
     <div style={{
       display: 'flex', gap: '10px',
       padding: '10px',
-      background: `linear-gradient(135deg, ${groupTint}10 0%, ${groupTint}06 100%)`,
+      background: 'var(--tg-theme-secondary-bg-color)',
       borderRadius: '12px',
       minHeight: '88px',
       position: 'relative',
       overflow: 'hidden',
       transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-      border: `1px solid ${groupTint}15`,
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+      borderLeft: `4px solid ${gc}`,
     }}>
-      {/* Left color accent bar */}
-      <div style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px',
-        background: statusColor, borderRadius: '12px 0 0 12px',
-      }} />
+
 
       {/* Thumbnail */}
       <div
