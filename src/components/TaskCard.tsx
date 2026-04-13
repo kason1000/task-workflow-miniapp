@@ -52,26 +52,23 @@ export const TaskCard = React.memo(function TaskCard({
   const statusColor = STATUS_COLORS[d.status] || '#6b7280';
   const gc = d.groupColor || '#6b7280';
 
-  // ---- Archived card — same style as active, slightly smaller thumbnail ----
+  // ---- Archived card — compact with matching style ----
   if (archived) {
     return (
       <div style={{
-        display: 'flex', gap: '10px',
-        padding: '10px',
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '6px 8px',
         background: 'var(--tg-theme-secondary-bg-color)',
-        borderRadius: '12px',
-        minHeight: '78px',
+        borderRadius: '10px',
         borderLeft: `4px solid ${gc}80`,
       }}>
         <div
           ref={thumbnailRef}
           onClick={handleClick}
           style={{
-            width: '58px', height: '58px', minWidth: '58px',
-            borderRadius: '10px', overflow: 'hidden',
-            background: thumbnailUrl && !imageError
-              ? 'var(--tg-theme-bg-color)'
-              : `linear-gradient(135deg, ${gc}20, var(--tg-theme-secondary-bg-color))`,
+            width: '40px', height: '40px', minWidth: '40px',
+            borderRadius: '8px', overflow: 'hidden',
+            background: 'var(--tg-theme-bg-color)',
             position: 'relative', cursor: thumbnailUrl ? 'pointer' : 'default',
           }}
         >
@@ -79,39 +76,27 @@ export const TaskCard = React.memo(function TaskCard({
             <img src={thumbnailUrl} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageError(true)}
               style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s' }} />
           )}
-          {!thumbnailUrl && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', opacity: 0.4 }}>📷</span>}
+          {!thumbnailUrl && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', opacity: 0.4 }}>📷</span>}
         </div>
 
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          {/* Row 1: Title + Group + Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
               {d.title}
             </span>
             {d.groupName && (
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: '3px',
-                fontSize: '9px', fontWeight: 600, padding: '1px 6px',
+                fontSize: '9px', fontWeight: 600, padding: '1px 5px',
                 borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
                 background: `${gc}18`, color: gc,
-                border: `1px solid ${gc}30`,
               }}>
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: gc }} />
                 {d.groupName}
               </span>
             )}
-            <span style={{
-              fontSize: '9px', fontWeight: 600, padding: '1px 6px',
-              borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
-              background: `${statusColor}18`, color: statusColor,
-              border: `1px solid ${statusColor}30`,
-            }}>
-              {t(`statusLabels.${d.status}`)}
-            </span>
           </div>
-
-          {/* Row 2: Submitter + date */}
-          <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', display: 'flex', gap: '5px', alignItems: 'center', marginTop: '2px' }}>
             {d.submitterName && <span>{d.submitterName}</span>}
             {d.submittedAt && <span>· {formatDate(d.submittedAt, { month: 'short', day: 'numeric' })}</span>}
           </div>
