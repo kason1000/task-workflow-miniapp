@@ -452,7 +452,7 @@ export function ListImageViewer({
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
             background: 'rgba(10,10,10,0.96)',
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-            borderTop: `2px solid ${gc}40`,
+            borderTop: `3px solid ${gc}80`,
             opacity: isVisible ? 1 : 0,
             transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
             transition: 'opacity 0.25s ease, transform 0.25s ease',
@@ -477,24 +477,24 @@ export function ListImageViewer({
               display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
               padding: '0 16px 8px',
             }}>
-              {/* Status badge — tinted pill */}
+              {/* Status badge — matches card style */}
               <span style={{
-                fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+                fontSize: '10px', fontWeight: 600, padding: '2px 7px',
                 borderRadius: '10px', whiteSpace: 'nowrap',
-                background: `${statusColor}25`, color: statusColor,
-                border: `1px solid ${statusColor}40`,
+                background: `${statusColor}18`, color: statusColor,
+                border: `1px solid ${statusColor}30`,
               }}>
                 {t(`statusLabels.${cd.status}`)}
               </span>
 
-              {/* Group capsule — colored dot + name */}
+              {/* Group capsule — matches card style */}
               {cd.groupName && (
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                   fontSize: '10px', fontWeight: 600, padding: '2px 8px',
                   borderRadius: '10px', whiteSpace: 'nowrap',
-                  background: `${gc}20`, color: gc,
-                  border: `1px solid ${gc}35`,
+                  background: `${gc}18`, color: gc,
+                  border: `1px solid ${gc}30`,
                 }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: gc }} />
                   {cd.groupName}
@@ -619,13 +619,13 @@ export function ListImageViewer({
                   flex: 1, height: '42px', fontSize: '13px',
                   background: sending[currentTask.id]
                     ? 'rgba(107,114,128,0.5)'
-                    : `linear-gradient(135deg, ${gc}, ${gc}cc)`,
+                    : `${gc}80`,
                   color: 'white',
                   border: 'none', borderRadius: '10px',
                   cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  boxShadow: sending[currentTask.id] ? 'none' : `0 2px 10px ${gc}40`,
+                  boxShadow: sending[currentTask.id] ? 'none' : `0 2px 8px ${gc}30`,
                 }}
               >{sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}</button>
             </div>
