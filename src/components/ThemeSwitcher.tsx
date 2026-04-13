@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTheme, type ThemeId, type ThemeMode, type FontSize } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
@@ -22,9 +23,15 @@ const DESIGN_NAMES: Record<string, string> = {
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
   const { theme, mode, setMode, themes, fontSize, setFontSize } = useTheme();
   const { t } = useLocale();
+  const [exiting, setExiting] = useState(false);
 
   const handleSelect = (m: ThemeMode) => {
     setMode(m);
+  };
+
+  const handleClose = () => {
+    setExiting(true);
+    setTimeout(() => onClose(), 250);
   };
 
   const FONT_SIZE_OPTIONS: { value: FontSize; label: string; aLabel: string }[] = [
@@ -37,12 +44,14 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
     <div
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        background: exiting ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.5)',
+        backdropFilter: exiting ? 'blur(0px)' : 'blur(6px)',
+        WebkitBackdropFilter: exiting ? 'blur(0px)' : 'blur(6px)',
         zIndex: 2000,
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        transition: 'background 0.25s ease, backdrop-filter 0.25s ease',
       }}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         style={{
@@ -52,17 +61,32 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           padding: '16px 16px 24px',
           paddingBottom: 'max(24px, calc(env(safe-area-inset-bottom) + 16px))',
           boxShadow: '0 -4px 30px rgba(0,0,0,0.2)',
-          animation: 'slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          animation: exiting ? 'slideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards' : 'slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           maxHeight: '80vh', overflowY: 'auto',
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <div style={{
-          width: '32px', height: '4px',
-          background: 'var(--tg-theme-hint-color)',
-          borderRadius: '2px', margin: '0 auto 16px', opacity: 0.3,
-        }} />
+        {/* Header with drag handle and done button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div style={{ width: '50px' }} />
+          <div style={{
+            width: '32px', height: '4px',
+            background: 'var(--tg-theme-hint-color)',
+            borderRadius: '2px', opacity: 0.3,
+          }} />
+          <button
+            onClick={handleClose}
+            style={{
+              background: 'none', border: 'none',
+              color: 'var(--tg-theme-button-color)',
+              fontSize: '14px', fontWeight: 600,
+              cursor: 'pointer', padding: '4px 8px',
+              minHeight: 'auto',
+            }}
+          >
+            Done
+          </button>
+        </div>
 
         {/* Section: Appearance */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
@@ -245,6 +269,10 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
         @keyframes slideUp {
           from { transform: translateY(100%); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideDown {
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(100%); opacity: 0; }
         }
       `}</style>
     </div>

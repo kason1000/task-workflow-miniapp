@@ -41,17 +41,9 @@ body {
   font-size: var(--fs-md);
 }
 
-/* Font size applied to buttons */
-button { min-height: var(--touch-min); font-size: var(--fs-button); }
-
-/* Font size scale levels — scales ALL content proportionally */
-[data-fontsize="2"] #root { font-size: 16px; }
-[data-fontsize="2"] .card { padding: 14px; }
-[data-fontsize="2"] button { min-height: 48px; font-size: 15px; }
-
-[data-fontsize="3"] #root { font-size: 18px; }
-[data-fontsize="3"] .card { padding: 16px; }
-[data-fontsize="3"] button { min-height: 56px; font-size: 17px; }
+/* Font size scale — zoom scales ALL content including inline styles */
+[data-fontsize="2"] #root { zoom: 1.15; }
+[data-fontsize="3"] #root { zoom: 1.3; }
 
 #root {
   min-height: 100vh;
