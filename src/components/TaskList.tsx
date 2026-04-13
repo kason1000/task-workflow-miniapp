@@ -567,7 +567,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                       gap: '2px',
                       background: sending[task.id]
                         ? 'var(--tg-theme-secondary-bg-color)'
-                        : 'transparent',
+                        : `${gc}18`,
                       color: sending[task.id]
                         ? 'var(--tg-theme-hint-color)'
                         : gc,
