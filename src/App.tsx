@@ -496,23 +496,7 @@ function App() {
               v{appVersion}</span>
           </div>
 
-          {/* Theme switcher button */}
-          <button
-            onClick={() => { setShowThemeSwitcher(true); hapticFeedback.light(); }}
-            aria-label="Change theme"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              padding: '4px 8px',
-              fontSize: '16px',
-              cursor: 'pointer',
-              opacity: 0.7,
-              marginLeft: '4px',
-              minWidth: 'auto',
-            }}
-          >
-            🎨
-          </button>
+
 
           <div style={{
             marginLeft: 'auto',  /* Push to the right */
@@ -634,8 +618,9 @@ function App() {
                       display: 'flex', alignItems: 'center', gap: '8px',
                     }}
                   >
-                    <span>👥</span>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--tg-theme-hint-color)', flexShrink: 0 }} />
                     <span>{t('taskList.allGroups')}</span>
+                    {!selectedGroupId && <span style={{ fontSize: '12px', color: 'var(--tg-theme-button-color)', marginLeft: 'auto' }}>✓</span>}
                   </div>
                   {groups.map(group => (
                     <div
@@ -679,6 +664,27 @@ function App() {
               >
                 <Users size={16} />
                 <span>{t('app.menuGroups')}</span>
+              </div>
+
+              {/* Theme switcher */}
+              <div
+                onClick={() => {
+                  setShowHamburgerMenu(false);
+                  setShowThemeSwitcher(true);
+                  hapticFeedback.light();
+                }}
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  borderTop: '1px solid var(--tg-theme-hint-color)',
+                }}
+              >
+                <span>🎨</span>
+                <span>{t('themeSwitcher.title')}</span>
               </div>
             </div>
           </div>
