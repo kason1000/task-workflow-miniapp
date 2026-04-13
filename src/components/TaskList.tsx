@@ -518,18 +518,15 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       {tasks.length > 0 && (
         <div>
           {tasks.map((task) => (
-            <div 
-              key={task.id} 
-              className="card"
+            <div
+              key={task.id}
               style={{
-                padding: '6px',  // Further reduced padding to make more space
-                ...(groups.find(g => g.id === task.groupId) ? {
-                  border: `2px solid ${getGroupColor(groups.find(g => g.id === task.groupId)?.id, groups.find(g => g.id === task.groupId)?.color)}`,
-                  borderRadius: '8px'
-                } : {})
+                marginBottom: '8px',
+                display: 'flex',
+                gap: '4px',
+                alignItems: 'stretch',
               }}
             >
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'stretch' }}>
                 {/* Task Card (clickable area) */}
                 <div 
                   onClick={() => handleTaskClick(task)} 
@@ -586,7 +583,6 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                     {t('taskList.sendButton')}
                   </span>
                 </button>
-              </div>
             </div>
           ))}
 

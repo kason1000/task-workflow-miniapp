@@ -13,6 +13,15 @@ interface TaskCardProps {
   isArchived?: boolean;
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  New: '#3b82f6',
+  Received: '#f59e0b',
+  Submitted: '#8b5cf6',
+  Redo: '#ef4444',
+  Completed: '#10b981',
+  Archived: '#6b7280',
+};
+
 export const TaskCard = React.memo(function TaskCard({
   task,
   thumbnailUrl,
@@ -27,7 +36,6 @@ export const TaskCard = React.memo(function TaskCard({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // All display logic is centralized — no computation in UI
   const d: TaskCardDisplay = useMemo(
     () => prepareTaskCard(task, userNames, groups),
     [task, userNames, groups]
@@ -40,194 +48,177 @@ export const TaskCard = React.memo(function TaskCard({
     }
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+  const archived = isArchived || d.isArchived;
+  const statusColor = STATUS_COLORS[d.status] || '#6b7280';
+
+  // ---- Archived card: compact single-row ----
+  if (archived) {
+    return (
       <div style={{
-        display: 'flex',
-        gap: '6px',
-        padding: '2px 0 0 0',
-        borderRadius: '0 0 6px 6px'
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '8px 0',
+        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
+        opacity: 0.85,
       }}>
-        {/* Thumbnail */}
+        {/* Small thumbnail */}
         <div
           ref={thumbnailRef}
           onClick={handleClick}
           style={{
-            width: '60px',
-            height: '60px',
-            minWidth: '60px',
-            borderRadius: '6px',
-            overflow: 'hidden',
-            background: thumbnailUrl && !imageError
-              ? 'var(--tg-theme-secondary-bg-color)'
-              : 'linear-gradient(135deg, var(--tg-theme-button-color) 0%, var(--tg-theme-secondary-bg-color) 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '24px',
-            border: '1px solid var(--tg-theme-secondary-bg-color)',
-            cursor: thumbnailUrl ? 'pointer' : 'default',
-            position: 'relative',
-            transition: 'transform 0.2s, border-color 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            if (thumbnailUrl) {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.borderColor = 'var(--tg-theme-button-color)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (thumbnailUrl) {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.borderColor = 'var(--tg-theme-secondary-bg-color)';
-            }
+            width: '40px', height: '40px', minWidth: '40px',
+            borderRadius: '8px', overflow: 'hidden',
+            background: 'var(--tg-theme-secondary-bg-color)',
+            position: 'relative', cursor: thumbnailUrl ? 'pointer' : 'default',
           }}
         >
           {thumbnailUrl && !imageError && (
-            <img
-              src={thumbnailUrl}
-              alt="Task thumbnail"
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-              style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: imageLoaded ? 1 : 0,
-                transition: 'opacity 0.3s ease'
-              }}
-            />
+            <img src={thumbnailUrl} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageError(true)}
+              style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s' }} />
           )}
-          {!imageLoaded && !imageError && thumbnailUrl && (
-            <div style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 1.5s infinite'
-            }} />
-          )}
-          {!thumbnailUrl && '📷'}
+          {!thumbnailUrl && <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>📷</span>}
         </div>
 
-        {/* Content */}
+        {/* Title + meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: '4px'
-          }}>
-            <h3 style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              flex: 1,
-              marginRight: '8px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              {d.hasVideo && <span style={{ fontSize: '14px' }}>🎥</span>}
-              {d.title}
-            </h3>
-            <span className={`badge ${d.statusBadgeClass}`} style={{ fontSize: '12px', padding: '4px 7px' }}>
-              {t(`statusLabels.${d.status}`)}
-            </span>
+          <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {d.title}
           </div>
+          <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+            {d.submitterName && <span>{d.submitterName}</span>}
+            {d.submittedAt && <span>· {formatDate(d.submittedAt, { month: 'short', day: 'numeric' })}</span>}
+          </div>
+        </div>
 
-          {/* Group Badge */}
+        {/* Status dot */}
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
+      </div>
+    );
+  }
+
+  // ---- Active card: fixed height, rich content ----
+  return (
+    <div style={{
+      display: 'flex', gap: '10px',
+      padding: '10px',
+      background: 'var(--tg-theme-secondary-bg-color)',
+      borderRadius: '12px',
+      minHeight: '88px',
+      position: 'relative',
+      overflow: 'hidden',
+      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    }}>
+      {/* Left color accent bar */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px',
+        background: statusColor, borderRadius: '12px 0 0 12px',
+      }} />
+
+      {/* Thumbnail */}
+      <div
+        ref={thumbnailRef}
+        onClick={handleClick}
+        style={{
+          width: '68px', height: '68px', minWidth: '68px',
+          borderRadius: '10px', overflow: 'hidden',
+          background: thumbnailUrl && !imageError
+            ? 'var(--tg-theme-bg-color)'
+            : `linear-gradient(135deg, ${statusColor}30, var(--tg-theme-bg-color))`,
+          position: 'relative',
+          cursor: thumbnailUrl ? 'pointer' : 'default',
+          border: '1px solid rgba(0,0,0,0.06)',
+          transition: 'transform 0.2s ease',
+        }}
+      >
+        {thumbnailUrl && !imageError && (
+          <img src={thumbnailUrl} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageError(true)}
+            style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease' }} />
+        )}
+        {!imageLoaded && !imageError && thumbnailUrl && (
+          <div style={{
+            position: 'absolute', width: '100%', height: '100%',
+            background: 'linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.04) 75%)',
+            backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite',
+          }} />
+        )}
+        {!thumbnailUrl && (
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', opacity: 0.5 }}>📷</span>
+        )}
+        {/* Video badge */}
+        {d.hasVideo && (
+          <div style={{
+            position: 'absolute', bottom: '3px', right: '3px',
+            background: 'rgba(0,0,0,0.6)', borderRadius: '4px',
+            padding: '1px 4px', fontSize: '10px', color: 'white',
+          }}>🎥</div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingLeft: '2px' }}>
+        {/* Row 1: Title + Status */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+          <div style={{
+            flex: 1, fontSize: '14px', fontWeight: 600, lineHeight: '1.3',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {d.title}
+          </div>
+          <span style={{
+            fontSize: '10px', fontWeight: 600, padding: '2px 7px',
+            borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0,
+            background: `${statusColor}18`, color: statusColor,
+            border: `1px solid ${statusColor}30`,
+          }}>
+            {t(`statusLabels.${d.status}`)}
+          </span>
+        </div>
+
+        {/* Row 2: Group capsule + submitter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
           {d.groupName && (
-            <div style={{ marginBottom: '2px' }}>
-              <span style={{
-                display: 'inline-block',
-                fontSize: '11px',
-                padding: '3px 6px',
-                background: 'var(--tg-theme-secondary-bg-color)',
-                color: 'var(--tg-theme-hint-color)',
-                borderRadius: '4px'
-              }}>
-                👥 {d.groupName}
-              </span>
-            </div>
-          )}
-
-          {isArchived || d.isArchived ? (
-            /* Archived view: show submitter + submitted date — no "User 123..." */
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              fontSize: '11px',
-              color: 'var(--tg-theme-hint-color)',
-              alignItems: 'center'
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+              borderRadius: '10px', whiteSpace: 'nowrap',
+              background: d.groupColor ? `${d.groupColor}18` : 'var(--tg-theme-bg-color)',
+              color: d.groupColor || 'var(--tg-theme-hint-color)',
+              border: `1px solid ${d.groupColor ? d.groupColor + '35' : 'rgba(0,0,0,0.08)'}`,
             }}>
-              {d.submitterName && <span>{t('taskList.doneBy', { name: d.submitterName })}</span>}
-              {d.submittedAt && <span>📅 {formatDate(d.submittedAt)}</span>}
-            </div>
-          ) : (
-            /* Active view: progress bar + date */
-            <>
-              <div style={{ marginBottom: '2px' }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '12px',
-                  color: 'var(--tg-theme-hint-color)',
-                  marginBottom: '1px',
-                  gap: '4px'
-                }}>
-                  <span>{t('taskList.progress')}</span>
-                  {d.submitterName && d.status !== 'New' && d.status !== 'Received' && (
-                    <span style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                      textAlign: 'center',
-                      fontSize: '12px'
-                    }}>
-                      {t('taskList.doneBy', { name: d.submitterName })}
-                    </span>
-                  )}
-                  <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
-                    {d.progressLabel}
-                  </span>
-                </div>
-                <div style={{
-                  height: '5px',
-                  background: 'var(--tg-theme-bg-color)',
-                  borderRadius: '2px',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${d.progressPercent}%`,
-                    background: d.progressPercent === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
-                    transition: 'width 0.3s',
-                  }} />
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '4px',
-                fontSize: '11px',
-                color: 'var(--tg-theme-hint-color)',
-                flexWrap: 'wrap',
-                alignItems: 'center'
-              }}>
-                {d.submitterName && d.lastModifiedAt && d.status !== 'New' && d.status !== 'Received' && (
-                  <span>📅 {formatDate(d.lastModifiedAt)}</span>
-                )}
-              </div>
-            </>
+              <span style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: d.groupColor || 'var(--tg-theme-hint-color)',
+              }} />
+              {d.groupName}
+            </span>
           )}
+          {d.submitterName && d.status !== 'New' && d.status !== 'Received' && (
+            <span style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)' }}>
+              {d.submitterName}
+            </span>
+          )}
+        </div>
+
+        {/* Row 3: Progress bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+          <div style={{
+            flex: 1, height: '4px', borderRadius: '2px',
+            background: 'var(--tg-theme-bg-color)', overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%', borderRadius: '2px',
+              width: `${d.progressPercent}%`,
+              background: d.progressPercent === 100
+                ? '#10b981'
+                : `linear-gradient(90deg, ${statusColor}, ${statusColor}aa)`,
+              transition: 'width 0.4s ease',
+            }} />
+          </div>
+          <span style={{
+            fontSize: '10px', fontWeight: 600, color: 'var(--tg-theme-hint-color)',
+            fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', minWidth: '24px', textAlign: 'right',
+          }}>
+            {d.progressLabel}
+          </span>
         </div>
       </div>
     </div>

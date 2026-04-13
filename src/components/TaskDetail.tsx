@@ -2,15 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../types';
 import { api, revokeAllMediaUrls } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
-import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
-import { statusColors, getGroupColor } from '../utils/taskStyles';
 import { prepareTaskDetail } from '../designs/shared/taskDisplayData';
 import { MediaGrid } from './MediaGrid';
 import { TaskActionBar } from './TaskActionBar';
 import { DetailImageViewer } from './DetailImageViewer';
-import { VideoThumb } from './VideoThumb';
 import { TaskInfoCard } from './TaskInfoCard';
 import { TaskGroupCard } from './TaskGroupCard';
 
@@ -20,8 +17,6 @@ interface TaskDetailProps {
   onBack: () => void;
   onTaskUpdated: () => void;
 }
-
-// statusColors is now imported from ../utils/taskStyles
 
 async function downloadFiles(
   fileSpecs: Array<{ fileId: string; fileName: string; mimeType: string }>
