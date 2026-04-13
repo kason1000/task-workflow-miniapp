@@ -10,7 +10,7 @@ import { TaskActionBar } from './TaskActionBar';
 import { DetailImageViewer } from './DetailImageViewer';
 import { TaskInfoCard } from './TaskInfoCard';
 import { TaskGroupCard } from './TaskGroupCard';
-import { Clock, Share2 } from 'lucide-react';
+import { Clock, Share2, Trash2 } from 'lucide-react';
 
 interface TaskDetailProps {
   task: Task;
@@ -665,30 +665,36 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         {selectionMode && selectedMedia.size > 0 && (
           <div style={{
             marginBottom: '12px',
-            padding: '12px',
-            background: '#ef4444',
-            borderRadius: '8px',
+            padding: '10px 12px',
+            background: 'var(--tg-theme-secondary-bg-color)',
+            border: '1.5px solid #ef4444',
+            borderRadius: '10px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
           }}>
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>
+            <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: 600 }}>
               {t('taskDetail.selectedCount', { count: selectedMedia.size })}
             </span>
             <button
               onClick={handleDeleteSelected}
               disabled={loading}
               style={{
-                padding: '8px 16px',
-                fontSize: '14px',
-                background: 'white',
+                height: '36px',
+                padding: '0 14px',
+                fontSize: '13px',
+                background: 'rgba(239,68,68,0.15)',
                 color: '#ef4444',
-                border: 'none',
-                borderRadius: '6px',
+                border: '1px solid rgba(239,68,68,0.3)',
+                borderRadius: '10px',
                 cursor: 'pointer',
-                fontWeight: '600'
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
             >
+              <Trash2 size={14} />
               {t('taskDetail.deleteSelected')}
             </button>
           </div>

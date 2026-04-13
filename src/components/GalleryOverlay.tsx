@@ -487,12 +487,13 @@ export function GalleryOverlay({
     >
       {/* Header */}
       <div style={{
-        height: '60px',
+        minHeight: '60px',
         background: 'rgba(0,0,0,0.95)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
         padding: '0 16px',
+        paddingTop: 'max(0px, env(safe-area-inset-top))',
         borderBottom: '1px solid rgba(255,255,255,0.1)',
         flexShrink: 0
       }}>
@@ -868,7 +869,8 @@ export function GalleryOverlay({
         <div style={{
           display: 'flex',
           gap: '8px',
-          padding: '12px 16px'
+          padding: '12px 16px',
+          paddingBottom: 'max(16px, calc(env(safe-area-inset-bottom) + 8px))'
         }}>
           <button
             onClick={handleShareCurrentSet}
