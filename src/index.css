@@ -19,13 +19,39 @@
   --tg-theme-button-color: #2481cc;
   --tg-theme-button-text-color: #ffffff;
   --tg-theme-secondary-bg-color: #f4f4f5;
+
+  /* Font size scale — overridden by ThemeContext per level */
+  --fs-xs: 10px;
+  --fs-sm: 12px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-card-title: 14px;
+  --fs-card-meta: 11px;
+  --fs-badge: 10px;
+  --fs-button: 13px;
+  --fs-header: 15px;
+  --touch-min: 42px;
 }
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--tg-theme-bg-color);
   color: var(--tg-theme-text-color);
+  font-size: var(--fs-md);
 }
+
+/* Font size applied to buttons */
+button { min-height: var(--touch-min); font-size: var(--fs-button); }
+
+/* Font size scale levels — scales ALL content proportionally */
+[data-fontsize="2"] #root { font-size: 16px; }
+[data-fontsize="2"] .card { padding: 14px; }
+[data-fontsize="2"] button { min-height: 48px; font-size: 15px; }
+
+[data-fontsize="3"] #root { font-size: 18px; }
+[data-fontsize="3"] .card { padding: 16px; }
+[data-fontsize="3"] button { min-height: 56px; font-size: 17px; }
 
 #root {
   min-height: 100vh;

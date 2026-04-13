@@ -1,7 +1,7 @@
-import { useTheme, type ThemeId, type ThemeMode } from '../contexts/ThemeContext';
+import { useTheme, type ThemeId, type ThemeMode, type FontSize } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
-import { Sun, Moon, Monitor, Check, Layout, Palette } from 'lucide-react';
+import { Sun, Moon, Monitor, Check, Layout, Palette, Type } from 'lucide-react';
 
 const COLOR_THEMES: { id: ThemeId; label: string }[] = [
   { id: 'ocean', label: 'Ocean' },
@@ -20,12 +20,18 @@ const DESIGN_NAMES: Record<string, string> = {
 };
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
-  const { theme, mode, setMode, themes } = useTheme();
+  const { theme, mode, setMode, themes, fontSize, setFontSize } = useTheme();
   const { t } = useLocale();
 
   const handleSelect = (m: ThemeMode) => {
     setMode(m);
   };
+
+  const FONT_SIZE_OPTIONS: { value: FontSize; label: string; aLabel: string }[] = [
+    { value: 1, label: 'A', aLabel: 'Small' },
+    { value: 2, label: 'A', aLabel: 'Medium' },
+    { value: 3, label: 'A', aLabel: 'Large' },
+  ];
 
   return (
     <div
@@ -132,6 +138,49 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                   flexShrink: 0,
                 }} />
                 {ct.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Section: Text Size */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+          <Type size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+            Text Size
+          </span>
+        </div>
+
+        <div style={{
+          display: 'flex', gap: '0',
+          background: 'var(--tg-theme-secondary-bg-color)',
+          borderRadius: '10px',
+          padding: '3px',
+          marginBottom: '16px',
+        }}>
+          {FONT_SIZE_OPTIONS.map((opt) => {
+            const isActive = fontSize === opt.value;
+            const size = opt.value === 1 ? 12 : opt.value === 2 ? 15 : 19;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setFontSize(opt.value)}
+                style={{
+                  flex: 1,
+                  height: '40px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: isActive ? 'var(--tg-theme-bg-color)' : 'transparent',
+                  color: isActive ? 'var(--tg-theme-text-color)' : 'var(--tg-theme-hint-color)',
+                  fontSize: `${size}px`, fontWeight: isActive ? 700 : 400,
+                  cursor: 'pointer',
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease',
+                  minHeight: 'auto',
+                }}
+              >
+                {opt.label}
               </button>
             );
           })}
