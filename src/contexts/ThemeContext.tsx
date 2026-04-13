@@ -1,20 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type ThemeId = 'classic' | 'dark' | 'ocean' | 'sunset' | 'forest' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
+export type ThemeMode = ThemeId | 'auto';
 
 interface ThemeInfo {
   id: ThemeId;
   name: string;
   description: string;
-  /** If true, this theme has its own layout components (not just CSS) */
   hasCustomLayout: boolean;
 }
 
 interface ThemeContextValue {
+  /** The resolved theme ID (never 'auto') */
   theme: ThemeId;
-  setTheme: (theme: ThemeId) => void;
+  /** The user's selected mode (can be 'auto') */
+  mode: ThemeMode;
+  setMode: (mode: ThemeMode) => void;
   themes: ThemeInfo[];
-  /** Whether current theme has a completely custom layout */
   isCustomLayout: boolean;
 }
 
@@ -35,28 +37,52 @@ const THEMES: ThemeInfo[] = [
   { id: 'brutalist', name: 'Brutalist', description: 'Raw bold anti-design', hasCustomLayout: true },
 ];
 
-const VALID_THEMES = THEMES.map(t => t.id);
+const VALID_MODES = [...THEMES.map(t => t.id), 'auto'];
 
-function readStoredTheme(): ThemeId {
+function getSystemDark(): boolean {
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } catch { return false; }
+}
+
+function resolveTheme(mode: ThemeMode): ThemeId {
+  if (mode === 'auto') return getSystemDark() ? 'dark' : 'classic';
+  return mode;
+}
+
+function readStoredMode(): ThemeMode {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && VALID_THEMES.includes(stored as ThemeId)) return stored as ThemeId;
+    if (stored && VALID_MODES.includes(stored)) return stored as ThemeMode;
   } catch {}
-  return 'classic';
+  return 'auto';
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeId>(readStoredTheme);
+  const [mode, setModeState] = useState<ThemeMode>(readStoredMode);
+  const [systemDark, setSystemDark] = useState(getSystemDark);
 
-  const setTheme = useCallback((next: ThemeId) => {
-    setThemeState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {}
+  // Listen for system dark mode changes
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
   }, []);
 
+  const theme = useMemo(() => {
+    if (mode === 'auto') return systemDark ? 'dark' : 'classic';
+    return mode;
+  }, [mode, systemDark]);
+
+  const setMode = useCallback((next: ThemeMode) => {
+    setModeState(next);
+    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+  }, []);
+
+  // Keep backward compat: also expose setTheme that sets mode directly
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     return () => document.documentElement.removeAttribute('data-theme');
@@ -66,10 +92,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ThemeContextValue>(() => ({
     theme,
-    setTheme,
+    mode,
+    setMode,
     themes: THEMES,
     isCustomLayout,
-  }), [theme, setTheme, isCustomLayout]);
+  }), [theme, mode, setMode, isCustomLayout]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

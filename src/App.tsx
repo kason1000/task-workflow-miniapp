@@ -498,7 +498,25 @@ function App() {
               v{appVersion}</span>
           </div>
 
-
+          {/* Theme/Design switcher button */}
+          <button
+            onClick={() => { setShowThemeSwitcher(true); hapticFeedback.light(); }}
+            aria-label="Theme"
+            style={{
+              background: 'var(--tg-theme-secondary-bg-color)',
+              border: '1.5px solid transparent',
+              borderRadius: '10px',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '4px',
+              minWidth: 'auto',
+            }}
+          >
+            <Palette size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
+          </button>
 
           <div style={{
             marginLeft: 'auto',  /* Push to the right */
@@ -674,26 +692,6 @@ function App() {
                 <span>{t('app.menuGroups')}</span>
               </div>
 
-              {/* Theme switcher */}
-              <div
-                onClick={() => {
-                  setShowHamburgerMenu(false);
-                  setShowThemeSwitcher(true);
-                  hapticFeedback.light();
-                }}
-                style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  borderTop: '1px solid var(--tg-theme-secondary-bg-color)',
-                }}
-              >
-                <Palette size={16} />
-                <span>{t('themeSwitcher.title')}</span>
-              </div>
             </div>
           </div>
         </div>

@@ -1,22 +1,14 @@
-import { useTheme, type ThemeId } from '../contexts/ThemeContext';
+import { useTheme, type ThemeId, type ThemeMode } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
 import { Sun, Moon, Monitor, Check, Layout, Palette } from 'lucide-react';
 
-// Core themes (light/dark toggle)
-const CORE_THEMES: { id: ThemeId; label: string; icon: typeof Sun }[] = [
-  { id: 'classic', label: 'Light', icon: Sun },
-  { id: 'dark', label: 'Dark', icon: Moon },
-];
-
-// Additional color themes
 const COLOR_THEMES: { id: ThemeId; label: string }[] = [
   { id: 'ocean', label: 'Ocean' },
   { id: 'sunset', label: 'Sunset' },
   { id: 'forest', label: 'Forest' },
 ];
 
-// Full UI designs
 const DESIGN_NAMES: Record<string, string> = {
   mosaic: 'Mosaic',
   command: 'Command',
@@ -28,17 +20,11 @@ const DESIGN_NAMES: Record<string, string> = {
 };
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
-  const { theme, setTheme, themes } = useTheme();
+  const { theme, mode, setMode, themes } = useTheme();
   const { t } = useLocale();
 
-  const isCoreDark = theme === 'dark';
-  const isCoreLight = theme === 'classic';
-  const isColorTheme = COLOR_THEMES.some(ct => ct.id === theme);
-  const isDesign = themes.find(th => th.id === theme)?.hasCustomLayout ?? false;
-
-  const handleSelect = (id: ThemeId) => {
-    setTheme(id);
-    onClose();
+  const handleSelect = (m: ThemeMode) => {
+    setMode(m);
   };
 
   return (
@@ -80,7 +66,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           </span>
         </div>
 
-        {/* Light / Dark segmented control */}
+        {/* Auto / Light / Dark segmented control */}
         <div style={{
           display: 'flex', gap: '0',
           background: 'var(--tg-theme-secondary-bg-color)',
@@ -88,29 +74,32 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           padding: '3px',
           marginBottom: '10px',
         }}>
-          {CORE_THEMES.map(ct => {
-            const Icon = ct.icon;
-            const isActive = theme === ct.id;
+          {([
+            { m: 'auto' as ThemeMode, label: 'Auto', Icon: Monitor },
+            { m: 'classic' as ThemeMode, label: 'Light', Icon: Sun },
+            { m: 'dark' as ThemeMode, label: 'Dark', Icon: Moon },
+          ]).map(({ m, label, Icon }) => {
+            const isActive = mode === m;
             return (
               <button
-                key={ct.id}
-                onClick={() => handleSelect(ct.id)}
+                key={m}
+                onClick={() => handleSelect(m)}
                 style={{
                   flex: 1,
                   height: '36px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                   borderRadius: '8px',
                   border: 'none',
                   background: isActive ? 'var(--tg-theme-bg-color)' : 'transparent',
                   color: isActive ? 'var(--tg-theme-text-color)' : 'var(--tg-theme-hint-color)',
-                  fontSize: '13px', fontWeight: isActive ? 600 : 400,
+                  fontSize: '12px', fontWeight: isActive ? 600 : 400,
                   cursor: 'pointer',
                   boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
                 <Icon size={14} />
-                {ct.label}
+                {label}
               </button>
             );
           })}
@@ -120,7 +109,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
           {COLOR_THEMES.map(ct => {
             const colors = THEME_COLORS[ct.id];
-            const isActive = theme === ct.id;
+            const isActive = mode === ct.id;
             return (
               <button
                 key={ct.id}
@@ -130,7 +119,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   borderRadius: '10px',
                   border: isActive ? `1.5px solid ${colors.accent}` : '1.5px solid transparent',
-                  background: isActive ? 'var(--tg-theme-secondary-bg-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  background: 'var(--tg-theme-secondary-bg-color)',
                   color: isActive ? colors.accent : 'var(--tg-theme-hint-color)',
                   fontSize: '12px', fontWeight: isActive ? 600 : 400,
                   cursor: 'pointer',
@@ -159,7 +148,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {themes.filter(th => th.hasCustomLayout).map(th => {
             const colors = THEME_COLORS[th.id] || { bg: '#fff', accent: '#333' };
-            const isActive = theme === th.id;
+            const isActive = mode === th.id;
             return (
               <button
                 key={th.id}
@@ -174,26 +163,18 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                   cursor: 'pointer', textAlign: 'left',
                 }}
               >
-                {/* Color swatch */}
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0,
                   background: colors.bg,
                   border: `1.5px solid ${colors.accent}50`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <div style={{
-                    width: '12px', height: '12px', borderRadius: '50%',
-                    background: colors.accent,
-                  }} />
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: colors.accent }} />
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600 }}>
-                    {DESIGN_NAMES[th.id] || th.name}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginTop: '1px' }}>
-                    {th.description}
-                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>{DESIGN_NAMES[th.id] || th.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginTop: '1px' }}>{th.description}</div>
                 </div>
 
                 {isActive && (

@@ -59,7 +59,7 @@ export const THEME = {
 // ============================================================
 export const THEME_COLORS: Record<string, { bg: string; accent: string }> = {
   classic: { bg: '#ffffff', accent: '#2481cc' },
-  dark: { bg: '#1a1a2e', accent: '#3b82f6' },
+  dark: { bg: '#18222d', accent: '#2ea6ff' },
   ocean: { bg: '#0c1929', accent: '#22d3ee' },
   sunset: { bg: '#fef7ed', accent: '#ea580c' },
   forest: { bg: '#0a1f0a', accent: '#34d399' },

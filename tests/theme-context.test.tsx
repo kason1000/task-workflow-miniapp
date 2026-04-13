@@ -4,14 +4,16 @@ import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import React from 'react';
 
 function ThemeTestConsumer() {
-  const { theme, setTheme, themes } = useTheme();
+  const { theme, mode, setMode, themes } = useTheme();
   return (
     <div>
       <span data-testid="theme">{theme}</span>
+      <span data-testid="mode">{mode}</span>
       <span data-testid="count">{themes.length}</span>
-      <button data-testid="set-dark" onClick={() => setTheme('dark')}>Dark</button>
-      <button data-testid="set-ocean" onClick={() => setTheme('ocean')}>Ocean</button>
-      <button data-testid="set-classic" onClick={() => setTheme('classic')}>Classic</button>
+      <button data-testid="set-dark" onClick={() => setMode('dark')}>Dark</button>
+      <button data-testid="set-ocean" onClick={() => setMode('ocean')}>Ocean</button>
+      <button data-testid="set-classic" onClick={() => setMode('classic')}>Classic</button>
+      <button data-testid="set-auto" onClick={() => setMode('auto')}>Auto</button>
     </div>
   );
 }
@@ -20,6 +22,20 @@ describe('ThemeContext', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
+    // Mock matchMedia for jsdom
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
   it('defaults to classic theme', () => {
