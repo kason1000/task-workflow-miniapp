@@ -1,6 +1,6 @@
 import { Task } from '../types';
 import { hapticFeedback } from '../utils/telegram';
-import { Share2 } from 'lucide-react';
+import { Share2, Image, Video, Clock } from 'lucide-react';
 import { COLORS } from '../utils/colors';
 
 interface MediaGridProps {
@@ -127,7 +127,7 @@ export function MediaGrid({
                   fontSize: '32px',
                   border: '2px dashed var(--tg-theme-hint-color)'
                 }}>
-                  📷
+                  <Image size={32} style={{ opacity: 0.3 }} />
                 </div>
               ) : (
                 allSetMedia.map((media) => {
@@ -177,7 +177,11 @@ export function MediaGrid({
                           opacity: selectionMode && !canDelete ? 0.5 : 1
                         }}
                       >
-                        {!imageUrl && (loadingMedia.has(media.fileId) ? '⏳' : media.type === 'photo' ? '📷' : '🎥')}
+                        {!imageUrl && (
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
+                            {loadingMedia.has(media.fileId) ? <Clock size={20} /> : media.type === 'photo' ? <Image size={20} /> : <Video size={20} />}
+                          </span>
+                        )}
 
                         {media.type === 'video' && imageUrl && (
                           <div style={{

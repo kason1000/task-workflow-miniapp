@@ -3,6 +3,7 @@ import { Task, Group } from '../types';
 import WebApp from '@twa-dev/sdk';
 import { getGroupColor } from '../utils/taskStyles';
 import { STATUS_COLORS, COLORS } from '../utils/colors';
+import { Image, Clock } from 'lucide-react';
 
 interface TaskInfoCardProps {
   task: Task;
@@ -80,7 +81,11 @@ export function TaskInfoCard({
             }
           }}
         >
-          {!createdPhotoUrl && (loadingMedia.has(task.createdPhoto?.file_id || '') ? '⏳' : '📷')}
+          {!createdPhotoUrl && (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.4 }}>
+              {loadingMedia.has(task.createdPhoto?.file_id || '') ? <Clock size={24} /> : <Image size={24} />}
+            </span>
+          )}
         </div>
 
         {/* Task Info */}
