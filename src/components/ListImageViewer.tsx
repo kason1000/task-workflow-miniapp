@@ -597,8 +597,8 @@ export function ListImageViewer({
             {/* Action buttons */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '4px 14px',
-              paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))',
+              padding: '4px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left))',
+              paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 10px))',
             }}>
               <button
                 onClick={(e) => { e.stopPropagation(); onClose(); onTaskClick(currentTask); }}

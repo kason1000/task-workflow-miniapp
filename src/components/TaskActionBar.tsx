@@ -73,8 +73,8 @@ export function TaskActionBar({
       bottom: 0, left: 0, right: 0,
       background: 'var(--tg-theme-bg-color)',
       borderTop: '1px solid var(--tg-theme-secondary-bg-color)',
-      padding: '10px 16px',
-      paddingBottom: 'max(10px, calc(env(safe-area-inset-bottom) + 6px))',
+      padding: '10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left))',
+      paddingBottom: 'max(16px, calc(env(safe-area-inset-bottom) + 10px))',
       zIndex: 50,
       boxShadow: '0 -2px 10px rgba(0,0,0,0.06)',
     }}>

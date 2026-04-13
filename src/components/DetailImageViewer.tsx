@@ -380,7 +380,7 @@ export function DetailImageViewer({
             )}
 
             {/* Action buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 14px', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left))', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 10px))' }}>
               {mode === 'title' && (
                 <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
                   style={{ flex: 1, height: '42px', fontSize: '13px', background: sending ? 'rgba(107,114,128,0.5)' : `${taskGroup?.color || '#3b82f6'}80`, color: 'white', border: 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : `0 2px 8px ${taskGroup?.color || '#3b82f6'}30` }}
@@ -401,8 +401,8 @@ export function DetailImageViewer({
 
                   {canDelete && currentFileId && !isCreatedPhoto && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeleteCurrent(); }} onTouchEnd={(e) => e.stopPropagation()}
-                      style={{ height: '42px', width: '48px', background: 'rgba(239,68,68,0.7)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                    ><Trash2 size={18} /></button>
+                      style={{ height: '42px', padding: '0 12px', background: 'rgba(239,68,68,0.7)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', flexShrink: 0, fontSize: '12px', fontWeight: 600 }}
+                    ><Trash2 size={16} /> {t('taskDetail.delete')}</button>
                   )}
                 </>
               )}
