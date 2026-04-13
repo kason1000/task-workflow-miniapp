@@ -7,6 +7,7 @@ import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
 import { ThumbnailStrip } from './ThumbnailStrip';
+import { COLORS } from '../utils/colors';
 
 interface GalleryOverlayProps {
   isOpen: boolean;
@@ -903,7 +904,7 @@ export function GalleryOverlay({
                 style={{
                   height: '42px',
                   width: '48px',
-                  background: 'rgba(239,68,68,0.7)',
+                  background: 'rgba(239,68,68,0.7)' /* danger */,
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
@@ -924,7 +925,7 @@ export function GalleryOverlay({
                 style={{
                   height: '42px',
                   padding: '0 12px',
-                  background: 'rgba(239,68,68,0.7)',
+                  background: 'rgba(239,68,68,0.7)' /* danger */,
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',

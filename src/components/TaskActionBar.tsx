@@ -1,5 +1,6 @@
 import { Task, TaskStatus } from '../types';
 import { Package, RotateCcw, Check, RefreshCw, Archive, Send, Trash2 } from 'lucide-react';
+import { COLORS } from '../utils/colors';
 
 interface TaskActionBarProps {
   task: Task;
@@ -29,7 +30,7 @@ export function TaskActionBar({
   groupColor,
 }: TaskActionBarProps) {
   const isArchived = task.status === 'Archived';
-  const gc = groupColor || '#3b82f6';
+  const gc = groupColor || COLORS.info;
 
   const btnBase: React.CSSProperties = {
     flex: '1 1 calc(50% - 4px)',
@@ -63,8 +64,8 @@ export function TaskActionBar({
   const btnDanger: React.CSSProperties = {
     ...btnBase,
     background: 'var(--tg-theme-secondary-bg-color)',
-    color: '#ef4444',
-    border: '1.5px solid #ef4444',
+    color: COLORS.danger,
+    border: `1.5px solid ${COLORS.danger}`,
   };
 
   return (

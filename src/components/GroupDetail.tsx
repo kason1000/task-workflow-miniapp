@@ -4,21 +4,7 @@ import { Group } from '../types';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { Users, Trash2, Link as LinkIcon, Crown, User, Eye, Palette } from 'lucide-react';
 import { useLocale } from '../i18n/LocaleContext';
-
-const GROUP_COLORS = [
-  '#3b82f6',
-  '#ef4444',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
-  '#f97316',
-  '#6366f1',
-  '#14b8a6',
-  '#f43f5e',
-];
+import { GROUP_COLOR_PALETTE, COLORS } from '../utils/colors';
 
 interface GroupDetailProps {
   groupId: string;
@@ -136,7 +122,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
   if (error || !group) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ color: '#ef4444', marginBottom: '12px' }}>
+        <div style={{ color: COLORS.danger, marginBottom: '12px' }}>
           ❌ {error || t('groupDetail.notFound')}
         </div>
         <button onClick={onBack}>{t('common.back')}</button>
@@ -156,7 +142,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
             width: '32px',
             height: '32px',
             borderRadius: '8px',
-            backgroundColor: group.color || '#3b82f6',
+            backgroundColor: group.color || COLORS.info,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -175,7 +161,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
             }}>
               <span>{t('groupDetail.idLabel', { id: group.id })}</span>
               {group.isDefault && (() => {
-                const gc = group.color || '#3b82f6';
+                const gc = group.color || COLORS.info;
                 return (
                   <span style={{
                     background: `${gc}18`,
@@ -203,7 +189,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                     width: '16px',
                     height: '16px',
                     borderRadius: '50%',
-                    backgroundColor: group.color || '#3b82f6'
+                    backgroundColor: group.color || COLORS.info
                   }}
                 />
                 {canManage && (
@@ -250,7 +236,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
               gap: '8px',
               marginBottom: '8px'
             }}>
-              {GROUP_COLORS.map((colorOption) => (
+              {GROUP_COLOR_PALETTE.map((colorOption) => (
                 <button
                   key={colorOption}
                   type="button"
@@ -286,11 +272,11 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  backgroundColor: group.color || '#3b82f6'
+                  backgroundColor: group.color || COLORS.info
                 }}
               />
               <span style={{ fontSize: '14px', color: 'var(--tg-theme-text-color)' }}>
-                {t('groupDetail.currentColor', { color: group.color || '#3b82f6' })}
+                {t('groupDetail.currentColor', { color: group.color || COLORS.info })}
               </span>
             </div>
           </div>
@@ -327,9 +313,9 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
           <div style={{
             marginTop: '12px',
             padding: '10px',
-            background: '#10b98118',
-            color: '#10b981',
-            border: '1px solid #10b98130',
+            background: `${COLORS.success}18`,
+            color: COLORS.success,
+            border: `1px solid ${COLORS.success}30`,
             borderRadius: '10px',
             fontSize: '13px',
             display: 'flex',
@@ -408,7 +394,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                     aria-label="Remove member"
                     style={{
                       background: 'transparent',
-                      color: '#ef4444',
+                      color: COLORS.danger,
                       padding: '8px',
                       minWidth: 'auto'
                     }}
@@ -432,7 +418,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
                 onClick={handleDeleteGroup}
                 disabled={actionLoading}
                 style={{
-                  background: '#ef4444',
+                  background: COLORS.danger,
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',

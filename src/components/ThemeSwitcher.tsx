@@ -1,20 +1,28 @@
 import { useTheme, type ThemeId } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
+import { THEME_COLORS } from '../utils/colors';
 
-const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }> = {
-  classic: { icon: '☀️', bg: '#ffffff', accent: '#2481cc' },
-  dark: { icon: '🌑', bg: '#1a1a2e', accent: '#3b82f6', tag: 'NEW' },
-  ocean: { icon: '🌊', bg: '#0c1929', accent: '#22d3ee', tag: 'NEW' },
-  sunset: { icon: '🌅', bg: '#fef7ed', accent: '#ea580c', tag: 'NEW' },
-  forest: { icon: '🌲', bg: '#0a1f0a', accent: '#34d399', tag: 'NEW' },
-  mosaic: { icon: '🖼️', bg: '#faf8f5', accent: '#c45d3e', tag: 'NEW' },
-  command: { icon: '⌨️', bg: '#080808', accent: '#39ff14', tag: 'NEW' },
-  elder: { icon: '👴', bg: '#fffef7', accent: '#1a6b3c', tag: 'NEW' },
-  zen: { icon: '🍃', bg: '#f5f2eb', accent: '#6b8f71', tag: 'NEW' },
-  retro: { icon: '👾', bg: '#1a0a2e', accent: '#ff6ec7', tag: 'NEW' },
-  glass: { icon: '💎', bg: '#e8edf5', accent: '#4a7dff', tag: 'NEW' },
-  brutalist: { icon: '🔲', bg: '#ffffff', accent: '#ff0000', tag: 'NEW' },
+const themeIcons: Record<ThemeId, { icon: string; tag?: string }> = {
+  classic: { icon: '☀️' },
+  dark: { icon: '🌑', tag: 'NEW' },
+  ocean: { icon: '🌊', tag: 'NEW' },
+  sunset: { icon: '🌅', tag: 'NEW' },
+  forest: { icon: '🌲', tag: 'NEW' },
+  mosaic: { icon: '🖼️', tag: 'NEW' },
+  command: { icon: '⌨️', tag: 'NEW' },
+  elder: { icon: '👴', tag: 'NEW' },
+  zen: { icon: '🍃', tag: 'NEW' },
+  retro: { icon: '👾', tag: 'NEW' },
+  glass: { icon: '💎', tag: 'NEW' },
+  brutalist: { icon: '🔲', tag: 'NEW' },
 };
+
+const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }> = Object.fromEntries(
+  Object.entries(themeIcons).map(([id, { icon, tag }]) => [
+    id,
+    { icon, bg: THEME_COLORS[id]?.bg ?? '#ffffff', accent: THEME_COLORS[id]?.accent ?? '#2481cc', ...(tag ? { tag } : {}) },
+  ])
+) as Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }>;
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
   const { theme, setTheme, themes } = useTheme();

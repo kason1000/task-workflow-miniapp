@@ -5,6 +5,7 @@ import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { useLocale } from '../i18n/LocaleContext';
 import { VideoThumb } from './VideoThumb';
 import { X, Send, Clock, ChevronLeft, ChevronRight, Share2, Trash2 } from 'lucide-react';
+import { STATUS_COLORS, COLORS } from '../utils/colors';
 
 export function DetailImageViewer({
   imageUrl, isAnimating, onClose, allPhotos, currentPhotoIndex,
@@ -271,7 +272,6 @@ export function DetailImageViewer({
 
       {/* Bottom panel */}
       {(() => {
-        const STATUS_COLORS: Record<string, string> = { New: '#3b82f6', Received: '#f59e0b', Submitted: '#8b5cf6', Redo: '#ef4444', Completed: '#10b981', Archived: '#6b7280' };
         const doneName = task.doneBy ? (userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })) : null;
         const canDelete = (userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member');
         const currentFileId = mode === 'media' && mediaItems[currentPhotoIndex]?.fileId;
@@ -311,7 +311,7 @@ export function DetailImageViewer({
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
             background: 'rgba(10,10,10,0.96)',
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-            borderTop: `3px solid ${taskGroup?.color || '#3b82f6'}80`,
+            borderTop: `3px solid ${taskGroup?.color || COLORS.info}80`,
             opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
             transition: 'opacity 0.25s ease, transform 0.25s ease', transitionDelay: isVisible ? '0.08s' : '0s',
           }}>
@@ -320,14 +320,14 @@ export function DetailImageViewer({
               <span style={{
                 fontSize: '10px', fontWeight: 600, padding: '2px 7px',
                 borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0,
-                background: `${STATUS_COLORS[task.status] || '#6b7280'}18`,
-                color: STATUS_COLORS[task.status] || '#6b7280',
-                border: `1px solid ${STATUS_COLORS[task.status] || '#6b7280'}30`,
+                background: `${STATUS_COLORS[task.status] || COLORS.gray}18`,
+                color: STATUS_COLORS[task.status] || COLORS.gray,
+                border: `1px solid ${STATUS_COLORS[task.status] || COLORS.gray}30`,
               }}>
                 {t(`statusLabels.${task.status}`)}
               </span>
               {taskGroup && (() => {
-                const gc = taskGroup.color || '#3b82f6';
+                const gc = taskGroup.color || COLORS.info;
                 return (
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -383,7 +383,7 @@ export function DetailImageViewer({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px max(14px, env(safe-area-inset-right)) 4px max(14px, env(safe-area-inset-left))', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 10px))' }}>
               {mode === 'title' && (
                 <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
-                  style={{ flex: 1, height: '42px', fontSize: '13px', background: sending ? 'rgba(107,114,128,0.5)' : `${taskGroup?.color || '#3b82f6'}80`, color: 'white', border: 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : `0 2px 8px ${taskGroup?.color || '#3b82f6'}30` }}
+                  style={{ flex: 1, height: '42px', fontSize: '13px', background: sending ? 'rgba(107,114,128,0.5)' : `${taskGroup?.color || COLORS.info}80`, color: 'white', border: 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : `0 2px 8px ${taskGroup?.color || COLORS.info}30` }}
                 >{sending ? <><Clock size={16} /> ...</> : <><Send size={16} /> {t('taskDetail.sendToChat')}</>}</button>
               )}
 
@@ -401,7 +401,7 @@ export function DetailImageViewer({
 
                   {canDelete && currentFileId && !isCreatedPhoto && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeleteCurrent(); }} onTouchEnd={(e) => e.stopPropagation()}
-                      style={{ height: '42px', padding: '0 12px', background: 'rgba(239,68,68,0.7)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', flexShrink: 0, fontSize: '12px', fontWeight: 600 }}
+                      style={{ height: '42px', padding: '0 12px', background: 'rgba(239,68,68,0.7)' /* danger */, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', flexShrink: 0, fontSize: '12px', fontWeight: 600 }}
                     ><Trash2 size={16} /> {t('taskDetail.delete')}</button>
                   )}
                 </>

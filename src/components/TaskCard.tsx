@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Task, Group } from '../types';
 import { prepareTaskCard, type TaskCardDisplay } from '../designs/shared/taskDisplayData';
+import { STATUS_COLORS, COLORS } from '../utils/colors';
 
 interface TaskCardProps {
   task: Task;
@@ -12,15 +13,6 @@ interface TaskCardProps {
   formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
   isArchived?: boolean;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  New: '#3b82f6',
-  Received: '#f59e0b',
-  Submitted: '#8b5cf6',
-  Redo: '#ef4444',
-  Completed: '#10b981',
-  Archived: '#6b7280',
-};
 
 export const TaskCard = React.memo(function TaskCard({
   task,
@@ -49,8 +41,8 @@ export const TaskCard = React.memo(function TaskCard({
   };
 
   const archived = isArchived || d.isArchived;
-  const statusColor = STATUS_COLORS[d.status] || '#6b7280';
-  const gc = d.groupColor || '#6b7280';
+  const statusColor = STATUS_COLORS[d.status] || COLORS.gray;
+  const gc = d.groupColor || COLORS.defaultGroup;
 
   // ---- Archived card — compact with matching style ----
   if (archived) {
@@ -203,7 +195,7 @@ export const TaskCard = React.memo(function TaskCard({
               height: '100%', borderRadius: '2px',
               width: `${d.progressPercent}%`,
               background: d.progressPercent === 100
-                ? '#10b981'
+                ? COLORS.success
                 : gc,
               transition: 'width 0.4s ease',
             }} />

@@ -11,6 +11,7 @@ import { DetailImageViewer } from './DetailImageViewer';
 import { TaskInfoCard } from './TaskInfoCard';
 import { TaskGroupCard } from './TaskGroupCard';
 import { Clock, Share2, Trash2 } from 'lucide-react';
+import { COLORS } from '../utils/colors';
 
 interface TaskDetailProps {
   task: Task;
@@ -553,7 +554,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 <div style={{
                   height: '100%',
                   width: `${(task.completedSets / task.requireSets) * 100}%`,
-                  background: task.completedSets === task.requireSets ? '#10b981' : (taskGroup?.color || 'var(--tg-theme-button-color)'),
+                  background: task.completedSets === task.requireSets ? COLORS.success : (taskGroup?.color || 'var(--tg-theme-button-color)'),
                   transition: 'width 0.3s'
                 }} />
               </div>
@@ -573,8 +574,8 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                   padding: '6px 12px',
                   fontSize: '12px',
                   background: 'var(--tg-theme-secondary-bg-color)',
-                  color: selectionMode ? '#ef4444' : 'var(--tg-theme-button-color)',
-                  border: selectionMode ? '1.5px solid #ef4444' : '1.5px solid var(--tg-theme-button-color)',
+                  color: selectionMode ? COLORS.danger : 'var(--tg-theme-button-color)',
+                  border: selectionMode ? `1.5px solid ${COLORS.danger}` : '1.5px solid var(--tg-theme-button-color)',
                   borderRadius: '10px',
                   cursor: 'pointer',
                   flexShrink: 0
@@ -658,13 +659,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             marginBottom: '12px',
             padding: '10px 12px',
             background: 'var(--tg-theme-secondary-bg-color)',
-            border: '1.5px solid #ef4444',
+            border: `1.5px solid ${COLORS.danger}`,
             borderRadius: '10px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}>
-            <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: 600 }}>
+            <span style={{ color: COLORS.danger, fontSize: '13px', fontWeight: 600 }}>
               {t('taskDetail.selectedCount', { count: selectedMedia.size })}
             </span>
             <button
@@ -674,9 +675,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 height: '36px',
                 padding: '0 14px',
                 fontSize: '13px',
-                background: 'rgba(239,68,68,0.15)',
-                color: '#ef4444',
-                border: '1px solid rgba(239,68,68,0.3)',
+                background: 'rgba(239,68,68,0.15)' /* danger */,
+                color: COLORS.danger,
+                border: '1px solid rgba(239,68,68,0.3)' /* danger */,
                 borderRadius: '10px',
                 cursor: 'pointer',
                 fontWeight: 600,

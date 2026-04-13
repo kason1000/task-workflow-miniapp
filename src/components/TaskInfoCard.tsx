@@ -2,15 +2,7 @@ import { useRef } from 'react';
 import { Task, Group } from '../types';
 import WebApp from '@twa-dev/sdk';
 import { getGroupColor } from '../utils/taskStyles';
-
-const STATUS_COLORS: Record<string, string> = {
-  New: '#3b82f6',
-  Received: '#f59e0b',
-  Submitted: '#8b5cf6',
-  Redo: '#ef4444',
-  Completed: '#10b981',
-  Archived: '#6b7280',
-};
+import { STATUS_COLORS, COLORS } from '../utils/colors';
 
 interface TaskInfoCardProps {
   task: Task;
@@ -109,9 +101,9 @@ export function TaskInfoCard({
               borderRadius: '10px',
               whiteSpace: 'nowrap',
               flexShrink: 0,
-              background: `${STATUS_COLORS[task.status] || '#6b7280'}18`,
-              color: STATUS_COLORS[task.status] || '#6b7280',
-              border: `1px solid ${STATUS_COLORS[task.status] || '#6b7280'}30`,
+              background: `${STATUS_COLORS[task.status] || COLORS.gray}18`,
+              color: STATUS_COLORS[task.status] || COLORS.gray,
+              border: `1px solid ${STATUS_COLORS[task.status] || COLORS.gray}30`,
             }}>
               {t(`statusLabels.${task.status}`)}
             </span>

@@ -4,6 +4,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { statusColors } from '../utils/taskStyles';
 import { prepareTaskCard } from '../designs/shared/taskDisplayData';
 import { X, FileText, Send, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { STATUS_COLORS, COLORS } from '../utils/colors';
 
 interface ListImageViewerProps {
   imageUrl: string;
@@ -445,7 +446,7 @@ export function ListImageViewer({
       {/* Bottom panel */}
       {currentTask && (() => {
         const cd = prepareTaskCard(currentTask, userNames, groups);
-        const statusColor = ({ New:'#3b82f6', Received:'#f59e0b', Submitted:'#8b5cf6', Redo:'#ef4444', Completed:'#10b981', Archived:'#6b7280' } as Record<string,string>)[cd.status] || '#6b7280';
+        const statusColor = STATUS_COLORS[cd.status] || COLORS.gray;
         const gc = cd.groupColor || statusColor;
 
         return (

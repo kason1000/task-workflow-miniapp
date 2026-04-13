@@ -1,6 +1,7 @@
 import { Task } from '../types';
 import { hapticFeedback } from '../utils/telegram';
 import { Share2 } from 'lucide-react';
+import { COLORS } from '../utils/colors';
 
 interface MediaGridProps {
   task: Task;
@@ -170,7 +171,7 @@ export function MediaGrid({
                           justifyContent: 'center',
                           fontSize: '28px',
                           border: selectionMode && isSelected
-                            ? '3px solid #ef4444'
+                            ? `3px solid ${COLORS.danger}`
                             : '2px solid var(--tg-theme-button-color)',
                           overflow: 'hidden',
                           opacity: selectionMode && !canDelete ? 0.5 : 1
@@ -218,7 +219,7 @@ export function MediaGrid({
                             width: '24px',
                             height: '24px',
                             borderRadius: '50%',
-                            background: isSelected ? '#ef4444' : 'rgba(0,0,0,0.6)',
+                            background: isSelected ? COLORS.danger : 'rgba(0,0,0,0.6)',
                             border: '2px solid white',
                             display: 'flex',
                             alignItems: 'center',

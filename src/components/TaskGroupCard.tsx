@@ -1,4 +1,5 @@
 import { Group } from '../types';
+import { COLORS } from '../utils/colors';
 
 interface TaskGroupCardProps {
   displayData: {
@@ -12,7 +13,7 @@ interface TaskGroupCardProps {
 export function TaskGroupCard({ displayData, taskGroup, loadingGroup, t }: TaskGroupCardProps) {
   if (loadingGroup || !taskGroup) return null;
 
-  const gc = taskGroup.color || '#6b7280';
+  const gc = taskGroup.color || COLORS.defaultGroup;
 
   return (
     <div className="card" style={{
