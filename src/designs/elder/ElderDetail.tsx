@@ -34,17 +34,23 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
   const detail = useTaskDetailData(task, userRole, onTaskUpdated, onBack);
 
   const {
-    mediaCache, userNames, taskGroup,
-    fullscreenImage, setFullscreenImage,
-    allMediaUrls, currentMediaIndex, setCurrentMediaIndex,
+    mediaCache,
+    userNames,
+    taskGroup,
+    fullscreenImage,
+    setFullscreenImage,
+    allMediaUrls,
+    currentMediaIndex,
+    setCurrentMediaIndex,
     getMediaUrl,
-    availableTransitions, handleTransition, handleDelete, transitioning,
+    availableTransitions,
+    handleTransition,
+    handleDelete,
+    transitioning,
   } = detail;
 
   const heroUrl = task.createdPhoto?.file_id ? getMediaUrl(task.createdPhoto.file_id) : undefined;
-  const progressPct = task.requireSets > 0
-    ? Math.round((task.completedSets / task.requireSets) * 100)
-    : 0;
+  const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
 
   const doTransition = async (status: string) => {
     const label = TRANSITION_LABELS[status]?.label || status;
@@ -68,7 +74,10 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       <div className="elder-detail-header">
         <button
           className="elder-detail-back"
-          onClick={() => { hapticFeedback.light(); onBack(); }}
+          onClick={() => {
+            hapticFeedback.light();
+            onBack();
+          }}
         >
           Go Back
         </button>
@@ -100,39 +109,28 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       {/* Info section */}
       <div className="elder-detail-section">
         <div className="elder-detail-section-title">Task Information</div>
-
         <div className="elder-detail-row">
           <span className="elder-detail-label">Created Date</span>
           <span className="elder-detail-value">
             {formatDate(task.createdAt, { year: 'numeric', month: 'long', day: 'numeric' })}
           </span>
         </div>
-
-        {task.createdBy && (
-          <div className="elder-detail-row">
-            <span className="elder-detail-label">Created By</span>
-            <span className="elder-detail-value">
-              {userNames[task.createdBy] || `User ${task.createdBy}`}
-            </span>
-          </div>
-        )}
-
         {task.doneBy && (
           <div className="elder-detail-row">
-            <span className="elder-detail-label">Submitted By</span>
+            <span className="elder-detail-label">
+              {task.status === 'Submitted' || task.status === 'Redo' ? 'Submitted By' : 'Uploaded By'}
+            </span>
             <span className="elder-detail-value">
-              {task.doneByName || userNames[task.doneBy] || `User ${task.doneBy}`}
+              {task.doneByName || userNames[task.doneBy]}
             </span>
           </div>
         )}
-
         {taskGroup && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">Group</span>
             <span className="elder-detail-value">{taskGroup.name}</span>
           </div>
         )}
-
         {task.requireSets > 0 && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">Progress</span>
@@ -146,7 +144,6 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
             </div>
           </div>
         )}
-
         {task.submittedAt && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">Submitted Date</span>
@@ -155,7 +152,6 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
             </span>
           </div>
         )}
-
         {task.labels?.video && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">Labels</span>
@@ -168,15 +164,12 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       {task.sets && task.sets.length > 0 && (
         <div className="elder-detail-section">
           <div className="elder-detail-section-title">Photos & Videos</div>
-
           {task.sets.map((set, setIdx) => {
             const allMedia = [
               ...(set.photos || []).map(p => ({ fileId: p.file_id, type: 'photo' as const })),
               ...(set.video ? [{ fileId: set.video.file_id, type: 'video' as const }] : []),
             ];
-
             if (allMedia.length === 0) return null;
-
             return (
               <div key={setIdx} style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '12px' }}>
@@ -246,7 +239,6 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
               </button>
             );
           })}
-
           {/* Delete for Admin */}
           {userRole === 'Admin' && (
             <button
@@ -288,11 +280,15 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       {/* Loading overlay */}
       {transitioning && (
         <div style={{
-          position: 'fixed', inset: 0,
+          position: 'fixed',
+          inset: 0,
           background: 'rgba(255, 255, 255, 0.85)',
           zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '24px', fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '24px',
+          fontWeight: 700,
         }}>
           Processing...
         </div>
