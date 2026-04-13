@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { Task, Group } from '../types';
 import { prepareTaskCard, type TaskCardDisplay } from '../designs/shared/taskDisplayData';
 import { STATUS_COLORS, COLORS } from '../utils/colors';
+import { Video, Image } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -68,7 +69,7 @@ export const TaskCard = React.memo(function TaskCard({
             <img src={thumbnailUrl} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageError(true)}
               style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s' }} />
           )}
-          {!thumbnailUrl && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', opacity: 0.4 }}>📷</span>}
+          {!thumbnailUrl && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}><Image size={20} /></span>}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -133,14 +134,14 @@ export const TaskCard = React.memo(function TaskCard({
           }} />
         )}
         {!thumbnailUrl && (
-          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', opacity: 0.4 }}>📷</span>
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}><Image size={24} /></span>
         )}
         {d.hasVideo && (
           <div style={{
             position: 'absolute', bottom: '3px', right: '3px',
             background: 'rgba(0,0,0,0.6)', borderRadius: '4px',
             padding: '1px 4px', fontSize: '10px', color: 'white',
-          }}>🎥</div>
+          }}><Video size={10} /></div>
         )}
       </div>
 
