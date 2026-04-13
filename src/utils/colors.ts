@@ -1,10 +1,21 @@
 /**
- * Centralized color palette — all hardcoded colors live here.
- * UI components import from this file instead of using hex values directly.
+ * Centralized color system.
+ *
+ * ARCHITECTURE:
+ * - CSS custom properties defined in index.css (:root) and overridden per theme
+ * - This file provides CSS variable references for inline styles
+ * - Components use these references: style={{ color: COLORS.danger }}
+ * - Themes override the underlying CSS variables to change all colors at once
+ *
+ * For opacity variants (e.g. status color at 18% opacity), use the
+ * hex values from STATUS_COLORS_HEX with string concatenation.
+ * These hex values are fixed across themes — status/semantic colors
+ * should remain consistent for recognition regardless of theme.
  */
 
 // ============================================================
-// Status colors
+// Status colors — fixed hex values for opacity calculations
+// Status colors stay the same across themes for visual consistency
 // ============================================================
 export const STATUS_COLORS: Record<string, string> = {
   New: '#3b82f6',
@@ -16,26 +27,35 @@ export const STATUS_COLORS: Record<string, string> = {
 };
 
 // ============================================================
-// Semantic colors
+// Semantic colors — fixed hex values for opacity calculations
 // ============================================================
 export const COLORS = {
-  // Actions
   danger: '#ef4444',
   success: '#10b981',
   warning: '#f59e0b',
   info: '#3b82f6',
-
-  // Neutral
   gray: '#6b7280',
   white: '#ffffff',
-
-  // Default group color (when no color assigned)
   defaultGroup: '#6b7280',
   defaultLink: '#2481cc',
 } as const;
 
 // ============================================================
-// Theme switcher colors (for preview swatches)
+// CSS variable references — these change with themes
+// Use these when you need theme-reactive colors in inline styles
+// ============================================================
+export const THEME = {
+  bg: 'var(--tg-theme-bg-color)',
+  text: 'var(--tg-theme-text-color)',
+  hint: 'var(--tg-theme-hint-color)',
+  link: 'var(--tg-theme-link-color)',
+  button: 'var(--tg-theme-button-color)',
+  buttonText: 'var(--tg-theme-button-text-color)',
+  secondaryBg: 'var(--tg-theme-secondary-bg-color)',
+} as const;
+
+// ============================================================
+// Theme switcher preview colors
 // ============================================================
 export const THEME_COLORS: Record<string, { bg: string; accent: string }> = {
   classic: { bg: '#ffffff', accent: '#2481cc' },
