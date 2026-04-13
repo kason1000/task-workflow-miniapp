@@ -31,12 +31,12 @@ describe('resolveLocaleFromLanguageCode', () => {
 describe('t() — translation lookup', () => {
   it('should return English string for known key', () => {
     expect(t('en', 'common.loading')).toBe('Loading...');
-    expect(t('en', 'common.back')).toBe('← Back');
+    expect(t('en', 'common.back')).toBe('Back');
   });
 
   it('should return Chinese string for known key', () => {
     expect(t('zh', 'common.loading')).toBe('加载中…');
-    expect(t('zh', 'common.back')).toBe('← 返回');
+    expect(t('zh', 'common.back')).toBe('返回');
   });
 
   it('should return status labels in both locales', () => {
