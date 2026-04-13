@@ -722,6 +722,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         onDelete={handleDelete}
         onSendToChat={handleSendToChat}
         t={t}
+        groupColor={taskGroup?.color}
       />
 
 

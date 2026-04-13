@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Task } from '../types';
 import { api } from '../services/api';
-import { Share2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Share2, Trash2, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
@@ -875,66 +875,69 @@ export function GalleryOverlay({
             disabled={actionLoading}
             style={{
               flex: 1,
-              padding: '12px',
-              background: actionLoading ? 'rgba(107, 114, 128, 0.9)' : 'rgba(59, 130, 246, 0.9)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
+              height: '42px',
+              background: actionLoading ? 'rgba(107,114,128,0.5)' : 'rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.85)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: actionLoading ? 'not-allowed' : 'pointer'
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: actionLoading ? 'not-allowed' : 'pointer',
             }}
           >
-            {actionLoading ? '⏳' : <Share2 size={18} />}
+            {actionLoading ? <Clock size={16} /> : <Share2 size={14} />}
             {actionLoading ? t('gallery.shareLoading') : t('gallery.shareSet', { index: currentSetIndex + 1 })}
           </button>
-          
+
           {canDelete && (
             <>
               <button
                 onClick={handleDeleteCurrentMedia}
                 disabled={actionLoading}
                 style={{
-                  padding: '12px',
-                  background: 'rgba(239, 68, 68, 0.85)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
+                  height: '42px',
+                  width: '48px',
+                  background: 'rgba(239,68,68,0.15)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: '48px',
-                  cursor: actionLoading ? 'not-allowed' : 'pointer'
+                  flexShrink: 0,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
                 }}
                 title={t('gallery.deleteMediaTitle')}
               >
-                <Trash2 size={18} />
+                <Trash2 size={16} />
               </button>
 
               <button
                 onClick={handleDeleteCurrentSet}
                 disabled={actionLoading}
                 style={{
-                  padding: '12px 14px',
-                  background: 'rgba(239, 68, 68, 0.95)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
+                  height: '42px',
+                  padding: '0 12px',
+                  background: 'rgba(239,68,68,0.15)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '4px',
                   fontSize: '12px',
-                  fontWeight: '500',
-                  cursor: actionLoading ? 'not-allowed' : 'pointer'
+                  fontWeight: 600,
+                  flexShrink: 0,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
                 }}
                 title={t('gallery.deleteSetTitle')}
               >
-                <Trash2 size={16} />
+                <Trash2 size={14} />
                 {t('gallery.deleteSetButton')}
               </button>
             </>
