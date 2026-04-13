@@ -111,7 +111,7 @@ export const TaskCard = React.memo(function TaskCard({
       display: 'flex', gap: '10px',
       padding: '10px',
       background: 'var(--tg-theme-secondary-bg-color)',
-      borderRadius: '12px',
+      borderRadius: '12px 8px 8px 12px',
       minHeight: '88px',
       borderLeft: `4px solid ${gc}80`,
     }}>

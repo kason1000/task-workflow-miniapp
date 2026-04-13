@@ -536,8 +536,8 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                     style={{
                       position: 'absolute',
                       right: 0, top: 0, bottom: 0,
-                      width: '64px',
-                      padding: '0 0 0 20px',
+                      width: '76px',
+                      padding: '0 0 0 24px',
                       fontSize: '10px',
                       display: 'flex',
                       flexDirection: 'column',
@@ -575,7 +575,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                     position: 'relative',
                     zIndex: 1,
                     cursor: 'pointer',
-                    marginRight: !filter.showArchived ? '44px' : 0,
+                    marginRight: !filter.showArchived ? '52px' : 0,
                   }}
                 >
                   <TaskCard
