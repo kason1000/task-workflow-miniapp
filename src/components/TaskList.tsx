@@ -517,21 +517,24 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
 
       {tasks.length > 0 && (
         <div>
-          {tasks.map((task) => (
+          {tasks.map((task) => {
+            const taskGroup = groups.find(g => g.id === task.groupId);
+            const gc = taskGroup?.color || '#6b7280';
+            return (
             <div
               key={task.id}
               style={{
                 marginBottom: '8px',
                 display: 'flex',
-                gap: '4px',
+                gap: '0',
                 alignItems: 'stretch',
               }}
             >
                 {/* Task Card (clickable area) */}
-                <div 
-                  onClick={() => handleTaskClick(task)} 
-                  style={{ 
-                    flex: 1, 
+                <div
+                  onClick={() => handleTaskClick(task)}
+                  style={{
+                    flex: 1,
                     cursor: 'pointer',
                     minWidth: 0
                   }}
@@ -548,43 +551,48 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                   />
                 </div>
 
-                {/* Send to Chat Button */}
-                <button
-                  onClick={(e) => handleSendToChat(task.id, e)}
-                  disabled={sending[task.id]}
-                  style={{
-                    width: '60px',  // Increased width to accommodate full text
-                    padding: '4px 4px',
-                    fontSize: '10px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '2px',
-                    background: sending[task.id] 
-                      ? 'var(--tg-theme-secondary-bg-color)' 
-                      : 'var(--tg-theme-button-color)',
-                    color: sending[task.id]
-                      ? 'var(--tg-theme-hint-color)'
-                      : 'var(--tg-theme-button-text-color)',
-                    flexShrink: 0,
-                    lineHeight: '1.2',
-                    whiteSpace: 'normal',
-                    textAlign: 'center',
-                    borderRadius: '6px',
-                    border: 'none',
-                    cursor: sending[task.id] ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>
-                    {sending[task.id] ? '⏳' : '💬'}
-                  </span>
-                  <span style={{ fontSize: '9px', fontWeight: '500' }}>
-                    {t('taskList.sendButton')}
-                  </span>
-                </button>
+                {/* Send to Chat Button — matches left border color */}
+                {!filter.showArchived && (
+                  <button
+                    onClick={(e) => handleSendToChat(task.id, e)}
+                    disabled={sending[task.id]}
+                    style={{
+                      width: '48px',
+                      padding: '4px',
+                      fontSize: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '2px',
+                      background: sending[task.id]
+                        ? 'var(--tg-theme-secondary-bg-color)'
+                        : 'transparent',
+                      color: sending[task.id]
+                        ? 'var(--tg-theme-hint-color)'
+                        : gc,
+                      flexShrink: 0,
+                      lineHeight: '1.2',
+                      whiteSpace: 'normal',
+                      textAlign: 'center',
+                      borderRadius: '0 12px 12px 0',
+                      border: `2px solid ${gc}40`,
+                      borderLeft: 'none',
+                      cursor: sending[task.id] ? 'not-allowed' : 'pointer',
+                      transition: 'background 0.15s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: '18px' }}>
+                      {sending[task.id] ? '⏳' : '💬'}
+                    </span>
+                    <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.7 }}>
+                      {t('taskList.sendButton')}
+                    </span>
+                  </button>
+                )}
             </div>
-          ))}
+            );
+          })}
 
           {/* Loading indicator for "Load More" */}
           {loadingMore && (
