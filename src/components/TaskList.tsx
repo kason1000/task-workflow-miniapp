@@ -551,13 +551,13 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                   />
                 </div>
 
-                {/* Send to Chat Button — matches left border color */}
+                {/* Send to Chat Button — curves like a right border */}
                 {!filter.showArchived && (
                   <button
                     onClick={(e) => handleSendToChat(task.id, e)}
                     disabled={sending[task.id]}
                     style={{
-                      width: '48px',
+                      width: '54px',
                       padding: '4px',
                       fontSize: '10px',
                       display: 'flex',
@@ -573,8 +573,9 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                       lineHeight: '1.2',
                       whiteSpace: 'normal',
                       textAlign: 'center',
-                      borderRadius: '0 12px 12px 0',
+                      borderRadius: '12px',
                       border: 'none',
+                      marginLeft: '-8px',
                       cursor: sending[task.id] ? 'not-allowed' : 'pointer',
                       transition: 'background 0.15s ease',
                       opacity: sending[task.id] ? 0.5 : 1,
