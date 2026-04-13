@@ -566,26 +566,24 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                       justifyContent: 'center',
                       gap: '2px',
                       background: sending[task.id]
-                        ? 'var(--tg-theme-secondary-bg-color)'
-                        : `${gc}18`,
-                      color: sending[task.id]
                         ? 'var(--tg-theme-hint-color)'
-                        : gc,
+                        : `${gc}50`,
+                      color: 'white',
                       flexShrink: 0,
                       lineHeight: '1.2',
                       whiteSpace: 'normal',
                       textAlign: 'center',
                       borderRadius: '0 12px 12px 0',
-                      border: `2px solid ${gc}40`,
-                      borderLeft: 'none',
+                      border: 'none',
                       cursor: sending[task.id] ? 'not-allowed' : 'pointer',
                       transition: 'background 0.15s ease',
+                      opacity: sending[task.id] ? 0.5 : 1,
                     }}
                   >
                     <span style={{ fontSize: '18px' }}>
                       {sending[task.id] ? '⏳' : '💬'}
                     </span>
-                    <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.7 }}>
+                    <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.85 }}>
                       {t('taskList.sendButton')}
                     </span>
                   </button>

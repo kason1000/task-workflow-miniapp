@@ -59,8 +59,7 @@ export const TaskCard = React.memo(function TaskCard({
         display: 'flex', alignItems: 'center', gap: '10px',
         padding: '8px 10px',
         borderRadius: '12px',
-        background: `${gc}08`,
-        border: `1px solid ${gc}20`,
+        background: 'var(--tg-theme-secondary-bg-color)',
         borderLeft: `4px solid ${gc}50`,
         marginBottom: '6px',
       }}>
@@ -111,12 +110,11 @@ export const TaskCard = React.memo(function TaskCard({
     <div style={{
       display: 'flex', gap: '10px',
       padding: '10px',
-      background: `${gc}08`,
-      borderRadius: '12px',
+      background: 'var(--tg-theme-secondary-bg-color)',
+      borderRadius: '12px 0 0 12px',
       minHeight: '88px',
       position: 'relative',
       overflow: 'hidden',
-      border: `1px solid ${gc}20`,
       borderLeft: `4px solid ${gc}50`,
     }}>
       {/* Thumbnail */}
