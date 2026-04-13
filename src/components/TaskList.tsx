@@ -168,7 +168,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       if (groupId) {
         // For group-specific tasks, we'll fetch all and filter, but implement pagination if needed
         const data = await api.getGroupTasks(groupId);
-        fetchedTasks = data.tasks || [];
+        fetchedTasks = Array.isArray(data?.tasks) ? data.tasks : [];
         
         // Apply status filter client-side
         if (statusFilter) {
@@ -220,7 +220,7 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
           fetchArchived ? filter.submittedMonth : undefined,
           fetchArchived ? filter.doneBy : undefined
         );
-        fetchedTasks = result.tasks;
+        fetchedTasks = Array.isArray(result?.tasks) ? result.tasks : [];
 
         if (fetchArchived) {
           if (result.totalCount !== undefined) setArchivedTotalCount(result.totalCount);

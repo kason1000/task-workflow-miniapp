@@ -185,7 +185,7 @@ export function useTaskListData(
       let fetchedTasks: Task[];
       if (groupId) {
         const data = await api.getGroupTasks(groupId);
-        fetchedTasks = data.tasks || [];
+        fetchedTasks = Array.isArray(data?.tasks) ? data.tasks : [];
         if (statusFilter) fetchedTasks = fetchedTasks.filter(t => t.status === statusFilter);
         if (fetchArchived) fetchedTasks = fetchedTasks.filter(t => t.status === 'Archived');
         else fetchedTasks = fetchedTasks.filter(t => t.status !== 'Archived');
@@ -210,7 +210,7 @@ export function useTaskListData(
           fetchArchived ? filter.submittedMonth : undefined,
           fetchArchived ? filter.doneBy : undefined
         );
-        fetchedTasks = result.tasks;
+        fetchedTasks = Array.isArray(result?.tasks) ? result.tasks : [];
         if (fetchArchived) {
           if (result.totalCount !== undefined) setArchivedTotalCount(result.totalCount);
           if (result.submitterCounts) setSubmitterCounts(result.submitterCounts);
