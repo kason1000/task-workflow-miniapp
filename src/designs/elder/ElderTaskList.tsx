@@ -1,6 +1,7 @@
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskCard, getSubmitterFilterOptions } from '../shared/taskDisplayData';
 import { Task, TaskStatus } from '../../types';
 import { hapticFeedback, showAlert } from '../../utils/telegram';
 import { api } from '../../services/api';
@@ -94,8 +95,8 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
   if (loading && tasks.length === 0) {
     return (
       <div className="elder-loading">
-        <span>Loading tasks...</span>
-        <span className="elder-tap-hint">Please wait</span>
+        <span>{t('taskList.loading')}</span>
+        <span className="elder-tap-hint">{t('common.loading')}</span>
       </div>
     );
   }
@@ -103,7 +104,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
   if (error) {
     return (
       <div className="elder-empty">
-        <div className="elder-empty-text">Error: {error}</div>
+        <div className="elder-empty-text">{t('taskList.errorPrefix', { error })}</div>
       </div>
     );
   }
@@ -112,7 +113,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
     <div>
       {/* Filters */}
       <div className="elder-filters">
-        <div className="elder-filter-label">Filter by Status:</div>
+        <div className="elder-filter-label">{t('taskList.filterByStatus')}</div>
         <div className="elder-filter-group">
           {statusFilters.map(opt => (
             <button
@@ -144,13 +145,13 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                   hapticFeedback.light();
                 }}
               >
-                {STATUS_EMOJI.Archived} Archived {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
+                {STATUS_EMOJI.Archived} {t('statusLabels.Archived')} {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
               </button>
             </div>
 
             {filter.showArchived && (
               <div style={{ marginTop: '8px' }}>
-                <div className="elder-filter-label">Filter by Month:</div>
+                <div className="elder-filter-label">{t('taskList.filterByMonth')}</div>
                 <select
                   className="elder-filter-select"
                   value={filter.submittedMonth || ''}
@@ -161,7 +162,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                     }));
                   }}
                 >
-                  <option value="">All Months</option>
+                  <option value="">{t('taskList.allMonths')}</option>
                   {getMonthOptions().map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -171,7 +172,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
 
             {filter.showArchived && Object.keys(submitterCounts).length > 0 && (
               <div style={{ marginTop: '8px' }}>
-                <div className="elder-filter-label">Filter by Submitter:</div>
+                <div className="elder-filter-label">{t('taskList.filterBySubmitter')}</div>
                 <select
                   className="elder-filter-select"
                   value={filter.doneBy || ''}
@@ -182,10 +183,10 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                     }));
                   }}
                 >
-                  <option value="">All Submitters</option>
-                  {Object.entries(submitterCounts).map(([userId, count]) => (
-                    <option key={userId} value={userId}>
-                      {userNames[parseInt(userId)] || userId} ({count})
+                  <option value="">{t('taskList.allSubmitters')}</option>
+                  {getSubmitterFilterOptions(submitterCounts, userNames).map(opt => (
+                    <option key={opt.userId} value={opt.userId}>
+                      {opt.name} ({opt.count})
                     </option>
                   ))}
                 </select>
@@ -198,28 +199,23 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
       {/* Task list */}
       {tasks.length === 0 ? (
         <div className="elder-empty">
-          <div className="elder-empty-text">No tasks found</div>
-          <div className="elder-tap-hint">Try a different filter</div>
+          <div className="elder-empty-text">{t('taskList.empty')}</div>
+          <div className="elder-tap-hint">{t('taskList.tryDifferentFilter')}</div>
         </div>
       ) : (
         tasks.map((task) => {
-          const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
-          const isArchived = task.status === 'Archived';
-          const group = groupMap.get(task.groupId);
-          // Only show name if someone has submitted/uploaded — not for new/received tasks
-          const submitterName = task.doneBy ? userNames[task.doneBy] : undefined;
-          // Never show "User 123..." fallback — only real names
+          const d = prepareTaskCard(task, userNames, groups);
+          const thumbUrl = d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined;
 
           return (
             <div
               key={task.id}
-              className={`elder-task-card ${isArchived ? 'elder-archived-card' : ''}`}
-              style={group?.color ? {
-                '--group-color': group.color,
-                '--group-bg': `${group.color}12`,
+              className={`elder-task-card ${d.isArchived ? 'elder-archived-card' : ''}`}
+              style={d.groupColor ? {
+                '--group-color': d.groupColor,
+                '--group-bg': `${d.groupColor}12`,
               } as React.CSSProperties : undefined}
-              data-group-color={group?.color || undefined}
+              data-group-color={d.groupColor || undefined}
               onClick={() => {
                 hapticFeedback.medium();
                 onTaskClick(task);
@@ -229,7 +225,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                 <img
                   className="elder-task-thumb"
                   src={thumbUrl}
-                  alt={task.title}
+                  alt={d.title}
                   onClick={(e) => {
                     e.stopPropagation();
                     openFullscreen(task, thumbUrl);
@@ -240,35 +236,35 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
               )}
 
               <div className="elder-task-info">
-                <div className="elder-task-title">{task.title}</div>
+                <div className="elder-task-title">{d.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span className={`elder-status-badge elder-status--${task.status.toLowerCase()}`}>
-                    {STATUS_EMOJI[task.status] || ''} {t(`statusLabels.${task.status}`)}
+                  <span className={`elder-status-badge elder-status--${d.status.toLowerCase()}`}>
+                    {STATUS_EMOJI[d.status] || ''} {t(`statusLabels.${d.status}`)}
                   </span>
-                  {group && (
+                  {d.groupName && (
                     <span
                       className="elder-group-badge"
-                      style={group.color ? {
-                        background: `${group.color}18`,
-                        border: `1px solid ${group.color}40`,
-                        color: group.color,
+                      style={d.groupColor ? {
+                        background: `${d.groupColor}18`,
+                        border: `1px solid ${d.groupColor}40`,
+                        color: d.groupColor,
                       } : {}}
                     >
-                      {group.name}
+                      {d.groupName}
                     </span>
                   )}
                 </div>
                 <div className="elder-task-meta">
-                  {submitterName && !submitterName.startsWith('User ') && <span>{submitterName}</span>}
-                  <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
+                  {d.submitterName && <span>{d.submitterName}</span>}
+                  <span>{formatDate(d.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
-                {task.requireSets > 0 && (
+                {d.requireSets > 0 && (
                   <div className="elder-progress-container">
                     <div className="elder-progress-bar">
-                      <div className="elder-progress-fill" style={{ width: `${progressPct}%` }} />
+                      <div className="elder-progress-fill" style={{ width: `${d.progressPercent}%` }} />
                     </div>
                     <span className="elder-progress-text">
-                      {task.completedSets}/{task.requireSets}
+                      {d.progressLabel}
                     </span>
                   </div>
                 )}
@@ -282,7 +278,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
       {hasMore && tasks.length > 0 && (
         <div className="elder-load-more">
           {loadingMore ? (
-            <span style={{ fontSize: '16px', color: 'var(--elder-hint)' }}>Loading more...</span>
+            <span style={{ fontSize: '16px', color: 'var(--elder-hint)' }}>{t('taskList.loadingMore')}</span>
           ) : (
             <button
               className="elder-load-more-btn"
@@ -291,7 +287,7 @@ export function ElderTaskList({ onTaskClick, groupId, refreshKey }: ElderTaskLis
                 hapticFeedback.light();
               }}
             >
-              Load More Tasks
+              {t('taskList.loadMore')}
             </button>
           )}
         </div>

@@ -95,13 +95,13 @@ export function RetroLayout({
                 className={`retro-tab-btn ${activeTab === 'tasks' ? 'active' : ''}`}
                 onClick={() => handleTabSwitch('tasks')}
               >
-                TASKS
+                {t('app.menuTasks')}
               </button>
               <button
                 className={`retro-tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
                 onClick={() => handleTabSwitch('groups')}
               >
-                GROUPS
+                {t('app.menuGroups')}
               </button>
             </>
           )}

@@ -1,7 +1,7 @@
-import { resolveUserName } from '../shared/transitionHelpers';
 import { Task } from '../../types';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { useLocale } from '../../i18n/LocaleContext';
 
 export interface BrutalistDetailProps {
@@ -38,12 +38,9 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
     availableTransitions, handleTransition, handleDelete, transitioning,
   } = detail;
 
-  const heroFileId = task.createdPhoto?.file_id;
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
+  const heroFileId = d.createdPhotoFileId;
   const heroUrl = heroFileId ? getMediaUrl(heroFileId) : undefined;
-
-  const pct = task.requireSets > 0
-    ? Math.round((task.completedSets / task.requireSets) * 100)
-    : 0;
 
   const openImage = (url: string) => {
     const idx = allMediaUrls.indexOf(url);
@@ -109,18 +106,18 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
       </div>
 
       {/* Progress */}
-      {task.requireSets > 0 && (
+      {d.requireSets > 0 && (
         <div className="brutal-detail-progress">
           <div>
-            <div className="brutal-detail-progress-num">{pct}%</div>
+            <div className="brutal-detail-progress-num">{d.progressPercent}%</div>
             <div className="brutal-detail-progress-label">
-              {task.completedSets}/{task.requireSets} SETS
+              {d.progressLabel} SETS
             </div>
           </div>
           <div className="brutal-detail-progress-bar-wrap">
             <div
               className="brutal-detail-progress-bar-fill"
-              style={{ width: `${pct}%` }}
+              style={{ width: `${d.progressPercent}%` }}
             />
           </div>
         </div>
@@ -135,20 +132,20 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
           </div>
         </div>
 
-        {task.createdBy && (
+        {d.createdByName && (
           <div className="brutal-detail-kv">
             <div className="brutal-detail-key">CREATOR</div>
             <div className="brutal-detail-value">
-              {userNames[task.createdBy] || `USER ${task.createdBy}`}
+              {d.createdByName}
             </div>
           </div>
         )}
 
-        {task.doneBy && (
+        {d.submitterName && (
           <div className="brutal-detail-kv">
             <div className="brutal-detail-key">DONE BY</div>
             <div className="brutal-detail-value">
-              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
+              {d.submitterName}
             </div>
           </div>
         )}
@@ -173,9 +170,9 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
       </div>
 
       {/* Group info */}
-      {taskGroup && (
+      {d.groupName && (
         <div className="brutal-group-bar">
-          GROUP: {taskGroup.name}
+          {t('taskDetail.group')}: {d.groupName}
         </div>
       )}
 
@@ -252,7 +249,7 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
               onClick={() => handleTransition(status)}
               disabled={transitioning}
             >
-              {transitioning ? 'PROCESSING...' : `MARK AS ${status.toUpperCase()}`}
+              {transitioning ? t('taskDetail.processing') : `MARK AS ${status.toUpperCase()}`}
             </button>
           ))}
         </div>
@@ -264,7 +261,7 @@ export function BrutalistDetail({ task, userRole, onBack, onTaskUpdated }: Bruta
           className="brutal-delete-btn"
           onClick={handleDelete}
         >
-          DELETE TASK
+          {t('taskDetail.deleteTask')}
         </button>
       )}
 

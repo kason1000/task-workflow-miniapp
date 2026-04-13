@@ -1,7 +1,7 @@
-import { resolveUserName } from '../shared/transitionHelpers';
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { useLocale } from '../../i18n/LocaleContext';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
 
@@ -130,6 +130,7 @@ export function MosaicDetail({ task, userRole, onBack, onTaskUpdated }: MosaicDe
 
   const transitions = (possibleTransitions[task.status] || []).filter(canTransition);
 
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
   const heroUrl = task.createdPhoto?.file_id ? mediaCache[task.createdPhoto.file_id] : undefined;
 
   return (
@@ -168,45 +169,45 @@ export function MosaicDetail({ task, userRole, onBack, onTaskUpdated }: MosaicDe
         {/* Meta row */}
         <div className="mosaic-detail-meta">
           <div className="mosaic-detail-meta-item">
-            <span className="mosaic-detail-meta-label">{t('taskDetail.createdDate') || 'Date'}</span>
+            <span className="mosaic-detail-meta-label">{t('taskDetail.createdDate')}</span>
             <span className="mosaic-detail-meta-value">
               {formatDate(task.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
             </span>
           </div>
 
-          {task.createdBy && (
+          {d.createdByName && (
             <div className="mosaic-detail-meta-item">
-              <span className="mosaic-detail-meta-label">{t('taskDetail.createdBy') || 'Creator'}</span>
+              <span className="mosaic-detail-meta-label">{t('taskDetail.creator')}</span>
               <span className="mosaic-detail-meta-value">
-                {userNames[task.createdBy] || `User ${task.createdBy}`}
+                {d.createdByName}
               </span>
             </div>
           )}
 
-          {task.doneBy && (
+          {d.submitterName && (
             <div className="mosaic-detail-meta-item">
-              <span className="mosaic-detail-meta-label">{t('taskDetail.submitter') || 'Submitter'}</span>
+              <span className="mosaic-detail-meta-label">{t('taskDetail.submitter')}</span>
               <span className="mosaic-detail-meta-value">
-                {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
+                {d.submitterName}
               </span>
             </div>
           )}
 
-          {taskGroup && (
+          {d.groupName && (
             <div className="mosaic-detail-meta-item">
-              <span className="mosaic-detail-meta-label">{t('taskDetail.group') || 'Group'}</span>
-              <span className="mosaic-detail-meta-value">{taskGroup.name}</span>
+              <span className="mosaic-detail-meta-label">{t('taskDetail.group')}</span>
+              <span className="mosaic-detail-meta-value">{d.groupName}</span>
             </div>
           )}
 
-          {task.requireSets > 0 && (
+          {d.requireSets > 0 && (
             <div className="mosaic-detail-meta-item">
-              <span className="mosaic-detail-meta-label">{t('taskDetail.progress') || 'Progress'}</span>
+              <span className="mosaic-detail-meta-label">{t('taskDetail.progress')}</span>
               <span className="mosaic-detail-meta-value">
                 <span className="mosaic-count-number" style={{ fontSize: '18px' }}>
-                  {task.completedSets}
+                  {d.completedSets}
                 </span>
-                <span style={{ color: 'var(--tg-theme-hint-color)', fontSize: '12px' }}> / {task.requireSets}</span>
+                <span style={{ color: 'var(--tg-theme-hint-color)', fontSize: '12px' }}> / {d.requireSets}</span>
               </span>
             </div>
           )}
@@ -226,7 +227,7 @@ export function MosaicDetail({ task, userRole, onBack, onTaskUpdated }: MosaicDe
               return (
                 <div key={setIdx} style={{ marginBottom: '16px' }}>
                   <div className="mosaic-detail-set-title">
-                    {t('taskDetail.setLabel') || 'Set'} {setIdx + 1}
+                    {t('taskDetail.setLabel')} {setIdx + 1}
                   </div>
                   <div className="mosaic-detail-set-row">
                     {allMedia.map((item) => {

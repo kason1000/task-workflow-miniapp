@@ -97,7 +97,7 @@ export function MosaicLayout({
         </div>
 
         {/* Center title */}
-        <span className="mosaic-header-title">TASKS</span>
+        <span className="mosaic-header-title">{t('app.menuTasks')}</span>
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', zIndex: 1 }}>

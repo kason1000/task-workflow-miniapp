@@ -92,7 +92,7 @@ export function ZenLayout({
           )}
         </div>
 
-        <span className="zen-header-title">Tasks</span>
+        <span className="zen-header-title">{t('app.menuTasks')}</span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
@@ -117,20 +117,20 @@ export function ZenLayout({
               className={`zen-menu-item ${view === 'list' ? 'zen-menu-item--active' : ''}`}
               onClick={() => { onBack(false); setShowMenu(false); }}
             >
-              Tasks
+              {t('app.menuTasks')}
             </button>
             <button
               className={`zen-menu-item ${view === 'groups' ? 'zen-menu-item--active' : ''}`}
               onClick={() => { onGroupsClick(); setShowMenu(false); }}
             >
-              Groups
+              {t('app.menuGroups')}
             </button>
             {!window.Telegram?.WebApp?.initData && (
               <button
                 className="zen-menu-item"
                 onClick={() => { onLogout(); setShowMenu(false); }}
               >
-                Logout
+                {t('app.logout')}
               </button>
             )}
           </div>

@@ -1,7 +1,7 @@
-import { resolveUserName } from '../shared/transitionHelpers';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { Task } from '../../types';
 import { hapticFeedback, showConfirm } from '../../utils/telegram';
 
@@ -33,10 +33,8 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
     availableTransitions, handleTransition, handleDelete, transitioning,
   } = detail;
 
-  const heroUrl = task.createdPhoto?.file_id ? getMediaUrl(task.createdPhoto.file_id) : undefined;
-  const progressPct = task.requireSets > 0
-    ? Math.round((task.completedSets / task.requireSets) * 100)
-    : 0;
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
+  const heroUrl = d.createdPhotoFileId ? getMediaUrl(d.createdPhotoFileId) : undefined;
 
   const doTransition = async (status: string) => {
     const label = TRANSITION_LABELS[status] || status;
@@ -61,7 +59,7 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
           className="zen-detail-back"
           onClick={() => { hapticFeedback.light(); onBack(); }}
         >
-          back
+          {t('common.back')}
         </button>
         <div style={{ flex: 1 }} />
         <span className={`zen-status-tag zen-status-tag--${task.status.toLowerCase()}`}>
@@ -89,47 +87,47 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
 
       {/* Info section */}
       <div className="zen-detail-section zen-fade-in" style={{ animationDelay: '0.2s' }}>
-        <div className="zen-detail-section-title">Details</div>
+        <div className="zen-detail-section-title">{t('taskDetail.details')}</div>
 
         <div className="zen-detail-row">
-          <span className="zen-detail-label">Created</span>
+          <span className="zen-detail-label">{t('taskDetail.createdDate')}</span>
           <span className="zen-detail-value">
             {formatDate(task.createdAt, { year: 'numeric', month: 'long', day: 'numeric' })}
           </span>
         </div>
 
-        {task.createdBy && (
+        {d.createdByName && (
           <div className="zen-detail-row">
-            <span className="zen-detail-label">By</span>
+            <span className="zen-detail-label">{t('taskDetail.createdByLabel')}</span>
             <span className="zen-detail-value">
-              {userNames[task.createdBy] || `User ${task.createdBy}`}
+              {d.createdByName}
             </span>
           </div>
         )}
 
-        {task.doneBy && (
+        {d.submitterName && (
           <div className="zen-detail-row">
-            <span className="zen-detail-label">Submitter</span>
+            <span className="zen-detail-label">{t('taskDetail.submitter')}</span>
             <span className="zen-detail-value">
-              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
+              {d.submitterName}
             </span>
           </div>
         )}
 
-        {taskGroup && (
+        {d.groupName && (
           <div className="zen-detail-row">
-            <span className="zen-detail-label">Group</span>
-            <span className="zen-detail-value">{taskGroup.name}</span>
+            <span className="zen-detail-label">{t('taskDetail.group')}</span>
+            <span className="zen-detail-value">{d.groupName}</span>
           </div>
         )}
 
-        {task.requireSets > 0 && (
+        {d.requireSets > 0 && (
           <div className="zen-detail-row">
-            <span className="zen-detail-label">Progress</span>
+            <span className="zen-detail-label">{t('taskDetail.progress')}</span>
             <span className="zen-detail-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>{task.completedSets}/{task.requireSets}</span>
+              <span>{d.progressLabel}</span>
               <div style={{ width: '60px', height: '2px', background: 'var(--zen-border)', borderRadius: '1px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${progressPct}%`, background: 'var(--zen-accent)', borderRadius: '1px' }} />
+                <div style={{ height: '100%', width: `${d.progressPercent}%`, background: 'var(--zen-accent)', borderRadius: '1px' }} />
               </div>
             </span>
           </div>
@@ -137,7 +135,7 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
 
         {task.submittedAt && (
           <div className="zen-detail-row">
-            <span className="zen-detail-label">Submitted</span>
+            <span className="zen-detail-label">{t('taskDetail.submittedDate')}</span>
             <span className="zen-detail-value">
               {formatDate(task.submittedAt, { year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
@@ -155,7 +153,7 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
       {/* Photo sets */}
       {task.sets && task.sets.length > 0 && (
         <div className="zen-detail-section zen-fade-in" style={{ animationDelay: '0.3s' }}>
-          <div className="zen-detail-section-title">Media</div>
+          <div className="zen-detail-section-title">{t('taskDetail.media')}</div>
 
           {task.sets.map((set, setIdx) => {
             const allMedia = [
@@ -174,7 +172,7 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
                   marginBottom: '10px',
                   letterSpacing: '0.04em',
                 }}>
-                  Set {setIdx + 1}
+                  {t('taskDetail.setLabel')} {setIdx + 1}
                 </div>
                 <div className="zen-media-grid">
                   {allMedia.map((item) => {
@@ -273,7 +271,7 @@ export function ZenDetail({ task, userRole, onBack, onTaskUpdated }: ZenDetailPr
           zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <span className="zen-loading">Processing...</span>
+          <span className="zen-loading">{t('taskDetail.processing')}</span>
         </div>
       )}
     </div>

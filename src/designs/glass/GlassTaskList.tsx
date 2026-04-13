@@ -1,6 +1,7 @@
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskCard, getSubmitterFilterOptions } from '../shared/taskDisplayData';
 import { Task, TaskStatus } from '../../types';
 
 interface GlassTaskListProps {
@@ -99,7 +100,7 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
           onClick={() => setFilter({ ...filter, showArchived: !filter.showArchived, status: 'all' })}
           style={filter.showArchived ? {} : { opacity: 0.7 }}
         >
-          {t('statusLabels.Archived') || 'Archived'}
+          {t('statusLabels.Archived')}
         </button>
       </div>
 
@@ -111,7 +112,7 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
             value={filter.submittedMonth || ''}
             onChange={e => setFilter(f => ({ ...f, submittedMonth: e.target.value || undefined }))}
           >
-            <option value="">All Months</option>
+            <option value="">{t('taskList.allMonths')}</option>
             {getMonthOptions().map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
@@ -121,10 +122,10 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
             value={filter.doneBy || ''}
             onChange={e => setFilter(f => ({ ...f, doneBy: e.target.value ? parseInt(e.target.value) : undefined }))}
           >
-            <option value="">All Submitters</option>
-            {Object.entries(submitterCounts).map(([userId, count]) => (
-              <option key={userId} value={userId}>
-                {userNames[parseInt(userId)] || `User #${userId}`} ({count})
+            <option value="">{t('taskList.allSubmitters')}</option>
+            {getSubmitterFilterOptions(submitterCounts, userNames).map(opt => (
+              <option key={opt.userId} value={opt.userId}>
+                {opt.name} ({opt.count})
               </option>
             ))}
           </select>
@@ -141,9 +142,8 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
         <div className="glass-empty">{t('taskList.noTasks')}</div>
       ) : (
         tasks.map((task, idx) => {
-          const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const group = groupMap.get(task.groupId);
-          const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
+          const d = prepareTaskCard(task, userNames, groups);
+          const thumbUrl = d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined;
 
           return (
             <div
@@ -153,13 +153,13 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
               onClick={() => onTaskClick(task)}
             >
               {/* Group color accent bar (left side) */}
-              {group?.color && (
+              {d.groupColor && (
                 <div
                   className="glass-card-group-accent"
-                  style={{ background: group.color }}
+                  style={{ background: d.groupColor }}
                 />
               )}
-              
+
               <div className="glass-card-body">
                 {thumbUrl ? (
                   <img
@@ -175,37 +175,37 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
                   <div className="glass-card-thumb-placeholder">📷</div>
                 )}
                 <div className="glass-card-info">
-                  <div className="glass-card-title">{task.title}</div>
+                  <div className="glass-card-title">{d.title}</div>
                   <div className="glass-card-meta">
-                    <span className={`glass-status ${STATUS_CSS[task.status]}`}>
+                    <span className={`glass-status ${STATUS_CSS[d.status]}`}>
                       <span className="glass-status-dot" />
-                      {t(`statusLabels.${task.status}`)}
+                      {t(`statusLabels.${d.status}`)}
                     </span>
                     {/* Group badge with color */}
-                    {group && (
+                    {d.groupName && (
                       <span
                         className="glass-group-badge"
-                        style={group.color ? {
-                          background: `${group.color}15`,
-                          border: `1px solid ${group.color}35`,
-                          color: group.color,
+                        style={d.groupColor ? {
+                          background: `${d.groupColor}15`,
+                          border: `1px solid ${d.groupColor}35`,
+                          color: d.groupColor,
                         } : {}}
                       >
-                        {group.name}
+                        {d.groupName}
                       </span>
                     )}
                   </div>
                   <div className="glass-card-meta" style={{ marginTop: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div className="glass-progress-track">
-                        <div className="glass-progress-fill" style={{ width: `${progressPct}%` }} />
+                        <div className="glass-progress-fill" style={{ width: `${d.progressPercent}%` }} />
                       </div>
                       <span className="glass-progress-text">
-                        {task.completedSets}/{task.requireSets}
+                        {d.progressLabel}
                       </span>
                     </div>
                     <span style={{ fontSize: 11, color: 'var(--glass-text-secondary)' }}>
-                      {formatDate(task.createdAt)}
+                      {formatDate(d.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -225,10 +225,10 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
           {loadingMore ? (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <span className="glass-spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-              Loading...
+              {t('common.loading')}
             </span>
           ) : (
-            'Load More'
+            t('taskList.loadMore')
           )}
         </button>
       )}
@@ -241,7 +241,7 @@ export function GlassTaskList({ onTaskClick, groupId, refreshKey }: GlassTaskLis
           fontSize: 13,
           color: 'var(--glass-text-secondary)',
         }}>
-          All tasks loaded
+          {t('taskList.allTasksLoaded')}
         </div>
       )}
 

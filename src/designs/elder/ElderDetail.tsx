@@ -1,6 +1,7 @@
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { Task } from '../../types';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
 
@@ -49,8 +50,8 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
     transitioning,
   } = detail;
 
-  const heroUrl = task.createdPhoto?.file_id ? getMediaUrl(task.createdPhoto.file_id) : undefined;
-  const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
+  const heroUrl = d.createdPhotoFileId ? getMediaUrl(d.createdPhotoFileId) : undefined;
 
   const doTransition = async (status: string) => {
     const label = TRANSITION_LABELS[status]?.label || status;
@@ -79,7 +80,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
             onBack();
           }}
         >
-          Go Back
+          {t('common.back')}
         </button>
         <span className={`elder-status-badge elder-status--${task.status.toLowerCase()}`}>
           {STATUS_EMOJI[task.status] || ''} {t(`statusLabels.${task.status}`)}
@@ -102,69 +103,59 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
               setCurrentMediaIndex(0);
             }}
           />
-          <div className="elder-tap-hint" style={{ textAlign: 'center' }}>Tap photo to view full size</div>
+          <div className="elder-tap-hint" style={{ textAlign: 'center' }}>{t('taskDetail.tapToOpen')}</div>
         </div>
       )}
 
       {/* Info section */}
       <div className="elder-detail-section">
-        <div className="elder-detail-section-title">Task Information</div>
+        <div className="elder-detail-section-title">{t('taskDetail.info')}</div>
         <div className="elder-detail-row">
-          <span className="elder-detail-label">Created Date</span>
+          <span className="elder-detail-label">{t('taskDetail.createdDate')}</span>
           <span className="elder-detail-value">
             {formatDate(task.createdAt, { year: 'numeric', month: 'long', day: 'numeric' })}
           </span>
         </div>
-        {task.createdBy && (
+        {d.createdByName && (
           <div className="elder-detail-row">
-            <span className="elder-detail-label">Created By</span>
+            <span className="elder-detail-label">{t('taskDetail.createdByLabel')}</span>
             <span className="elder-detail-value">
-              {(userNames[task.createdBy] && !userNames[task.createdBy].startsWith('User '))
-                ? userNames[task.createdBy]
-                : '—'}
+              {d.createdByName}
             </span>
           </div>
         )}
-        {task.doneBy && (
+        {d.submitterName && (
           <div className="elder-detail-row">
             <span className="elder-detail-label">
-              {task.status === 'Submitted' || task.status === 'Redo' ? 'Submitted By' : 'Done By'}
+              {task.status === 'Submitted' || task.status === 'Redo' ? t('taskDetail.submittedByLabel') : t('taskDetail.doneByLabel')}
             </span>
             <span className="elder-detail-value">
-              {(() => {
-                // Prefer real name from userNames, then doneByName, filter out "User 123..." fallbacks
-                const fromApi = userNames[task.doneBy!];
-                const fromTask = task.doneByName;
-                const name = (fromApi && !fromApi.startsWith('User ')) ? fromApi
-                  : (fromTask && !fromTask.startsWith('User ')) ? fromTask
-                  : '—';
-                return name;
-              })()}
+              {d.submitterName}
             </span>
           </div>
         )}
-        {taskGroup && (
+        {d.groupName && (
           <div className="elder-detail-row">
-            <span className="elder-detail-label">Group</span>
-            <span className="elder-detail-value">{taskGroup.name}</span>
+            <span className="elder-detail-label">{t('taskDetail.group')}</span>
+            <span className="elder-detail-value">{d.groupName}</span>
           </div>
         )}
-        {task.requireSets > 0 && (
+        {d.requireSets > 0 && (
           <div className="elder-detail-row">
-            <span className="elder-detail-label">Progress</span>
+            <span className="elder-detail-label">{t('taskDetail.progress')}</span>
             <div className="elder-progress-container">
               <div className="elder-progress-bar">
-                <div className="elder-progress-fill" style={{ width: `${progressPct}%` }} />
+                <div className="elder-progress-fill" style={{ width: `${d.progressPercent}%` }} />
               </div>
               <span className="elder-progress-text">
-                {task.completedSets}/{task.requireSets} ({progressPct}%)
+                {d.progressLabel} ({d.progressPercent}%)
               </span>
             </div>
           </div>
         )}
         {task.submittedAt && (
           <div className="elder-detail-row">
-            <span className="elder-detail-label">Submitted Date</span>
+            <span className="elder-detail-label">{t('taskDetail.submittedDate')}</span>
             <span className="elder-detail-value">
               {formatDate(task.submittedAt, { year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
@@ -172,7 +163,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
         )}
         {task.labels?.video && (
           <div className="elder-detail-row">
-            <span className="elder-detail-label">Labels</span>
+            <span className="elder-detail-label">{t('taskDetail.labels')}</span>
             <span className="elder-detail-value">Video Required</span>
           </div>
         )}
@@ -181,7 +172,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       {/* Photo sets */}
       {task.sets && task.sets.length > 0 && (
         <div className="elder-detail-section">
-          <div className="elder-detail-section-title">Photos & Videos</div>
+          <div className="elder-detail-section-title">{t('taskDetail.photosAndVideos')}</div>
           {task.sets.map((set, setIdx) => {
             const allMedia = [
               ...(set.photos || []).map(p => ({ fileId: p.file_id, type: 'photo' as const })),
@@ -191,7 +182,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
             return (
               <div key={setIdx} style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '12px' }}>
-                  Set {setIdx + 1} of {task.requireSets}
+                  {t('taskDetail.setOf', { index: setIdx + 1, total: task.requireSets })}
                 </div>
                 <div className="elder-media-grid">
                   {allMedia.map((item) => {
@@ -222,7 +213,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
                             />
                           )
                         ) : (
-                          <div className="elder-media-placeholder">Loading...</div>
+                          <div className="elder-media-placeholder">{t('common.loading')}</div>
                         )}
                       </div>
                     );
@@ -238,7 +229,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
       {availableTransitions.length > 0 && (
         <div className="elder-actions">
           <div style={{ fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>
-            Actions
+            {t('taskDetail.actions')}
           </div>
           {availableTransitions.map(status => {
             const config = TRANSITION_LABELS[status] || {
@@ -265,7 +256,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
               disabled={transitioning}
               style={{ marginTop: '16px' }}
             >
-              Delete Task
+              {t('taskDetail.deleteTask')}
             </button>
           )}
         </div>
@@ -308,7 +299,7 @@ export function ElderDetail({ task, userRole, onBack, onTaskUpdated }: ElderDeta
           fontSize: '24px',
           fontWeight: 700,
         }}>
-          Processing...
+          {t('taskDetail.processing')}
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Task, Group } from '../types';
-import { statusColors } from '../utils/taskStyles';
+import { prepareTaskCard, type TaskCardDisplay } from '../designs/shared/taskDisplayData';
 
 interface TaskCardProps {
   task: Task;
@@ -24,19 +24,14 @@ export const TaskCard = React.memo(function TaskCard({
   isArchived,
 }: TaskCardProps) {
   const thumbnailRef = useRef<HTMLDivElement>(null);
-
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const completedSets = task.sets.filter((set) => {
-    const hasPhotos = set.photos.length >= 3;
-    const hasVideo = task.labels.video ? !!set.video : true;
-    return hasPhotos && hasVideo;
-  }).length;
-
-  const progress = (completedSets / task.requireSets) * 100;
-  const doneName = task.doneBy ? (userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy })) : null;
-  const taskGroup = groups.find(g => g.id === task.groupId);
+  // All display logic is centralized — no computation in UI
+  const d: TaskCardDisplay = useMemo(
+    () => prepareTaskCard(task, userNames, groups),
+    [task, userNames, groups]
+  );
 
   const handleClick = (e: React.MouseEvent) => {
     if (thumbnailUrl && thumbnailRef.current) {
@@ -88,7 +83,6 @@ export const TaskCard = React.memo(function TaskCard({
             }
           }}
         >
-          {/* Background image (hidden until loaded) */}
           {thumbnailUrl && !imageError && (
             <img
               src={thumbnailUrl}
@@ -105,8 +99,6 @@ export const TaskCard = React.memo(function TaskCard({
               }}
             />
           )}
-
-          {/* Loading skeleton or placeholder */}
           {!imageLoaded && !imageError && thumbnailUrl && (
             <div style={{
               position: 'absolute',
@@ -117,8 +109,6 @@ export const TaskCard = React.memo(function TaskCard({
               animation: 'shimmer 1.5s infinite'
             }} />
           )}
-
-          {/* Fallback icon */}
           {!thumbnailUrl && '📷'}
         </div>
 
@@ -143,16 +133,16 @@ export const TaskCard = React.memo(function TaskCard({
               alignItems: 'center',
               gap: '4px'
             }}>
-              {task.labels.video && <span style={{ fontSize: '14px' }}>🎥</span>}
-              {task.title}
+              {d.hasVideo && <span style={{ fontSize: '14px' }}>🎥</span>}
+              {d.title}
             </h3>
-            <span className={`badge ${statusColors[task.status]}`} style={{ fontSize: '12px', padding: '4px 7px' }}>
-              {t(`statusLabels.${task.status}`)}
+            <span className={`badge ${d.statusBadgeClass}`} style={{ fontSize: '12px', padding: '4px 7px' }}>
+              {t(`statusLabels.${d.status}`)}
             </span>
           </div>
 
           {/* Group Badge */}
-          {taskGroup && (
+          {d.groupName && (
             <div style={{ marginBottom: '2px' }}>
               <span style={{
                 display: 'inline-block',
@@ -162,13 +152,13 @@ export const TaskCard = React.memo(function TaskCard({
                 color: 'var(--tg-theme-hint-color)',
                 borderRadius: '4px'
               }}>
-                👥 {taskGroup.name}
+                👥 {d.groupName}
               </span>
             </div>
           )}
 
-          {isArchived ? (
-            /* Archived view: show submitter + submitted date, no progress bar */
+          {isArchived || d.isArchived ? (
+            /* Archived view: show submitter + submitted date — no "User 123..." */
             <div style={{
               display: 'flex',
               gap: '6px',
@@ -176,8 +166,8 @@ export const TaskCard = React.memo(function TaskCard({
               color: 'var(--tg-theme-hint-color)',
               alignItems: 'center'
             }}>
-              {doneName && <span>{t('taskList.doneBy', { name: doneName })}</span>}
-              {(task as any).submittedAt && <span>📅 {formatDate((task as any).submittedAt)}</span>}
+              {d.submitterName && <span>{t('taskList.doneBy', { name: d.submitterName })}</span>}
+              {d.submittedAt && <span>📅 {formatDate(d.submittedAt)}</span>}
             </div>
           ) : (
             /* Active view: progress bar + date */
@@ -193,7 +183,7 @@ export const TaskCard = React.memo(function TaskCard({
                   gap: '4px'
                 }}>
                   <span>{t('taskList.progress')}</span>
-                  {doneName && task.status !== 'New' && task.status !== 'Received' && (
+                  {d.submitterName && d.status !== 'New' && d.status !== 'Received' && (
                     <span style={{
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -202,11 +192,11 @@ export const TaskCard = React.memo(function TaskCard({
                       textAlign: 'center',
                       fontSize: '12px'
                     }}>
-                      {t('taskList.doneBy', { name: doneName })}
+                      {t('taskList.doneBy', { name: d.submitterName })}
                     </span>
                   )}
                   <span style={{ whiteSpace: 'nowrap', fontSize: '11px' }}>
-                    {completedSets}/{task.requireSets}
+                    {d.progressLabel}
                   </span>
                 </div>
                 <div style={{
@@ -217,8 +207,8 @@ export const TaskCard = React.memo(function TaskCard({
                 }}>
                   <div style={{
                     height: '100%',
-                    width: `${progress}%`,
-                    background: progress === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
+                    width: `${d.progressPercent}%`,
+                    background: d.progressPercent === 100 ? '#10b981' : 'var(--tg-theme-button-color)',
                     transition: 'width 0.3s',
                   }} />
                 </div>
@@ -232,8 +222,8 @@ export const TaskCard = React.memo(function TaskCard({
                 flexWrap: 'wrap',
                 alignItems: 'center'
               }}>
-                {doneName && task.lastModifiedAt && task.status !== 'New' && task.status !== 'Received' && (
-                  <span>📅 {formatDate(task.lastModifiedAt)}</span>
+                {d.submitterName && d.lastModifiedAt && d.status !== 'New' && d.status !== 'Received' && (
+                  <span>📅 {formatDate(d.lastModifiedAt)}</span>
                 )}
               </div>
             </>

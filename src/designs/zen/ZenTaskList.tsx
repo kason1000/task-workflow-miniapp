@@ -1,6 +1,7 @@
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskCard, getSubmitterFilterOptions } from '../shared/taskDisplayData';
 import { Task, TaskStatus } from '../../types';
 import { hapticFeedback } from '../../utils/telegram';
 
@@ -53,7 +54,7 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
   ];
 
   if (loading && tasks.length === 0) {
-    return <div className="zen-loading">Loading...</div>;
+    return <div className="zen-loading">{t('common.loading')}</div>;
   }
 
   if (error) {
@@ -95,7 +96,7 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 hapticFeedback.light();
               }}
             >
-              Archived {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
+              {t('statusLabels.Archived')} {archivedTotalCount !== null && filter.showArchived ? ` (${archivedTotalCount})` : ''}
             </button>
           )}
         </div>
@@ -111,7 +112,7 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 }));
               }}
             >
-              <option value="">All months</option>
+              <option value="">{t('taskList.allMonths')}</option>
               {getMonthOptions().map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
@@ -127,10 +128,10 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                   }));
                 }}
               >
-                <option value="">All submitters</option>
-                {Object.entries(submitterCounts).map(([userId, count]) => (
-                  <option key={userId} value={userId}>
-                    {userNames[parseInt(userId)] || `User ${userId}`} ({count})
+                <option value="">{t('taskList.allSubmitters')}</option>
+                {getSubmitterFilterOptions(submitterCounts, userNames).map(opt => (
+                  <option key={opt.userId} value={opt.userId}>
+                    {opt.name} ({opt.count})
                   </option>
                 ))}
               </select>
@@ -142,35 +143,31 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
       {/* Task list */}
       {tasks.length === 0 ? (
         <div className="zen-empty">
-          <div className="zen-empty-text">No tasks found</div>
+          <div className="zen-empty-text">{t('taskList.empty')}</div>
         </div>
       ) : (
         tasks.map((task) => {
-          const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const progressPct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
-          const isArchived = task.status === 'Archived';
-          const group = groupMap.get(task.groupId);
-          const rawName = task.doneBy ? userNames[task.doneBy] : undefined;
-          const submitterName = rawName && !rawName.startsWith('User ') ? rawName : undefined;
+          const d = prepareTaskCard(task, userNames, groups);
+          const thumbUrl = d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined;
 
           return (
             <div
               key={task.id}
-              className={`zen-task-card ${isArchived ? 'zen-archived-card' : ''}`}
+              className={`zen-task-card ${d.isArchived ? 'zen-archived-card' : ''}`}
               onClick={() => {
                 hapticFeedback.medium();
                 onTaskClick(task);
               }}
             >
-              <div className={`zen-task-status-line zen-task-status-line--${task.status.toLowerCase()}`} />
-              {group?.color && (
-                <div className="zen-group-accent" style={{ background: group.color }} />
+              <div className={`zen-task-status-line zen-task-status-line--${d.status.toLowerCase()}`} />
+              {d.groupColor && (
+                <div className="zen-group-accent" style={{ background: d.groupColor }} />
               )}
               {thumbUrl ? (
                 <img
                   className="zen-task-thumb"
                   src={thumbUrl}
-                  alt={task.title}
+                  alt={d.title}
                   onClick={(e) => {
                     e.stopPropagation();
                     openFullscreen(task, thumbUrl);
@@ -181,36 +178,36 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
               )}
 
               <div className="zen-task-info">
-                <div className="zen-task-title">{task.title}</div>
+                <div className="zen-task-title">{d.title}</div>
                 <div className="zen-task-status-row">
-                  <span className="zen-task-status-text" style={{ color: `var(--zen-status-${task.status.toLowerCase()})` }}>
-                    {t(`statusLabels.${task.status}`)}
+                  <span className="zen-task-status-text" style={{ color: `var(--zen-status-${d.status.toLowerCase()})` }}>
+                    {t(`statusLabels.${d.status}`)}
                   </span>
-                  {group && (
+                  {d.groupName && (
                     <span
                       className="zen-group-badge"
-                      style={group.color ? {
-                        background: `${group.color}18`,
-                        border: `1px solid ${group.color}40`,
-                        color: group.color,
+                      style={d.groupColor ? {
+                        background: `${d.groupColor}18`,
+                        border: `1px solid ${d.groupColor}40`,
+                        color: d.groupColor,
                       } : {}}
                     >
-                      {group.name}
+                      {d.groupName}
                     </span>
                   )}
                 </div>
                 <div className="zen-task-meta">
-                  {submitterName && <span>{submitterName}</span>}
-                  <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
+                  {d.submitterName && <span>{d.submitterName}</span>}
+                  <span>{formatDate(d.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
 
-                {task.requireSets > 0 && (
+                {d.requireSets > 0 && (
                   <div className="zen-progress-container">
                     <div className="zen-progress-bar">
-                      <div className="zen-progress-fill" style={{ width: `${progressPct}%` }} />
+                      <div className="zen-progress-fill" style={{ width: `${d.progressPercent}%` }} />
                     </div>
                     <span className="zen-progress-text">
-                      {task.completedSets}/{task.requireSets}
+                      {d.progressLabel}
                     </span>
                   </div>
                 )}
@@ -224,7 +221,7 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
       {hasMore && tasks.length > 0 && (
         <div className="zen-load-more">
           {loadingMore ? (
-            <span style={{ fontSize: '13px', color: 'var(--zen-hint)' }}>Loading...</span>
+            <span style={{ fontSize: '13px', color: 'var(--zen-hint)' }}>{t('common.loading')}</span>
           ) : (
             <button
               className="zen-load-more-btn"
@@ -233,7 +230,7 @@ export function ZenTaskList({ onTaskClick, groupId, refreshKey }: ZenTaskListPro
                 hapticFeedback.light();
               }}
             >
-              Load more
+              {t('taskList.loadMore')}
             </button>
           )}
         </div>

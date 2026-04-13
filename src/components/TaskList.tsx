@@ -5,6 +5,7 @@ import { hapticFeedback, showAlert } from '../utils/telegram';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
 import { statusColors, getGroupColor } from '../utils/taskStyles';
+import { prepareTaskCard, resolveUserName } from '../designs/shared/taskDisplayData';
 import { TaskFilterBar } from './TaskFilterBar';
 import { TaskCard } from './TaskCard';
 
@@ -1090,8 +1091,9 @@ function ImageViewer({
 
       {/* Bottom panel */}
       {currentTask && (() => {
-        const taskGroup = groups.find(g => g.id === currentTask.groupId);
-        const doneName = currentTask.doneBy ? (userNames[currentTask.doneBy] || t('common.userFallback', { id: currentTask.doneBy })) : null;
+        const cd = prepareTaskCard(currentTask, userNames, groups);
+        const doneName = cd.submitterName || null;
+        const taskGroup = cd.groupName ? groups.find(g => g.id === currentTask.groupId) : null;
 
         return (
           <div ref={bottomPanelRef} style={{

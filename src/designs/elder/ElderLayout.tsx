@@ -92,7 +92,7 @@ export function ElderLayout({
           )}
         </div>
 
-        <span className="elder-header-title">My Tasks</span>
+        <span className="elder-header-title">{t('app.menuTasks')}</span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
@@ -117,20 +117,20 @@ export function ElderLayout({
               className={`elder-menu-item ${view === 'list' ? 'elder-menu-item--active' : ''}`}
               onClick={() => { onBack(false); setShowMenu(false); }}
             >
-              <span>Tasks</span>
+              <span>{t('app.menuTasks')}</span>
             </button>
             <button
               className={`elder-menu-item ${view === 'groups' ? 'elder-menu-item--active' : ''}`}
               onClick={() => { onGroupsClick(); setShowMenu(false); }}
             >
-              <span>Groups</span>
+              <span>{t('app.menuGroups')}</span>
             </button>
             {!window.Telegram?.WebApp?.initData && (
               <button
                 className="elder-menu-item"
                 onClick={() => { onLogout(); setShowMenu(false); }}
               >
-                <span>Log Out</span>
+                <span>{t('app.logout')}</span>
               </button>
             )}
           </div>

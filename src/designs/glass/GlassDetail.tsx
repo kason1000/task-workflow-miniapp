@@ -1,7 +1,7 @@
-import { resolveUserName } from '../shared/transitionHelpers';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { Task, TaskStatus } from '../../types';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
 
@@ -62,12 +62,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
     showAlert(t('taskDetail.deleteSuccess'));
   };
 
-  const progressPct = task.requireSets > 0
-    ? Math.round((task.completedSets / task.requireSets) * 100)
-    : 0;
-
-  const totalPhotos = task.sets.reduce((sum, set) => sum + (set.photos?.length || 0), 0);
-  const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
 
   return (
     <div className="glass-detail">
@@ -102,49 +97,49 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
       {/* Info Section */}
       <div className="glass-detail-section">
         <div className="glass-detail-row">
-          <span className="glass-detail-label">Group</span>
-          <span className="glass-detail-value">{taskGroup?.name || task.groupId || '---'}</span>
+          <span className="glass-detail-label">{t('taskDetail.group')}</span>
+          <span className="glass-detail-value">{d.groupName || task.groupId || '---'}</span>
         </div>
         <div className="glass-detail-row">
-          <span className="glass-detail-label">Created By</span>
+          <span className="glass-detail-label">{t('taskDetail.createdByLabel')}</span>
           <span className="glass-detail-value">
-            {userNames[task.createdBy] || t('common.userFallback', { id: task.createdBy })}
+            {d.createdByName || t('common.userFallback', { id: task.createdBy })}
           </span>
         </div>
         <div className="glass-detail-row">
-          <span className="glass-detail-label">Date</span>
+          <span className="glass-detail-label">{t('taskDetail.date')}</span>
           <span className="glass-detail-value">
             {formatDate(task.createdAt, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
-        {task.doneBy && (
+        {d.submitterName && (
           <div className="glass-detail-row">
-            <span className="glass-detail-label">Done By</span>
+            <span className="glass-detail-label">{t('taskDetail.doneByLabel')}</span>
             <span className="glass-detail-value">
-              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
+              {d.submitterName}
             </span>
           </div>
         )}
         <div className="glass-detail-row">
-          <span className="glass-detail-label">Progress</span>
+          <span className="glass-detail-label">{t('taskDetail.progress')}</span>
           <span className="glass-detail-value">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div className="glass-progress-track" style={{ width: 80 }}>
-                <div className="glass-progress-fill" style={{ width: `${progressPct}%` }} />
+                <div className="glass-progress-fill" style={{ width: `${d.progressPercent}%` }} />
               </div>
-              <span>{task.completedSets}/{task.requireSets}</span>
+              <span>{d.progressLabel}</span>
             </div>
           </span>
         </div>
         <div className="glass-detail-row">
-          <span className="glass-detail-label">Media</span>
+          <span className="glass-detail-label">{t('taskDetail.media')}</span>
           <span className="glass-detail-value">
-            {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''}, {totalVideos} video{totalVideos !== 1 ? 's' : ''}
+            {d.totalMediaCount} item{d.totalMediaCount !== 1 ? 's' : ''}
           </span>
         </div>
         {task.submittedAt && (
           <div className="glass-detail-row">
-            <span className="glass-detail-label">Submitted</span>
+            <span className="glass-detail-label">{t('taskDetail.submittedDate')}</span>
             <span className="glass-detail-value">
               {formatDate(task.submittedAt, { year: 'numeric', month: 'short', day: 'numeric' })}
             </span>
@@ -152,7 +147,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
         )}
         {task.archivedAt && (
           <div className="glass-detail-row">
-            <span className="glass-detail-label">Archived</span>
+            <span className="glass-detail-label">{t('taskDetail.archivedDate')}</span>
             <span className="glass-detail-value">
               {formatDate(task.archivedAt, { year: 'numeric', month: 'short', day: 'numeric' })}
             </span>
@@ -160,7 +155,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
         )}
         {task.labels?.video && (
           <div className="glass-detail-row">
-            <span className="glass-detail-label">Labels</span>
+            <span className="glass-detail-label">{t('taskDetail.labels')}</span>
             <span className="glass-detail-value" style={{ color: 'var(--glass-accent)' }}>Video</span>
           </div>
         )}
@@ -183,7 +178,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
             return (
               <div key={setIdx} style={{ marginBottom: setIdx < task.sets.length - 1 ? 16 : 0 }}>
                 <div className="glass-set-header">
-                  Set {setIdx + 1} of {task.requireSets}
+                  {t('taskDetail.setOf', { index: setIdx + 1, total: task.requireSets })}
                 </div>
                 <div className="glass-photo-grid">
                   {allMedia.map((item) => {
@@ -263,7 +258,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
       {/* Back button */}
       <div style={{ padding: '8px 0' }}>
         <button className="glass-back-btn" onClick={onBack}>
-          ← Back to list
+          {t('common.back')}
         </button>
       </div>
 
@@ -279,7 +274,7 @@ export function GlassDetail({ task, userRole, onBack, onTaskUpdated }: GlassDeta
           flexDirection: 'column', gap: 8,
         }}>
           <div className="glass-spinner" />
-          <span style={{ color: 'var(--glass-text-secondary)', fontWeight: 500 }}>Processing...</span>
+          <span style={{ color: 'var(--glass-text-secondary)', fontWeight: 500 }}>{t('taskDetail.processing')}</span>
         </div>
       )}
 

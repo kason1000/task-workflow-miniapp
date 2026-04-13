@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
+import { prepareTaskCard } from '../shared/taskDisplayData';
 import { useLocale } from '../../i18n/LocaleContext';
 
 interface CommandTaskListProps {
@@ -250,6 +251,8 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
     fetchTasks(nextPage);
   };
 
+  const userNames: Record<number, string> = {}; // CommandTaskList doesn't load user names for the list view
+
   const getGroupName = (gId: string): string => {
     const group = groups.find(g => g.id === gId);
     if (!group) return '---';
@@ -257,7 +260,7 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
   };
 
   if (loading) {
-    return <div className="cmd-loading">LOADING TASKS</div>;
+    return <div className="cmd-loading">{t('taskList.loading')}</div>;
   }
 
   if (error) {
@@ -300,10 +303,11 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
 
       {/* Task Rows */}
       {tasks.length === 0 ? (
-        <div className="cmd-empty">-- NO TASKS FOUND --</div>
+        <div className="cmd-empty">-- {t('taskList.empty')} --</div>
       ) : (
         tasks.map((task, idx) => {
-          const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
+          const d = prepareTaskCard(task, userNames, groups);
+          const thumbUrl = d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined;
           return (
             <div
               key={task.id}
@@ -322,13 +326,13 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
               <span className="cmd-task-id">{task.id.slice(0, 6)}</span>
 
               {/* Status */}
-              <span className={`cmd-status ${STATUS_CSS[task.status]}`}>
-                {STATUS_CODE[task.status] || `[${task.status.slice(0, 3).toUpperCase()}]`}
+              <span className={`cmd-status ${STATUS_CSS[d.status]}`}>
+                {STATUS_CODE[d.status] || `[${d.status.slice(0, 3).toUpperCase()}]`}
               </span>
 
               {/* Title */}
               <span className="cmd-task-title">
-                {task.title.length > 20 ? task.title.slice(0, 19) + '.' : task.title}
+                {d.title.length > 20 ? d.title.slice(0, 19) + '.' : d.title}
               </span>
 
               {/* Group */}
@@ -336,11 +340,11 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
 
               {/* Progress */}
               <span className="cmd-progress">
-                {buildAsciiBar(task.completedSets, task.requireSets)}
+                {buildAsciiBar(d.completedSets, d.requireSets)}
               </span>
 
               {/* Date */}
-              <span className="cmd-task-date">{formatCompactDate(task.createdAt)}</span>
+              <span className="cmd-task-date">{formatCompactDate(d.createdAt)}</span>
             </div>
           );
         })

@@ -68,7 +68,7 @@ export function BrutalistLayout({
           >
             &larr; BACK
           </button>
-          <span className="brutal-header-title">DETAIL</span>
+          <span className="brutal-header-title">{t('common.details')}</span>
           <span className="brutal-header-role">{role}</span>
         </div>
         <BrutalistDetail
@@ -95,7 +95,7 @@ export function BrutalistLayout({
               {showMenu ? 'X' : '///'}
             </button>
           )}
-          <span className="brutal-header-title">TASK MANAGER</span>
+          <span className="brutal-header-title">{t('app.taskManager')}</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

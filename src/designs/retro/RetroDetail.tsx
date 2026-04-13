@@ -1,7 +1,7 @@
-import { resolveUserName } from '../shared/transitionHelpers';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskDetailData } from '../shared/useTaskDetailData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { Task, TaskStatus } from '../../types';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
 
@@ -50,6 +50,7 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
     availableTransitions, handleTransition, handleDelete, transitioning,
   } = detail;
 
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
   const heroUrl = task.createdPhoto?.file_id ? mediaCache[task.createdPhoto.file_id] : undefined;
 
   const onTransition = async (status: string) => {
@@ -112,17 +113,17 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
               <span className="retro-detail-prop-value">{task.title}</span>
             </div>
             <div className="retro-detail-prop-row">
-              <span className="retro-detail-prop-key">Group</span>
-              <span className="retro-detail-prop-value">{taskGroup?.name || task.groupId || '---'}</span>
+              <span className="retro-detail-prop-key">{t('taskDetail.group')}</span>
+              <span className="retro-detail-prop-value">{d.groupName || task.groupId || '---'}</span>
             </div>
             <div className="retro-detail-prop-row">
-              <span className="retro-detail-prop-key">Created By</span>
+              <span className="retro-detail-prop-key">{t('taskDetail.createdByLabel')}</span>
               <span className="retro-detail-prop-value">
-                {userNames[task.createdBy] || t('common.userFallback', { id: task.createdBy })}
+                {d.createdByName || t('common.userFallback', { id: task.createdBy })}
               </span>
             </div>
             <div className="retro-detail-prop-row">
-              <span className="retro-detail-prop-key">Created At</span>
+              <span className="retro-detail-prop-key">{t('taskDetail.createdDate')}</span>
               <span className="retro-detail-prop-value">
                 {formatDate(task.createdAt, {
                   year: 'numeric', month: '2-digit', day: '2-digit',
@@ -130,23 +131,23 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
                 })}
               </span>
             </div>
-            {task.doneBy && (
+            {d.submitterName && (
               <div className="retro-detail-prop-row">
-                <span className="retro-detail-prop-key">Done By</span>
+                <span className="retro-detail-prop-key">{t('taskDetail.doneByLabel')}</span>
                 <span className="retro-detail-prop-value">
-                  {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
+                  {d.submitterName}
                 </span>
               </div>
             )}
             <div className="retro-detail-prop-row">
-              <span className="retro-detail-prop-key">Progress</span>
+              <span className="retro-detail-prop-key">{t('taskDetail.progress')}</span>
               <span className="retro-detail-prop-value">
-                {task.completedSets}/{task.requireSets} SETS
+                {d.progressLabel} SETS
               </span>
             </div>
             {task.submittedAt && (
               <div className="retro-detail-prop-row">
-                <span className="retro-detail-prop-key">Submitted</span>
+                <span className="retro-detail-prop-key">{t('taskDetail.submittedDate')}</span>
                 <span className="retro-detail-prop-value">
                   {formatDate(task.submittedAt, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -154,7 +155,7 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
             )}
             {task.archivedAt && (
               <div className="retro-detail-prop-row">
-                <span className="retro-detail-prop-key">Archived</span>
+                <span className="retro-detail-prop-key">{t('taskDetail.archivedDate')}</span>
                 <span className="retro-detail-prop-value">
                   {formatDate(task.archivedAt, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -162,7 +163,7 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
             )}
             {task.labels?.video && (
               <div className="retro-detail-prop-row">
-                <span className="retro-detail-prop-key">Labels</span>
+                <span className="retro-detail-prop-key">{t('taskDetail.labels')}</span>
                 <span className="retro-detail-prop-value" style={{ color: 'var(--retro-yellow)' }}>[VIDEO]</span>
               </div>
             )}
@@ -263,7 +264,7 @@ export function RetroDetail({ task, userRole, onBack, onTaskUpdated }: RetroDeta
           background: 'rgba(26, 10, 46, 0.8)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <span className="retro-loading">PROCESSING</span>
+          <span className="retro-loading">{t('taskDetail.processing')}</span>
         </div>
       )}
 

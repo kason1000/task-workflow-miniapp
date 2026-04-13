@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
+import { prepareTaskCard } from '../shared/taskDisplayData';
 import { useLocale } from '../../i18n/LocaleContext';
 import { hapticFeedback } from '../../utils/telegram';
 
@@ -38,6 +39,8 @@ interface GridItemProps {
   thumbnailUrl?: string;
   groupName?: string;
   userName?: string;
+  progressPercent: number;
+  progressLabel: string;
   formatDate: (date: Date | string, opts?: Intl.DateTimeFormatOptions) => string;
   onClick: (task: Task) => void;
   t: (key: string, params?: Record<string, any>) => string;
@@ -49,15 +52,14 @@ const MosaicGridItem = memo(function MosaicGridItem({
   thumbnailUrl,
   groupName,
   userName,
+  progressPercent,
+  progressLabel,
   formatDate,
   onClick,
   t,
 }: GridItemProps) {
   const mod = statusModifier(task.status);
   const variant = gridVariant(index);
-  const progressPct = task.requireSets > 0
-    ? Math.round((task.completedSets / task.requireSets) * 100)
-    : 0;
 
   return (
     <div
@@ -100,7 +102,7 @@ const MosaicGridItem = memo(function MosaicGridItem({
         </div>
         {task.requireSets > 0 && (
           <div className="mosaic-curtain-progress">
-            {task.completedSets}/{task.requireSets} sets
+            {progressLabel} sets
           </div>
         )}
       </div>
@@ -109,7 +111,7 @@ const MosaicGridItem = memo(function MosaicGridItem({
       {task.requireSets > 0 && (
         <div
           className={`mosaic-grid-progress mosaic-progress--${mod}`}
-          style={{ width: `${progressPct}%` }}
+          style={{ width: `${progressPercent}%` }}
         />
       )}
     </div>
@@ -333,19 +335,24 @@ export function MosaicTaskList({ onTaskClick, groupId, refreshKey }: MosaicTaskL
         </div>
       ) : (
         <div className="mosaic-grid">
-          {tasks.map((task, index) => (
-            <MosaicGridItem
-              key={task.id}
-              task={task}
-              index={index}
-              thumbnailUrl={task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined}
-              groupName={groupMap.get(task.groupId)}
-              userName={task.createdBy ? userNames[task.createdBy] : undefined}
-              formatDate={formatDate}
-              onClick={onTaskClick}
-              t={t}
-            />
-          ))}
+          {tasks.map((task, index) => {
+            const d = prepareTaskCard(task, userNames, groups);
+            return (
+              <MosaicGridItem
+                key={task.id}
+                task={task}
+                index={index}
+                thumbnailUrl={d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined}
+                groupName={d.groupName}
+                userName={d.createdByName}
+                progressPercent={d.progressPercent}
+                progressLabel={d.progressLabel}
+                formatDate={formatDate}
+                onClick={onTaskClick}
+                t={t}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -356,7 +363,7 @@ export function MosaicTaskList({ onTaskClick, groupId, refreshKey }: MosaicTaskL
             <span style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>{t('common.loading')}</span>
           ) : (
             <button className="mosaic-load-more-link" onClick={handleLoadMore}>
-              {t('taskList.loadMore') || 'Load more'}
+              {t('taskList.loadMore')}
             </button>
           )}
         </div>

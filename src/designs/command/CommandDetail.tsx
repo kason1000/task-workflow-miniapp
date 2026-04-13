@@ -1,7 +1,7 @@
-import { resolveUserName } from '../shared/transitionHelpers';
 import { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Group } from '../../types';
 import { api, revokeAllMediaUrls } from '../../services/api';
+import { prepareTaskDetail } from '../shared/taskDisplayData';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
 import { useLocale } from '../../i18n/LocaleContext';
 
@@ -190,7 +190,7 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
     }
   };
 
-  const isArchived = task.status === 'Archived';
+  const d = prepareTaskDetail(task, userNames, taskGroup, userRole);
   const createdPhotoUrl = task.createdPhoto ? mediaCache[task.createdPhoto.file_id] : undefined;
 
   // Build all media items for the task
@@ -203,9 +203,6 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
       allMediaItems.push({ fileId: set.video.file_id, url: mediaCache[set.video.file_id], type: 'video', setIndex: si });
     }
   });
-
-  const totalPhotos = task.sets.reduce((sum, set) => sum + (set.photos?.length || 0), 0);
-  const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
 
   return (
     <div className="cmd-detail" style={{ paddingBottom: '80px' }}>
@@ -240,17 +237,17 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
           </span>
         </div>
         <div className="cmd-detail-row">
-          <span className="cmd-detail-key">GROUP</span>
-          <span className="cmd-detail-value">{taskGroup?.name || task.groupId || '---'}</span>
+          <span className="cmd-detail-key">{t('taskDetail.group')}</span>
+          <span className="cmd-detail-value">{d.groupName || task.groupId || '---'}</span>
         </div>
         <div className="cmd-detail-row">
-          <span className="cmd-detail-key">CREATED BY</span>
+          <span className="cmd-detail-key">{t('taskDetail.createdByLabel')}</span>
           <span className="cmd-detail-value">
-            {userNames[task.createdBy] || t('common.userFallback', { id: task.createdBy })}
+            {d.createdByName || t('common.userFallback', { id: task.createdBy })}
           </span>
         </div>
         <div className="cmd-detail-row">
-          <span className="cmd-detail-key">CREATED AT</span>
+          <span className="cmd-detail-key">{t('taskDetail.createdDate')}</span>
           <span className="cmd-detail-value">
             {formatDate(task.createdAt, {
               year: 'numeric', month: '2-digit', day: '2-digit',
@@ -259,24 +256,24 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
             })}
           </span>
         </div>
-        {task.doneBy && (
+        {d.submitterName && (
           <div className="cmd-detail-row">
-            <span className="cmd-detail-key">DONE BY</span>
+            <span className="cmd-detail-key">{t('taskDetail.doneByLabel')}</span>
             <span className="cmd-detail-value">
-              {(userNames[task.doneBy!] && !userNames[task.doneBy!].startsWith('User ')) ? userNames[task.doneBy!] : (task.doneByName && !task.doneByName.startsWith('User ')) ? task.doneByName : '—'}
+              {d.submitterName}
             </span>
           </div>
         )}
         <div className="cmd-detail-row">
           <span className="cmd-detail-key">SETS</span>
           <span className="cmd-detail-value">
-            {task.completedSets}/{task.requireSets} complete
+            {d.progressLabel} complete
           </span>
         </div>
         <div className="cmd-detail-row">
           <span className="cmd-detail-key">MEDIA</span>
           <span className="cmd-detail-value">
-            {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''}, {totalVideos} video{totalVideos !== 1 ? 's' : ''}
+            {d.totalMediaCount} item{d.totalMediaCount !== 1 ? 's' : ''}
           </span>
         </div>
         {task.submittedAt && (
@@ -297,7 +294,7 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
         )}
         {task.labels?.video && (
           <div className="cmd-detail-row">
-            <span className="cmd-detail-key">LABELS</span>
+            <span className="cmd-detail-key">{t('taskDetail.labels')}</span>
             <span className="cmd-detail-value">[VIDEO]</span>
           </div>
         )}
@@ -398,7 +395,7 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
             [ARCHIVE]
           </button>
         )}
-        {isArchived && userRole === 'Admin' && (
+        {d.isArchived && userRole === 'Admin' && (
           <button className="cmd-action-btn" onClick={handleRestore} disabled={loading}>
             [RESTORE]
           </button>
@@ -424,7 +421,7 @@ export function CommandDetail({ task, userRole, onBack, onTaskUpdated }: Command
           background: 'rgba(8, 8, 8, 0.7)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <span className="cmd-loading">PROCESSING</span>
+          <span className="cmd-loading">{t('taskDetail.processing')}</span>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { useLocale } from '../../i18n/LocaleContext';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskCard, getSubmitterFilterOptions } from '../shared/taskDisplayData';
 import { Task, TaskStatus } from '../../types';
 
 interface RetroTaskListProps {
@@ -91,11 +92,11 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
   ];
 
   if (loading && tasks.length === 0) {
-    return <div className="retro-loading">LOADING TASKS</div>;
+    return <div className="retro-loading">{t('taskList.loading')}</div>;
   }
 
   if (error) {
-    return <div className="retro-error">ERROR: {error}</div>;
+    return <div className="retro-error">{t('taskList.errorPrefix', { error })}</div>;
   }
 
   return (
@@ -142,9 +143,9 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
             onChange={e => setFilter(f => ({ ...f, doneBy: e.target.value ? parseInt(e.target.value) : undefined }))}
           >
             <option value="">ALL</option>
-            {Object.entries(submitterCounts).map(([userId, count]) => (
-              <option key={userId} value={userId}>
-                {userNames[parseInt(userId)] || `User #${userId}`} ({count})
+            {getSubmitterFilterOptions(submitterCounts, userNames).map(opt => (
+              <option key={opt.userId} value={opt.userId}>
+                {opt.name} ({opt.count})
               </option>
             ))}
           </select>
@@ -158,13 +159,11 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
 
       {/* Task List */}
       {tasks.length === 0 ? (
-        <div className="retro-empty">-- NO TASKS FOUND --</div>
+        <div className="retro-empty">-- {t('taskList.empty')} --</div>
       ) : (
         tasks.map((task, idx) => {
-          const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-          const group = groupMap.get(task.groupId);
-          const rawName = task.doneBy ? userNames[task.doneBy] : undefined;
-          const submitterName = rawName && !rawName.startsWith('User ') ? rawName : undefined;
+          const d = prepareTaskCard(task, userNames, groups);
+          const thumbUrl = d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined;
 
           return (
             <div
@@ -173,8 +172,8 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
               style={{ animationDelay: `${idx * 40}ms` }}
               onClick={() => onTaskClick(task)}
             >
-              {group?.color && (
-                <div className="retro-group-accent" style={{ background: group.color }} />
+              {d.groupColor && (
+                <div className="retro-group-accent" style={{ background: d.groupColor }} />
               )}
 
               <div className="retro-task-card-titlebar">
@@ -201,31 +200,31 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
                   <div className="retro-thumb-placeholder">?</div>
                 )}
                 <div className="retro-task-info">
-                  <div className="retro-task-title">{task.title}</div>
+                  <div className="retro-task-title">{d.title}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                    <span className={`retro-status ${STATUS_CSS[task.status]}`}>
-                      {STATUS_LABEL[task.status]}
+                    <span className={`retro-status ${STATUS_CSS[d.status]}`}>
+                      {STATUS_LABEL[d.status]}
                     </span>
-                    {group && (
+                    {d.groupName && (
                       <span
                         className="retro-group-badge"
-                        style={group.color ? {
-                          background: `${group.color}22`,
-                          border: `1px solid ${group.color}60`,
-                          color: group.color,
+                        style={d.groupColor ? {
+                          background: `${d.groupColor}22`,
+                          border: `1px solid ${d.groupColor}60`,
+                          color: d.groupColor,
                         } : {}}
                       >
-                        {group.name}
+                        {d.groupName}
                       </span>
                     )}
                     <div className="retro-progress-bar">
-                      {buildProgressSegments(task.completedSets, task.requireSets)}
-                      <span className="retro-progress-text">{task.completedSets}/{task.requireSets}</span>
+                      {buildProgressSegments(d.completedSets, d.requireSets)}
+                      <span className="retro-progress-text">{d.progressLabel}</span>
                     </div>
                   </div>
                   <div className="retro-task-meta">
-                    <span>{formatRetroDate(task.createdAt)}</span>
-                    {submitterName && <span>{submitterName}</span>}
+                    <span>{formatRetroDate(d.createdAt)}</span>
+                    {d.submitterName && <span>{d.submitterName}</span>}
                   </div>
                 </div>
               </div>
@@ -241,7 +240,7 @@ export function RetroTaskList({ onTaskClick, groupId, refreshKey }: RetroTaskLis
           onClick={loadMoreTasks}
           disabled={loadingMore}
         >
-          {loadingMore ? 'LOADING...' : '>> LOAD MORE TASKS <<'}
+          {loadingMore ? t('common.loading') : t('taskList.loadMore')}
         </button>
       )}
 

@@ -63,12 +63,12 @@ export function GlassLayout({
 
   const headerTitle = (() => {
     switch (view) {
-      case 'list': return 'Tasks';
-      case 'detail': return selectedTask?.title || 'Detail';
-      case 'groups': return 'Groups';
-      case 'groupDetail': return 'Group';
-      case 'createGroup': return 'New Group';
-      default: return 'Tasks';
+      case 'list': return t('app.menuTasks');
+      case 'detail': return selectedTask?.title || t('common.details');
+      case 'groups': return t('app.menuGroups');
+      case 'groupDetail': return t('taskDetail.group');
+      case 'createGroup': return t('createGroup.title');
+      default: return t('app.menuTasks');
     }
   })();
 

@@ -1,6 +1,7 @@
 import { Task, TaskStatus } from '../../types';
 import { useTaskListData } from '../shared/useTaskListData';
 import { FullImageViewer } from '../shared/FullImageViewer';
+import { prepareTaskCard, getSubmitterFilterOptions } from '../shared/taskDisplayData';
 import { useLocale } from '../../i18n/LocaleContext';
 
 interface BrutalistTaskListProps {
@@ -64,7 +65,7 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
     return (
       <div className="brutal-loading">
         <div className="brutal-spinner" />
-        <div className="brutal-loading-text">LOADING</div>
+        <div className="brutal-loading-text">{t('common.loading')}</div>
       </div>
     );
   }
@@ -72,7 +73,7 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
   if (error) {
     return (
       <div className="brutal-error">
-        <div className="brutal-error-text">ERROR</div>
+        <div className="brutal-error-text">{t('taskList.errorPrefix', { error: '' })}</div>
         <div className="brutal-error-detail">{error}</div>
       </div>
     );
@@ -105,7 +106,7 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
           style={{ cursor: 'pointer' }}
           onClick={() => setFilter(prev => ({ ...prev, showArchived: !prev.showArchived, status: 'all' }))}
         >
-          ARCHIVED
+          {t('statusLabels.Archived')}
         </span>
       </div>
 
@@ -133,9 +134,9 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
             onChange={(e) => setFilter(prev => ({ ...prev, doneBy: e.target.value ? parseInt(e.target.value) : undefined }))}
           >
             <option value="">ALL SUBMITTERS</option>
-            {Object.entries(submitterCounts).map(([userId, count]) => (
-              <option key={userId} value={userId}>
-                {userNames[parseInt(userId)] || `USER ${userId}`} ({count})
+            {getSubmitterFilterOptions(submitterCounts, userNames).map(opt => (
+              <option key={opt.userId} value={opt.userId}>
+                {opt.name} ({opt.count})
               </option>
             ))}
           </select>
@@ -145,16 +146,13 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
       {/* Task cards */}
       {tasks.length === 0 ? (
         <div className="brutal-empty">
-          <div className="brutal-empty-text">NO TASKS</div>
+          <div className="brutal-empty-text">{t('taskList.empty')}</div>
         </div>
       ) : (
         <div>
           {tasks.map((task) => {
-            const thumbUrl = task.createdPhoto?.file_id ? thumbnails[task.createdPhoto.file_id] : undefined;
-            const pct = task.requireSets > 0 ? Math.round((task.completedSets / task.requireSets) * 100) : 0;
-            const group = groupMap.get(task.groupId);
-            const rawName = task.doneBy ? userNames[task.doneBy] : undefined;
-            const submitterName = rawName && !rawName.startsWith('User ') ? rawName : undefined;
+            const d = prepareTaskCard(task, userNames, groups);
+            const thumbUrl = d.thumbnailFileId ? thumbnails[d.thumbnailFileId] : undefined;
 
             return (
               <div
@@ -162,25 +160,25 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                 className="brutal-card"
                 onClick={() => onTaskClick(task)}
               >
-                {group?.color && (
-                  <div className="brutal-group-accent" style={{ background: group.color }} />
+                {d.groupColor && (
+                  <div className="brutal-group-accent" style={{ background: d.groupColor }} />
                 )}
 
                 <div className="brutal-card-top">
                   <div style={{ flex: 1 }}>
-                    <div className="brutal-card-title">{task.title}</div>
-                    <span className={`brutal-card-status ${STATUS_CSS[task.status] || ''}`}>
-                      {task.status.toUpperCase()}
+                    <div className="brutal-card-title">{d.title}</div>
+                    <span className={`brutal-card-status ${STATUS_CSS[d.status] || ''}`}>
+                      {d.status.toUpperCase()}
                     </span>
-                    {group && (
+                    {d.groupName && (
                       <span
                         className="brutal-group-badge"
-                        style={group.color ? {
-                          background: group.color,
+                        style={d.groupColor ? {
+                          background: d.groupColor,
                           color: '#fff',
                         } : {}}
                       >
-                        {group.name.toUpperCase()}
+                        {d.groupName.toUpperCase()}
                       </span>
                     )}
                   </div>
@@ -200,18 +198,18 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
                   )}
                 </div>
 
-                {task.requireSets > 0 && (
+                {d.requireSets > 0 && (
                   <div className="brutal-progress">
-                    <span className="brutal-progress-number">{pct}%</span>
+                    <span className="brutal-progress-number">{d.progressPercent}%</span>
                     <div className="brutal-progress-bar-wrap">
-                      <div className="brutal-progress-bar-fill" style={{ width: `${pct}%` }} />
+                      <div className="brutal-progress-bar-fill" style={{ width: `${d.progressPercent}%` }} />
                     </div>
                   </div>
                 )}
 
                 <div className="brutal-card-meta">
-                  {submitterName && <span>{submitterName} / </span>}
-                  <span>{formatDate(task.createdAt, { month: 'short', day: 'numeric' })}</span>
+                  {d.submitterName && <span>{d.submitterName} / </span>}
+                  <span>{formatDate(d.createdAt, { month: 'short', day: 'numeric' })}</span>
                 </div>
               </div>
             );
@@ -228,7 +226,7 @@ export function BrutalistTaskList({ onTaskClick, groupId, refreshKey }: Brutalis
             </div>
           ) : (
             <button className="brutal-load-more-btn" onClick={loadMoreTasks}>
-              LOAD MORE
+              {t('taskList.loadMore')}
             </button>
           )}
         </div>

@@ -6,6 +6,7 @@ import { GalleryOverlay } from './GalleryOverlay';
 import WebApp from '@twa-dev/sdk';
 import { useLocale } from '../i18n/LocaleContext';
 import { statusColors, getGroupColor } from '../utils/taskStyles';
+import { prepareTaskDetail } from '../designs/shared/taskDisplayData';
 import { MediaGrid } from './MediaGrid';
 import { TaskActionBar } from './TaskActionBar';
 
@@ -500,19 +501,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const totalVideos = task.sets.reduce((sum, set) => sum + (set.video ? 1 : 0), 0);
   const totalMedia = totalPhotos + totalVideos;
 
-  const getUploaders = (): string[] => {
-    const uploaderIds = new Set<number>();
+  // All display logic centralized — no computation in UI
+  const displayData = prepareTaskDetail(task, userNames, taskGroup, userRole);
 
-    task.sets.forEach(set => {
-      set.photos?.forEach(photo => uploaderIds.add(photo.by));
-      if (set.video) uploaderIds.add(set.video.by);
-    });
-
-    return Array.from(uploaderIds).map(id => userNames[id] || t('common.userFallback', { id }));
-  };
-
-  const isArchived = task.status === 'Archived';
-  const canDeleteMedia = userRole === 'Admin' || userRole === 'Lead' || userRole === 'Member';
+  const isArchived = displayData.isArchived;
+  const canDeleteMedia = displayData.canDeleteMedia;
   const createdPhotoUrl = task.createdPhoto ? mediaCache[task.createdPhoto.file_id] : undefined;
 
   return (
@@ -619,22 +612,20 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             }}>
               <div>
                 {t('taskDetail.createdBy', {
-                  name: userNames[task.createdBy] || WebApp.initDataUnsafe?.user?.first_name || t('common.userFallback', { id: task.createdBy }),
+                  name: displayData.createdByName || WebApp.initDataUnsafe?.user?.first_name || '—',
                   date: formatDate(task.createdAt),
                 })}
               </div>
 
-              {task.doneBy && (
+              {displayData.submitterName && (
                 <div>
-                  {t('taskDetail.submittedBy', {
-                    name: userNames[task.doneBy] || t('common.userFallback', { id: task.doneBy }),
-                  })}
+                  {t('taskDetail.submittedBy', { name: displayData.submitterName })}
                 </div>
               )}
 
-              {totalMedia > 0 && getUploaders().length > 0 && (
+              {displayData.uploaderNames.length > 0 && (
                 <div>
-                  {t('taskDetail.uploadedBy', { names: getUploaders().join(', ') })}
+                  {t('taskDetail.uploadedBy', { names: displayData.uploaderNames.join(', ') })}
                 </div>
               )}
             </div>
