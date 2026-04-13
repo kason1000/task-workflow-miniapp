@@ -50,28 +50,27 @@ export const TaskCard = React.memo(function TaskCard({
 
   const archived = isArchived || d.isArchived;
   const statusColor = STATUS_COLORS[d.status] || '#6b7280';
+  const gc = d.groupColor || '#6b7280';
 
-  // ---- Archived card: compact single-row ----
+  // ---- Archived card ----
   if (archived) {
-    const gc = d.groupColor || '#6b7280';
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
         padding: '8px 10px',
-        borderRadius: '10px',
-        background: `var(--tg-theme-secondary-bg-color)`,
-        borderLeft: `4px solid ${gc}`,
+        borderRadius: '12px',
+        background: `${gc}08`,
+        border: `1px solid ${gc}20`,
+        borderLeft: `4px solid ${gc}50`,
         marginBottom: '6px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
       }}>
-        {/* Small thumbnail */}
         <div
           ref={thumbnailRef}
           onClick={handleClick}
           style={{
             width: '40px', height: '40px', minWidth: '40px',
             borderRadius: '8px', overflow: 'hidden',
-            background: 'var(--tg-theme-bg-color)',
+            background: 'var(--tg-theme-secondary-bg-color)',
             position: 'relative', cursor: thumbnailUrl ? 'pointer' : 'default',
           }}
         >
@@ -82,7 +81,6 @@ export const TaskCard = React.memo(function TaskCard({
           {!thumbnailUrl && <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>📷</span>}
         </div>
 
-        {/* Title + meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
@@ -108,23 +106,19 @@ export const TaskCard = React.memo(function TaskCard({
     );
   }
 
-  // ---- Active card: fixed height, rich content ----
-  const gc = d.groupColor || statusColor;
+  // ---- Active card ----
   return (
     <div style={{
       display: 'flex', gap: '10px',
       padding: '10px',
-      background: 'var(--tg-theme-secondary-bg-color)',
+      background: `${gc}08`,
       borderRadius: '12px',
       minHeight: '88px',
       position: 'relative',
       overflow: 'hidden',
-      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-      borderLeft: `4px solid ${gc}`,
+      border: `1px solid ${gc}20`,
+      borderLeft: `4px solid ${gc}50`,
     }}>
-
-
       {/* Thumbnail */}
       <div
         ref={thumbnailRef}
@@ -133,12 +127,11 @@ export const TaskCard = React.memo(function TaskCard({
           width: '68px', height: '68px', minWidth: '68px',
           borderRadius: '10px', overflow: 'hidden',
           background: thumbnailUrl && !imageError
-            ? 'var(--tg-theme-bg-color)'
-            : `linear-gradient(135deg, ${statusColor}30, var(--tg-theme-bg-color))`,
+            ? 'var(--tg-theme-secondary-bg-color)'
+            : `linear-gradient(135deg, ${gc}20, var(--tg-theme-secondary-bg-color))`,
           position: 'relative',
           cursor: thumbnailUrl ? 'pointer' : 'default',
-          border: '1px solid rgba(0,0,0,0.06)',
-          transition: 'transform 0.2s ease',
+          border: `1px solid ${gc}15`,
         }}
       >
         {thumbnailUrl && !imageError && (
@@ -153,9 +146,8 @@ export const TaskCard = React.memo(function TaskCard({
           }} />
         )}
         {!thumbnailUrl && (
-          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', opacity: 0.5 }}>📷</span>
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', opacity: 0.4 }}>📷</span>
         )}
-        {/* Video badge */}
         {d.hasVideo && (
           <div style={{
             position: 'absolute', bottom: '3px', right: '3px',
@@ -166,7 +158,7 @@ export const TaskCard = React.memo(function TaskCard({
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingLeft: '2px' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         {/* Row 1: Title + Status */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
           <div style={{
@@ -192,14 +184,10 @@ export const TaskCard = React.memo(function TaskCard({
               display: 'inline-flex', alignItems: 'center', gap: '4px',
               fontSize: '10px', fontWeight: 600, padding: '2px 8px',
               borderRadius: '10px', whiteSpace: 'nowrap',
-              background: d.groupColor ? `${d.groupColor}18` : 'var(--tg-theme-bg-color)',
-              color: d.groupColor || 'var(--tg-theme-hint-color)',
-              border: `1px solid ${d.groupColor ? d.groupColor + '35' : 'rgba(0,0,0,0.08)'}`,
+              background: `${gc}18`, color: gc,
+              border: `1px solid ${gc}30`,
             }}>
-              <span style={{
-                width: '6px', height: '6px', borderRadius: '50%',
-                background: d.groupColor || 'var(--tg-theme-hint-color)',
-              }} />
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: gc }} />
               {d.groupName}
             </span>
           )}
@@ -214,14 +202,14 @@ export const TaskCard = React.memo(function TaskCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
           <div style={{
             flex: 1, height: '4px', borderRadius: '2px',
-            background: 'var(--tg-theme-bg-color)', overflow: 'hidden',
+            background: `${gc}12`, overflow: 'hidden',
           }}>
             <div style={{
               height: '100%', borderRadius: '2px',
               width: `${d.progressPercent}%`,
               background: d.progressPercent === 100
                 ? '#10b981'
-                : `linear-gradient(90deg, ${statusColor}, ${statusColor}aa)`,
+                : gc,
               transition: 'width 0.4s ease',
             }} />
           </div>
