@@ -108,16 +108,18 @@ export const TaskCard = React.memo(function TaskCard({
   }
 
   // ---- Active card: fixed height, rich content ----
+  const groupTint = d.groupColor || statusColor;
   return (
     <div style={{
       display: 'flex', gap: '10px',
       padding: '10px',
-      background: 'var(--tg-theme-secondary-bg-color)',
+      background: `linear-gradient(135deg, ${groupTint}10 0%, ${groupTint}06 100%)`,
       borderRadius: '12px',
       minHeight: '88px',
       position: 'relative',
       overflow: 'hidden',
       transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+      border: `1px solid ${groupTint}15`,
     }}>
       {/* Left color accent bar */}
       <div style={{
