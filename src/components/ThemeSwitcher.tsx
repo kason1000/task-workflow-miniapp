@@ -1,39 +1,52 @@
 import { useTheme, type ThemeId } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
+import { Sun, Moon, Monitor, Check, Layout, Palette } from 'lucide-react';
 
-const themeIcons: Record<ThemeId, { icon: string; tag?: string }> = {
-  classic: { icon: '☀️' },
-  dark: { icon: '🌑', tag: 'NEW' },
-  ocean: { icon: '🌊', tag: 'NEW' },
-  sunset: { icon: '🌅', tag: 'NEW' },
-  forest: { icon: '🌲', tag: 'NEW' },
-  mosaic: { icon: '🖼️', tag: 'NEW' },
-  command: { icon: '⌨️', tag: 'NEW' },
-  elder: { icon: '👴', tag: 'NEW' },
-  zen: { icon: '🍃', tag: 'NEW' },
-  retro: { icon: '👾', tag: 'NEW' },
-  glass: { icon: '💎', tag: 'NEW' },
-  brutalist: { icon: '🔲', tag: 'NEW' },
+// Core themes (light/dark toggle)
+const CORE_THEMES: { id: ThemeId; label: string; icon: typeof Sun }[] = [
+  { id: 'classic', label: 'Light', icon: Sun },
+  { id: 'dark', label: 'Dark', icon: Moon },
+];
+
+// Additional color themes
+const COLOR_THEMES: { id: ThemeId; label: string }[] = [
+  { id: 'ocean', label: 'Ocean' },
+  { id: 'sunset', label: 'Sunset' },
+  { id: 'forest', label: 'Forest' },
+];
+
+// Full UI designs
+const DESIGN_NAMES: Record<string, string> = {
+  mosaic: 'Mosaic',
+  command: 'Command',
+  elder: 'Easy View',
+  zen: 'Zen',
+  retro: 'Retro',
+  glass: 'Glass',
+  brutalist: 'Brutalist',
 };
-
-const themeVisuals: Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }> = Object.fromEntries(
-  Object.entries(themeIcons).map(([id, { icon, tag }]) => [
-    id,
-    { icon, bg: THEME_COLORS[id]?.bg ?? '#ffffff', accent: THEME_COLORS[id]?.accent ?? '#2481cc', ...(tag ? { tag } : {}) },
-  ])
-) as Record<ThemeId, { icon: string; bg: string; accent: string; tag?: string }>;
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
   const { theme, setTheme, themes } = useTheme();
   const { t } = useLocale();
 
+  const isCoreDark = theme === 'dark';
+  const isCoreLight = theme === 'classic';
+  const isColorTheme = COLOR_THEMES.some(ct => ct.id === theme);
+  const isDesign = themes.find(th => th.id === theme)?.hasCustomLayout ?? false;
+
+  const handleSelect = (id: ThemeId) => {
+    setTheme(id);
+    onClose();
+  };
+
   return (
     <div
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(4px)',
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
         zIndex: 2000,
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
@@ -43,117 +56,154 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
         style={{
           width: '100%', maxWidth: '600px',
           background: 'var(--tg-theme-bg-color)',
-          borderRadius: '20px 20px 0 0',
-          padding: '24px 20px 32px',
-          boxShadow: '0 -4px 40px rgba(0,0,0,0.3)',
-          animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          borderRadius: '16px 16px 0 0',
+          padding: '16px 16px 24px',
+          paddingBottom: 'max(24px, calc(env(safe-area-inset-bottom) + 16px))',
+          boxShadow: '0 -4px 30px rgba(0,0,0,0.2)',
+          animation: 'slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          maxHeight: '80vh', overflowY: 'auto',
         }}
         onClick={e => e.stopPropagation()}
       >
+        {/* Drag handle */}
         <div style={{
-          width: '36px', height: '4px',
+          width: '32px', height: '4px',
           background: 'var(--tg-theme-hint-color)',
-          borderRadius: '2px', margin: '0 auto 20px', opacity: 0.4,
+          borderRadius: '2px', margin: '0 auto 16px', opacity: 0.3,
         }} />
 
-        <div style={{
-          fontSize: '17px', fontWeight: 700,
-          marginBottom: '6px',
-          color: 'var(--tg-theme-text-color)',
-        }}>
-          {t('themeSwitcher.title')}
-        </div>
-        <div style={{
-          fontSize: '12px',
-          color: 'var(--tg-theme-hint-color)',
-          marginBottom: '18px',
-        }}>
-          {t('themeSwitcher.subtitle')}
+        {/* Section: Appearance */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+          <Palette size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+            {t('themeSwitcher.colorThemes')}
+          </span>
         </div>
 
-        {/* CSS-only themes */}
-        <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {t('themeSwitcher.colorThemes')}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          {themes.filter(th => !th.hasCustomLayout).map(th => {
-            const v = themeVisuals[th.id];
-            const isActive = theme === th.id;
+        {/* Light / Dark segmented control */}
+        <div style={{
+          display: 'flex', gap: '0',
+          background: 'var(--tg-theme-secondary-bg-color)',
+          borderRadius: '10px',
+          padding: '3px',
+          marginBottom: '10px',
+        }}>
+          {CORE_THEMES.map(ct => {
+            const Icon = ct.icon;
+            const isActive = theme === ct.id;
             return (
               <button
-                key={th.id}
-                onClick={() => { setTheme(th.id); onClose(); }}
+                key={ct.id}
+                onClick={() => handleSelect(ct.id)}
                 style={{
-                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                  padding: '12px 8px', borderRadius: '14px',
-                  border: isActive ? `2px solid ${v.accent}` : '2px solid var(--tg-theme-secondary-bg-color)',
-                  background: isActive ? `${v.accent}15` : 'var(--tg-theme-secondary-bg-color)',
-                  color: 'var(--tg-theme-text-color)', cursor: 'pointer',
+                  flex: 1,
+                  height: '36px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: isActive ? 'var(--tg-theme-bg-color)' : 'transparent',
+                  color: isActive ? 'var(--tg-theme-text-color)' : 'var(--tg-theme-hint-color)',
+                  fontSize: '13px', fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '10px',
-                  background: v.bg, border: `2px solid ${v.accent}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-                  boxShadow: isActive ? `0 0 12px ${v.accent}40` : 'none',
-                }}>{v.icon}</div>
-                <div style={{ fontSize: '12px', fontWeight: 600 }}>{th.name}</div>
+                <Icon size={14} />
+                {ct.label}
               </button>
             );
           })}
         </div>
 
-        {/* Full UI designs */}
-        <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {t('themeSwitcher.fullDesigns')}
+        {/* Additional color themes */}
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+          {COLOR_THEMES.map(ct => {
+            const colors = THEME_COLORS[ct.id];
+            const isActive = theme === ct.id;
+            return (
+              <button
+                key={ct.id}
+                onClick={() => handleSelect(ct.id)}
+                style={{
+                  flex: 1, height: '40px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  borderRadius: '10px',
+                  border: isActive ? `1.5px solid ${colors.accent}` : '1.5px solid transparent',
+                  background: isActive ? 'var(--tg-theme-secondary-bg-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  color: isActive ? colors.accent : 'var(--tg-theme-hint-color)',
+                  fontSize: '12px', fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: '14px', height: '14px', borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${colors.bg}, ${colors.accent})`,
+                  border: `1px solid ${colors.accent}40`,
+                  flexShrink: 0,
+                }} />
+                {ct.label}
+              </button>
+            );
+          })}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+        {/* Section: UI Designs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+          <Layout size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+            {t('themeSwitcher.fullDesigns')}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {themes.filter(th => th.hasCustomLayout).map(th => {
-            const v = themeVisuals[th.id];
+            const colors = THEME_COLORS[th.id] || { bg: '#fff', accent: '#333' };
             const isActive = theme === th.id;
             return (
               <button
                 key={th.id}
-                onClick={() => { setTheme(th.id); onClose(); }}
+                onClick={() => handleSelect(th.id)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  padding: '14px 16px', borderRadius: '14px', width: '100%',
-                  border: isActive ? `2px solid ${v.accent}` : '2px solid var(--tg-theme-secondary-bg-color)',
-                  background: isActive ? `${v.accent}12` : 'var(--tg-theme-secondary-bg-color)',
-                  color: 'var(--tg-theme-text-color)', cursor: 'pointer', textAlign: 'left',
-                  transition: 'all 0.2s ease',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 12px',
+                  borderRadius: '10px', width: '100%',
+                  border: isActive ? `1.5px solid ${colors.accent}` : '1.5px solid transparent',
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  color: 'var(--tg-theme-text-color)',
+                  cursor: 'pointer', textAlign: 'left',
                 }}
               >
+                {/* Color swatch */}
                 <div style={{
-                  width: '48px', height: '48px', borderRadius: '12px',
-                  background: v.bg, border: `2px solid ${v.accent}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px',
-                  flexShrink: 0, boxShadow: isActive ? `0 0 16px ${v.accent}40` : 'none',
-                }}>{v.icon}</div>
+                  width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0,
+                  background: colors.bg,
+                  border: `1.5px solid ${colors.accent}50`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: '12px', height: '12px', borderRadius: '50%',
+                    background: colors.accent,
+                  }} />
+                </div>
 
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {th.name}
-                    {v.tag && (
-                      <span style={{
-                        fontSize: '9px', fontWeight: 700, padding: '2px 6px',
-                        borderRadius: '4px', background: v.accent, color: v.bg,
-                        letterSpacing: '0.05em',
-                      }}>{v.tag}</span>
-                    )}
-                    {isActive && (
-                      <span style={{ fontSize: '11px', color: v.accent, fontWeight: 500 }}>{t('themeSwitcher.active')}</span>
-                    )}
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                    {DESIGN_NAMES[th.id] || th.name}
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>{th.description}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', marginTop: '1px' }}>
+                    {th.description}
+                  </div>
                 </div>
 
                 {isActive && (
                   <div style={{
-                    width: '24px', height: '24px', borderRadius: '50%',
-                    background: v.accent, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: v.bg, fontSize: '14px', fontWeight: 700, flexShrink: 0,
-                  }}>✓</div>
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    background: colors.accent, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Check size={12} color={colors.bg} strokeWidth={3} />
+                  </div>
                 )}
               </button>
             );

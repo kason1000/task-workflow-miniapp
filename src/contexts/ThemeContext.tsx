@@ -37,23 +37,12 @@ const THEMES: ThemeInfo[] = [
 
 const VALID_THEMES = THEMES.map(t => t.id);
 
-function detectDefaultTheme(): ThemeId {
-  // Default to Easy View for Chinese language users
-  try {
-    const lang = navigator.language || '';
-    if (lang.startsWith('zh')) return 'elder';
-    const tgLang = window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
-    if (tgLang && (tgLang === 'zh' || tgLang.startsWith('zh-') || tgLang.startsWith('zh_'))) return 'elder';
-  } catch {}
-  return 'classic';
-}
-
 function readStoredTheme(): ThemeId {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && VALID_THEMES.includes(stored as ThemeId)) return stored as ThemeId;
   } catch {}
-  return detectDefaultTheme();
+  return 'classic';
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
