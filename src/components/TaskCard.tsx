@@ -108,55 +108,60 @@ export const TaskCard = React.memo(function TaskCard({
   // ---- Active card ----
   return (
     <div style={{
-      display: 'flex', gap: '10px',
-      padding: '10px',
+      display: 'flex', gap: '0',
       background: 'var(--tg-theme-secondary-bg-color)',
       borderRadius: '12px',
       minHeight: '88px',
       position: 'relative',
       overflow: 'hidden',
-      borderLeft: `4px solid ${gc}50`,
     }}>
-      {/* Thumbnail */}
+      {/* Left colored zone — thumbnail area */}
       <div
-        ref={thumbnailRef}
-        onClick={handleClick}
         style={{
-          width: '68px', height: '68px', minWidth: '68px',
-          borderRadius: '10px', overflow: 'hidden',
-          background: thumbnailUrl && !imageError
-            ? 'var(--tg-theme-secondary-bg-color)'
-            : `linear-gradient(135deg, ${gc}20, var(--tg-theme-secondary-bg-color))`,
-          position: 'relative',
-          cursor: thumbnailUrl ? 'pointer' : 'default',
-          border: `1px solid ${gc}15`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '8px',
+          background: `${gc}50`,
+          borderRadius: '12px 0 0 12px',
+          flexShrink: 0,
         }}
       >
-        {thumbnailUrl && !imageError && (
-          <img src={thumbnailUrl} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageError(true)}
-            style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease' }} />
-        )}
-        {!imageLoaded && !imageError && thumbnailUrl && (
-          <div style={{
-            position: 'absolute', width: '100%', height: '100%',
-            background: 'linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.04) 75%)',
-            backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite',
-          }} />
-        )}
-        {!thumbnailUrl && (
-          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', opacity: 0.4 }}>📷</span>
-        )}
-        {d.hasVideo && (
-          <div style={{
-            position: 'absolute', bottom: '3px', right: '3px',
-            background: 'rgba(0,0,0,0.6)', borderRadius: '4px',
-            padding: '1px 4px', fontSize: '10px', color: 'white',
-          }}>🎥</div>
-        )}
+        <div
+          ref={thumbnailRef}
+          onClick={handleClick}
+          style={{
+            width: '68px', height: '68px', minWidth: '68px',
+            borderRadius: '10px', overflow: 'hidden',
+            background: 'rgba(255,255,255,0.15)',
+            position: 'relative',
+            cursor: thumbnailUrl ? 'pointer' : 'default',
+          }}
+        >
+          {thumbnailUrl && !imageError && (
+            <img src={thumbnailUrl} alt="" onLoad={() => setImageLoaded(true)} onError={() => setImageError(true)}
+              style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease' }} />
+          )}
+          {!imageLoaded && !imageError && thumbnailUrl && (
+            <div style={{
+              position: 'absolute', width: '100%', height: '100%',
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%)',
+              backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite',
+            }} />
+          )}
+          {!thumbnailUrl && (
+            <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: 'white', opacity: 0.5 }}>📷</span>
+          )}
+          {d.hasVideo && (
+            <div style={{
+              position: 'absolute', bottom: '3px', right: '3px',
+              background: 'rgba(0,0,0,0.5)', borderRadius: '4px',
+              padding: '1px 4px', fontSize: '10px', color: 'white',
+            }}>🎥</div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '10px' }}>
         {/* Row 1: Title + Status */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
           <div style={{
