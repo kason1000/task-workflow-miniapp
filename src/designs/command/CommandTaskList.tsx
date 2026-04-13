@@ -158,7 +158,7 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
 
       if (groupId) {
         const data = await api.getGroupTasks(groupId);
-        fetchedTasks = data.tasks || [];
+        fetchedTasks = Array.isArray(data?.tasks) ? data.tasks : [];
 
         if (statusFilter) {
           fetchedTasks = fetchedTasks.filter(t => t.status === statusFilter);
@@ -197,7 +197,7 @@ export function CommandTaskList({ onTaskClick, groupId, refreshKey }: CommandTas
           fetchArchived ? 'submittedAt' : undefined,
           fetchArchived ? 'desc' : undefined,
         );
-        fetchedTasks = result.tasks || [];
+        fetchedTasks = Array.isArray(result?.tasks) ? result.tasks : [];
         if (result.totalCount !== undefined) setTotalCount(result.totalCount);
 
         if (filter === 'all' && !fetchArchived) {

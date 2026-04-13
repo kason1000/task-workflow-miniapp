@@ -176,7 +176,7 @@ export function MosaicTaskList({ onTaskClick, groupId, refreshKey }: MosaicTaskL
 
       if (groupId) {
         const data = await api.getGroupTasks(groupId);
-        fetchedTasks = data.tasks || [];
+        fetchedTasks = Array.isArray(data?.tasks) ? data.tasks : [];
         if (statusFilter) fetchedTasks = fetchedTasks.filter(t => t.status === statusFilter);
         fetchedTasks = fetchedTasks.filter(t => t.status !== 'Archived');
 
@@ -195,7 +195,7 @@ export function MosaicTaskList({ onTaskClick, groupId, refreshKey }: MosaicTaskL
         fetchedTasks = fetchedTasks.slice(start, start + 20);
       } else {
         const result = await api.getTasks(statusFilter, false, pageNum - 1, 20);
-        fetchedTasks = result.tasks;
+        fetchedTasks = Array.isArray(result?.tasks) ? result.tasks : [];
         setHasMore(fetchedTasks.length === 20);
       }
 
