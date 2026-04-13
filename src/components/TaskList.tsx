@@ -525,40 +525,19 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
               key={task.id}
               style={{
                 marginBottom: '8px',
-                display: 'flex',
-                gap: '0',
-                alignItems: 'stretch',
+                position: 'relative',
               }}
             >
-                {/* Task Card (clickable area) */}
-                <div
-                  onClick={() => handleTaskClick(task)}
-                  style={{
-                    flex: 1,
-                    cursor: 'pointer',
-                    minWidth: 0
-                  }}
-                >
-                  <TaskCard
-                    task={task}
-                    thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
-                    userNames={userNames}
-                    groups={groups}
-                    onThumbnailClick={(taskObj, url, rect, e) => handleThumbnailClick(taskObj, url, rect, e)}
-                    t={t}
-                    formatDate={formatDate}
-                    isArchived={filter.showArchived}
-                  />
-                </div>
-
-                {/* Send to Chat Button — curves like a right border */}
+                {/* Send button behind card — flat left, rounded right */}
                 {!filter.showArchived && (
                   <button
                     onClick={(e) => handleSendToChat(task.id, e)}
                     disabled={sending[task.id]}
                     style={{
-                      width: '54px',
-                      padding: '4px',
+                      position: 'absolute',
+                      right: 0, top: 0, bottom: 0,
+                      width: '64px',
+                      padding: '0 4px 0 0',
                       fontSize: '10px',
                       display: 'flex',
                       flexDirection: 'column',
@@ -573,22 +552,44 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                       lineHeight: '1.2',
                       whiteSpace: 'normal',
                       textAlign: 'center',
-                      borderRadius: '12px',
+                      borderRadius: '0 12px 12px 0',
                       border: 'none',
-                      marginLeft: '-8px',
                       cursor: sending[task.id] ? 'not-allowed' : 'pointer',
                       transition: 'background 0.15s ease',
                       opacity: sending[task.id] ? 0.5 : 1,
+                      zIndex: 0,
                     }}
                   >
-                    <span style={{ fontSize: '18px' }}>
+                    <span style={{ fontSize: '18px', paddingLeft: '12px' }}>
                       {sending[task.id] ? '⏳' : '💬'}
                     </span>
-                    <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.85 }}>
+                    <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.85, paddingLeft: '12px' }}>
                       {t('taskList.sendButton')}
                     </span>
                   </button>
                 )}
+
+                {/* Task Card — overlays the button's left portion */}
+                <div
+                  onClick={() => handleTaskClick(task)}
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    cursor: 'pointer',
+                    marginRight: !filter.showArchived ? '44px' : 0,
+                  }}
+                >
+                  <TaskCard
+                    task={task}
+                    thumbnailUrl={task.createdPhoto ? thumbnails[task.createdPhoto.file_id] : undefined}
+                    userNames={userNames}
+                    groups={groups}
+                    onThumbnailClick={(taskObj, url, rect, e) => handleThumbnailClick(taskObj, url, rect, e)}
+                    t={t}
+                    formatDate={formatDate}
+                    isArchived={filter.showArchived}
+                  />
+                </div>
             </div>
             );
           })}
