@@ -3,6 +3,7 @@ import { Task } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert } from '../utils/telegram';
 import { useLocale } from '../i18n/LocaleContext';
+import { Clock, AlertCircle } from 'lucide-react';
 
 interface ShareScreenProps {
   taskId: string;
@@ -198,7 +199,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+        <div style={{ marginBottom: '16px', opacity: 0.3 }}><Clock size={48} /></div>
         <div>{t('share.loading')}</div>
       </div>
     );
@@ -207,7 +208,7 @@ export function ShareScreen({ taskId, onBack }: ShareScreenProps) {
   if (!task) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+        <div style={{ marginBottom: '16px', opacity: 0.3 }}><AlertCircle size={48} /></div>
         <div>{t('share.taskNotFound')}</div>
         <button onClick={onBack} style={{ marginTop: '16px' }}>
           {t('common.back')}

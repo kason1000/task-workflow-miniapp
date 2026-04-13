@@ -343,7 +343,7 @@ export function DetailImageViewer({
               })()}
               {doneName && task.status !== 'New' && (
                 <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  👤 {doneName}
+                  {doneName}
                 </span>
               )}
             </div>

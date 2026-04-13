@@ -62,7 +62,7 @@ export function GroupList({ userRole, onGroupClick, onCreateGroup }: GroupListPr
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <div style={{ color: '#ef4444', marginBottom: '12px' }}>
-          ❌ {error}
+          {error}
         </div>
         <button onClick={fetchGroups}>{t('common.retry')}</button>
       </div>

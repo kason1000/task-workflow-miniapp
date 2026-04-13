@@ -1,5 +1,6 @@
 import React from 'react';
 import { hapticFeedback } from '../utils/telegram';
+import { Play } from 'lucide-react';
 
 interface MediaItem {
   type: 'photo' | 'video';
@@ -112,7 +113,7 @@ export const ThumbnailStrip = React.memo(function ThumbnailStrip({
                       justifyContent: 'center',
                       fontSize: '10px'
                     }}>
-                      ▶️
+                      <Play size={10} fill="white" color="white" />
                     </div>
                   )}
                 </>

@@ -1,5 +1,6 @@
 import { Group } from '../types';
 import { COLORS } from '../utils/colors';
+import { Users } from 'lucide-react';
 
 interface TaskGroupCardProps {
   displayData: {
@@ -38,7 +39,7 @@ export function TaskGroupCard({ displayData, taskGroup, loadingGroup, t }: TaskG
           fontSize: '24px',
           flexShrink: 0
         }}>
-          👥
+          <Users size={20} />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>

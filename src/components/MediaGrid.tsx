@@ -1,6 +1,6 @@
 import { Task } from '../types';
 import { hapticFeedback } from '../utils/telegram';
-import { Share2, Image, Video, Clock } from 'lucide-react';
+import { Share2, Image, Video, Clock, Play } from 'lucide-react';
 import { COLORS } from '../utils/colors';
 
 interface MediaGridProps {
@@ -195,7 +195,7 @@ export function MediaGrid({
                             justifyContent: 'center',
                             fontSize: '11px'
                           }}>
-                            ▶️
+                            <Play size={14} fill="#333" color="#333" />
                           </div>
                         )}
 

@@ -135,7 +135,7 @@ export function GroupDetail({ groupId, userRole, onBack, onGroupDeleted }: Group
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <div style={{ color: COLORS.danger, marginBottom: '12px' }}>
-          ❌ {error || t('groupDetail.notFound')}
+          {error || t('groupDetail.notFound')}
         </div>
         <button onClick={onBack}>{t('common.back')}</button>
       </div>

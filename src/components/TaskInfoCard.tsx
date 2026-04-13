@@ -97,7 +97,7 @@ export function TaskInfoCard({
             marginBottom: '8px'
           }}>
             <h3 style={{ fontSize: '16px', margin: 0, flex: 1, marginRight: '8px' }}>
-              📋 {task.title}
+              {task.title}
             </h3>
             <span style={{
               fontSize: '10px',

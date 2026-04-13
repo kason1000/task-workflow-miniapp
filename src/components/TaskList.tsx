@@ -8,7 +8,7 @@ import { getGroupColor } from '../utils/taskStyles';
 import { TaskFilterBar } from './TaskFilterBar';
 import { TaskCard } from './TaskCard';
 import { ListImageViewer } from './ListImageViewer';
-import { Send, Clock } from 'lucide-react';
+import { Send, Clock, FileText, Archive } from 'lucide-react';
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
@@ -507,9 +507,9 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
       {/* Task List */}
       {tasks.length === 0 && !loading && (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <p style={{ fontSize: '48px', marginBottom: '12px' }}>
-            {filter.showArchived ? '🗃️' : '📋'}
-          </p>
+          <div style={{ marginBottom: '12px', opacity: 0.3 }}>
+            {filter.showArchived ? <Archive size={48} /> : <FileText size={48} />}
+          </div>
           <p style={{ color: 'var(--tg-theme-hint-color)' }}>
             {filter.showArchived ? t('taskList.noArchivedTasks') : t('taskList.noTasks')}
           </p>
