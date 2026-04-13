@@ -92,8 +92,8 @@ export const TaskCard = React.memo(function TaskCard({
               <span style={{
                 fontSize: '9px', fontWeight: 600, padding: '1px 6px',
                 borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
-                background: `${groupColor}18`, color: groupColor,
-                border: `1px solid ${groupColor}30`,
+                background: `${gc}18`, color: gc,
+                border: `1px solid ${gc}30`,
               }}>
                 {d.groupName}
               </span>
