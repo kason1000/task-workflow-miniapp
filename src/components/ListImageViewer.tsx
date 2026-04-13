@@ -444,59 +444,94 @@ export function ListImageViewer({
       {/* Bottom panel */}
       {currentTask && (() => {
         const cd = prepareTaskCard(currentTask, userNames, groups);
-        const doneName = cd.submitterName || null;
-        const taskGroup = cd.groupName ? groups.find(g => g.id === currentTask.groupId) : null;
+        const statusColor = ({ New:'#3b82f6', Received:'#f59e0b', Submitted:'#8b5cf6', Redo:'#ef4444', Completed:'#10b981', Archived:'#6b7280' } as Record<string,string>)[cd.status] || '#6b7280';
+        const gc = cd.groupColor || statusColor;
 
         return (
           <div ref={bottomPanelRef} style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.95)',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(10,10,10,0.96)',
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            borderTop: `2px solid ${gc}40`,
             opacity: isVisible ? 1 : 0,
             transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
             transition: 'opacity 0.25s ease, transform 0.25s ease',
-            transitionDelay: isVisible ? '0.08s' : '0s'
+            transitionDelay: isVisible ? '0.08s' : '0s',
           }}>
-            {/* Info row */}
+            {/* Task info row */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '10px 16px 8px', overflow: 'hidden'
+              padding: '10px 16px 6px', overflow: 'hidden',
             }}>
-              <span className={`badge ${statusColors[currentTask.status]}`} style={{
-                fontSize: '12px', padding: '3px 10px', fontWeight: 600, flexShrink: 0
+              {/* Title */}
+              <span style={{
+                fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.9)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
               }}>
-                {t(`statusLabels.${currentTask.status}`)}
+                {cd.title}
               </span>
-              {taskGroup && (
+            </div>
+
+            {/* Badges row */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+              padding: '0 16px 8px',
+            }}>
+              {/* Status badge — tinted pill */}
+              <span style={{
+                fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+                borderRadius: '10px', whiteSpace: 'nowrap',
+                background: `${statusColor}25`, color: statusColor,
+                border: `1px solid ${statusColor}40`,
+              }}>
+                {t(`statusLabels.${cd.status}`)}
+              </span>
+
+              {/* Group capsule — colored dot + name */}
+              {cd.groupName && (
                 <span style={{
-                  fontSize: '12px', padding: '3px 10px', flexShrink: 0,
-                  background: taskGroup.color || '#3b82f6', color: 'white',
-                  borderRadius: '10px', fontWeight: 600
-                }}>{taskGroup.name}</span>
-              )}
-              {doneName && currentTask.status !== 'New' && (
-                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  👤 {doneName}
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+                  borderRadius: '10px', whiteSpace: 'nowrap',
+                  background: `${gc}20`, color: gc,
+                  border: `1px solid ${gc}35`,
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: gc }} />
+                  {cd.groupName}
                 </span>
               )}
-              {currentTask.lastModifiedAt && currentTask.status !== 'New' && currentTask.status !== 'Received' && (
-                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', flexShrink: 0, marginLeft: 'auto' }}>
-                  {formatDate(currentTask.lastModifiedAt)}
+
+              {/* Progress pill */}
+              <span style={{
+                fontSize: '10px', fontWeight: 600, padding: '2px 8px',
+                borderRadius: '10px', whiteSpace: 'nowrap',
+                background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {cd.progressLabel}
+              </span>
+
+              {/* Submitter */}
+              {cd.submitterName && cd.status !== 'New' && cd.status !== 'Received' && (
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginLeft: 'auto' }}>
+                  {cd.submitterName}
                 </span>
               )}
             </div>
 
-            {/* Thumbnail row with arrows */}
+            {/* Thumbnail row */}
             <div style={{ display: 'flex', alignItems: 'center', padding: '2px 6px 8px', gap: '4px' }}>
               <button
                 onClick={(e) => { e.stopPropagation(); goToPreviousPhoto(); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label="Previous"
                 style={{
-                  width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px',
-                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
-                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '20px', cursor: 'pointer', padding: 0,
+                  width: '28px', height: '56px', flexShrink: 0, borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', cursor: 'pointer', padding: 0,
                 }}
               >‹</button>
 
@@ -513,6 +548,10 @@ export function ListImageViewer({
               >
                 {allPhotos.map((photo, idx) => {
                   const isActive = idx === currentPhotoIndex;
+                  // Tint active thumbnail border with its task's group color
+                  const photoTask = tasks.find(t2 => t2.id === photo.taskId);
+                  const photoGroup = photoTask ? groups.find(g => g.id === photoTask.groupId) : null;
+                  const thumbBorder = isActive ? (photoGroup?.color || 'white') : 'transparent';
                   return (
                     <div
                       key={`${photo.taskId}-${idx}`}
@@ -524,9 +563,9 @@ export function ListImageViewer({
                         setFullscreenImage(photo.url);
                       }}
                       style={{
-                        width: '64px', height: '64px', flexShrink: 0,
-                        borderRadius: '5px', overflow: 'hidden',
-                        border: isActive ? '2px solid white' : '2px solid transparent',
+                        width: '56px', height: '56px', flexShrink: 0,
+                        borderRadius: '8px', overflow: 'hidden',
+                        border: `2px solid ${thumbBorder}`,
                         opacity: isActive ? 1 : 0.4,
                         cursor: 'pointer',
                         transition: 'opacity 0.15s ease, border-color 0.15s ease',
@@ -545,29 +584,30 @@ export function ListImageViewer({
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label="Next"
                 style={{
-                  width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px',
-                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
-                  border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '20px', cursor: 'pointer', padding: 0,
+                  width: '28px', height: '56px', flexShrink: 0, borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', cursor: 'pointer', padding: 0,
                 }}
               >›</button>
             </div>
 
             {/* Action buttons */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
+              display: 'flex', alignItems: 'center', gap: '8px',
               padding: '4px 14px',
-              paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))'
+              paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))',
             }}>
               <button
                 onClick={(e) => { e.stopPropagation(); onClose(); onTaskClick(currentTask); }}
                 onTouchEnd={(e) => e.stopPropagation()}
                 style={{
-                  flex: 1, height: '44px', fontSize: '14px',
-                  background: 'rgba(255,255,255,0.1)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+                  flex: 1, height: '42px', fontSize: '13px',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px',
                   cursor: 'pointer', fontWeight: 600,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
               >📋 {t('common.details')}</button>
 
@@ -576,17 +616,16 @@ export function ListImageViewer({
                 onTouchEnd={(e) => e.stopPropagation()}
                 disabled={sending[currentTask.id]}
                 style={{
-                  flex: 1, height: '44px', fontSize: '14px',
+                  flex: 1, height: '42px', fontSize: '13px',
                   background: sending[currentTask.id]
-                    ? 'rgba(107,114,128,0.6)'
-                    : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    ? 'rgba(107,114,128,0.5)'
+                    : `linear-gradient(135deg, ${gc}, ${gc}cc)`,
                   color: 'white',
-                  border: sending[currentTask.id] ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                  borderRadius: '10px',
+                  border: 'none', borderRadius: '10px',
                   cursor: sending[currentTask.id] ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  boxShadow: sending[currentTask.id] ? 'none' : '0 2px 8px rgba(37,99,235,0.25)'
+                  boxShadow: sending[currentTask.id] ? 'none' : `0 2px 10px ${gc}40`,
                 }}
               >{sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}</button>
             </div>
