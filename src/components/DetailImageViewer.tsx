@@ -309,7 +309,9 @@ export function DetailImageViewer({
         return (
           <div ref={bottomPanelRef} style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(10,10,10,0.96)',
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            borderTop: `3px solid ${taskGroup?.color || '#3b82f6'}80`,
             opacity: isVisible ? 1 : 0, transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
             transition: 'opacity 0.25s ease, transform 0.25s ease', transitionDelay: isVisible ? '0.08s' : '0s',
           }}>
@@ -350,7 +352,7 @@ export function DetailImageViewer({
             {hasMultiple && (
               <div style={{ display: 'flex', alignItems: 'center', padding: '2px 6px 6px', gap: '4px' }}>
                 <button onClick={(e) => { e.stopPropagation(); goPrevLocal(); }} onTouchEnd={(e) => e.stopPropagation()} aria-label="Previous"
-                  style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
+                  style={{ width: '28px', height: '56px', flexShrink: 0, borderRadius: '8px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
                 ><ChevronLeft size={20} /></button>
                 <div ref={thumbStripRef} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
                   style={{ display: 'flex', gap: '3px', overflowX: 'auto', flex: 1, scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
@@ -372,7 +374,7 @@ export function DetailImageViewer({
                   })}
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); goNextLocal(); }} onTouchEnd={(e) => e.stopPropagation()} aria-label="Next"
-                  style={{ width: '30px', height: '64px', flexShrink: 0, borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
+                  style={{ width: '28px', height: '56px', flexShrink: 0, borderRadius: '8px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer', padding: 0 }}
                 ><ChevronRight size={20} /></button>
               </div>
             )}
@@ -381,26 +383,26 @@ export function DetailImageViewer({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 14px', paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom) + 8px))' }}>
               {mode === 'title' && (
                 <button onClick={(e) => { e.stopPropagation(); onSendToChat(); }} onTouchEnd={(e) => e.stopPropagation()} disabled={sending}
-                  style={{ flex: 1, height: '44px', fontSize: '14px', background: sending ? 'rgba(107,114,128,0.6)' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', border: sending ? '1px solid rgba(255,255,255,0.08)' : 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : '0 2px 8px rgba(37,99,235,0.25)' }}
+                  style={{ flex: 1, height: '42px', fontSize: '13px', background: sending ? 'rgba(107,114,128,0.5)' : `${taskGroup?.color || '#3b82f6'}80`, color: 'white', border: 'none', borderRadius: '10px', cursor: sending ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: sending ? 'none' : `0 2px 8px ${taskGroup?.color || '#3b82f6'}30` }}
                 >{sending ? <><Clock size={16} /> ...</> : <><Send size={16} /> {t('taskDetail.sendToChat')}</>}</button>
               )}
 
               {mode === 'media' && (
                 <>
                   <button onClick={(e) => { e.stopPropagation(); shareSetDirect(currentSetIdx); }} onTouchEnd={(e) => e.stopPropagation()}
-                    style={{ flex: 1, height: '44px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                  ><Share2 size={16} /> {t('gallery.shareSet', { index: currentSetIdx + 1 })}</button>
+                    style={{ flex: 1, height: '42px', fontSize: '13px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                  ><Share2 size={14} /> {t('gallery.shareSet', { index: currentSetIdx + 1 })}</button>
 
                   {multiSets && (
                     <button onClick={(e) => { e.stopPropagation(); for (let i = 0; i < task.requireSets; i++) shareSetDirect(i); }} onTouchEnd={(e) => e.stopPropagation()}
-                      style={{ flex: 1, height: '44px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                    ><Share2 size={16} /> {t('share.shareAllButton').replace('📤 ', '')}</button>
+                      style={{ flex: 1, height: '42px', fontSize: '13px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    ><Share2 size={14} /> {t('share.shareAllButton')}</button>
                   )}
 
                   {canDelete && currentFileId && !isCreatedPhoto && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeleteCurrent(); }} onTouchEnd={(e) => e.stopPropagation()}
-                      style={{ height: '44px', width: '52px', fontSize: '18px', background: 'rgba(239,68,68,0.8)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                    ><Trash2 size={18} /></button>
+                      style={{ height: '42px', width: '48px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    ><Trash2 size={16} /></button>
                   )}
                 </>
               )}

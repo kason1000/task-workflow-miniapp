@@ -3,7 +3,7 @@ import type { Dictionary } from './en';
 export const zh: Dictionary = {
   common: {
     loading: '加载中…',
-    back: '← 返回',
+    back: '返回',
     retry: '重试',
     cancel: '取消',
     confirm: '确认',
@@ -282,7 +282,7 @@ export const zh: Dictionary = {
     reload: '重新加载',
   },
   createTaskForm: {
-    back: '← 返回',
+    back: '返回',
     title: '📸 发送照片给机器人',
     subtitle: '每张照片将创建一个单独的任务',
     tips: '💡 提示：',

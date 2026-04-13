@@ -1,7 +1,7 @@
 export const en = {
   common: {
     loading: 'Loading...',
-    back: '← Back',
+    back: 'Back',
     retry: 'Retry',
     cancel: 'Cancel',
     confirm: 'Confirm',
@@ -280,7 +280,7 @@ export const en = {
     reload: 'Reload App',
   },
   createTaskForm: {
-    back: '← Back',
+    back: 'Back',
     title: '📸 Send Photos to the Bot',
     subtitle: 'Each photo will create a separate task',
     tips: '💡 Tips:',
