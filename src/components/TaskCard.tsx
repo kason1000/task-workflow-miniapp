@@ -53,12 +53,15 @@ export const TaskCard = React.memo(function TaskCard({
 
   // ---- Archived card: compact single-row ----
   if (archived) {
+    const groupColor = d.groupColor || 'var(--tg-theme-hint-color)';
     return (
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '8px 0',
-        borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
-        opacity: 0.85,
+        padding: '8px 10px',
+        borderRadius: '10px',
+        background: 'var(--tg-theme-secondary-bg-color)',
+        borderLeft: `3px solid ${groupColor}`,
+        marginBottom: '6px',
       }}>
         {/* Small thumbnail */}
         <div
@@ -67,7 +70,7 @@ export const TaskCard = React.memo(function TaskCard({
           style={{
             width: '40px', height: '40px', minWidth: '40px',
             borderRadius: '8px', overflow: 'hidden',
-            background: 'var(--tg-theme-secondary-bg-color)',
+            background: 'var(--tg-theme-bg-color)',
             position: 'relative', cursor: thumbnailUrl ? 'pointer' : 'default',
           }}
         >
@@ -80,17 +83,26 @@ export const TaskCard = React.memo(function TaskCard({
 
         {/* Title + meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {d.title}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {d.title}
+            </span>
+            {d.groupName && (
+              <span style={{
+                fontSize: '9px', fontWeight: 600, padding: '1px 6px',
+                borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
+                background: `${groupColor}18`, color: groupColor,
+                border: `1px solid ${groupColor}30`,
+              }}>
+                {d.groupName}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
             {d.submitterName && <span>{d.submitterName}</span>}
             {d.submittedAt && <span>· {formatDate(d.submittedAt, { month: 'short', day: 'numeric' })}</span>}
           </div>
         </div>
-
-        {/* Status dot */}
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
       </div>
     );
   }
