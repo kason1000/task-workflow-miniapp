@@ -401,8 +401,8 @@ export function DetailImageViewer({
 
                   {canDelete && currentFileId && !isCreatedPhoto && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeleteCurrent(); }} onTouchEnd={(e) => e.stopPropagation()}
-                      style={{ height: '42px', width: '48px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                    ><Trash2 size={16} /></button>
+                      style={{ height: '42px', width: '48px', background: 'rgba(239,68,68,0.7)', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    ><Trash2 size={18} /></button>
                   )}
                 </>
               )}

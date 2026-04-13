@@ -1,5 +1,6 @@
 import { Task } from '../types';
 import { hapticFeedback } from '../utils/telegram';
+import { Share2 } from 'lucide-react';
 
 interface MediaGridProps {
   task: Task;
@@ -93,16 +94,20 @@ export function MediaGrid({
                   onClick={() => onShareSetDirect(setIndex)}
                   disabled={loading}
                   style={{
-                    padding: '6px 12px',
+                    padding: '4px 10px',
                     fontSize: '12px',
-                    background: 'var(--tg-theme-button-color)',
-                    color: 'var(--tg-theme-button-text-color)',
-                    border: 'none',
+                    background: 'var(--tg-theme-secondary-bg-color)',
+                    color: 'var(--tg-theme-button-color)',
+                    border: '1.5px solid var(--tg-theme-button-color)',
                     borderRadius: '10px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
-                  📤 {fileCount}
+                  <Share2 size={12} /> {fileCount}
                 </button>
               )}
             </div>

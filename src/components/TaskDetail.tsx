@@ -506,15 +506,6 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         formatDate={formatDate}
       />
 
-      {/* NEW: Group Information Card */}
-      {!loadingGroup && taskGroup && (
-        <TaskGroupCard
-          displayData={displayData}
-          taskGroup={taskGroup}
-          loadingGroup={loadingGroup}
-          t={t}
-        />
-      )}
 
       {/* Sets Section */}
       <div className="card" style={{ position: 'relative' }}>

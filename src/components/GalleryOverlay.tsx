@@ -903,9 +903,9 @@ export function GalleryOverlay({
                 style={{
                   height: '42px',
                   width: '48px',
-                  background: 'rgba(239,68,68,0.15)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239,68,68,0.3)',
+                  background: 'rgba(239,68,68,0.7)',
+                  color: 'white',
+                  border: 'none',
                   borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
@@ -915,7 +915,7 @@ export function GalleryOverlay({
                 }}
                 title={t('gallery.deleteMediaTitle')}
               >
-                <Trash2 size={16} />
+                <Trash2 size={18} />
               </button>
 
               <button
@@ -924,9 +924,9 @@ export function GalleryOverlay({
                 style={{
                   height: '42px',
                   padding: '0 12px',
-                  background: 'rgba(239,68,68,0.15)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239,68,68,0.3)',
+                  background: 'rgba(239,68,68,0.7)',
+                  color: 'white',
+                  border: 'none',
                   borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
