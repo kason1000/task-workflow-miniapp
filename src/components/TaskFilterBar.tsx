@@ -65,6 +65,16 @@ export function TaskFilterBar({
     return months;
   };
 
+  // Tinted pill style for filter buttons — active shows border + bold, not solid fill
+  const filterBtnStyle = (isActive: boolean): React.CSSProperties => ({
+    minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
+    background: 'var(--tg-theme-secondary-bg-color)',
+    color: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-text-color)',
+    border: isActive ? '1.5px solid var(--tg-theme-button-color)' : '1.5px solid transparent',
+    borderRadius: '10px',
+    fontWeight: isActive ? 600 : 400,
+  });
+
   return (
     <div style={{
       position: 'sticky',
@@ -93,24 +103,14 @@ export function TaskFilterBar({
                 <button
                   onClick={() => { setFilter(prev => ({ ...prev, submittedMonth: undefined })); hapticFeedback.light(); }}
                   aria-label={t('taskList.filterAll')}
-                  style={{
-                    minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                    background: !filter.submittedMonth ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                    color: !filter.submittedMonth ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                    border: 'none', borderRadius: '10px'
-                  }}
+                  style={filterBtnStyle(!filter.submittedMonth)}
                 >All</button>
                 {getMonthOptions().map(m => (
                   <button
                     key={m.value}
                     onClick={() => { setFilter(prev => ({ ...prev, submittedMonth: m.value })); hapticFeedback.light(); }}
                     aria-label={`Filter by ${m.label}`}
-                    style={{
-                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                      background: filter.submittedMonth === m.value ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                      color: filter.submittedMonth === m.value ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '10px'
-                    }}
+                    style={filterBtnStyle(filter.submittedMonth === m.value)}
                   >{m.label}</button>
                 ))}
               </>
@@ -119,24 +119,14 @@ export function TaskFilterBar({
                 <button
                   onClick={() => handleStatusFilter()}
                   aria-label={t('taskList.filterAll')}
-                  style={{
-                    minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                    background: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                    color: filter.status === 'all' && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                    border: 'none', borderRadius: '10px'
-                  }}
+                  style={filterBtnStyle(filter.status === 'all' && !filter.showArchived)}
                 >{t('taskList.filterAll')}</button>
 
                 {userRole === 'Viewer' && (
                   <button
                     onClick={() => handleStatusFilter('InProgress')}
                     aria-label={t('taskList.filterInProgress')}
-                    style={{
-                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                      background: filter.status === 'InProgress' ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                      color: filter.status === 'InProgress' ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '10px'
-                    }}
+                    style={filterBtnStyle(filter.status === 'InProgress')}
                   >{t('taskList.filterInProgress')}</button>
                 )}
 
@@ -145,12 +135,7 @@ export function TaskFilterBar({
                     key={status}
                     onClick={() => handleStatusFilter(status)}
                     aria-label={t(`statusLabels.${status}`)}
-                    style={{
-                      minWidth: 'auto', padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap', flexShrink: 0,
-                      background: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                      color: filter.status === status && !filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '10px'
-                    }}
+                    style={filterBtnStyle(filter.status === status && !filter.showArchived)}
                   >{t(`statusLabels.${status}`)}</button>
                 ))}
               </>
@@ -165,9 +150,10 @@ export function TaskFilterBar({
                 aria-label={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
                 style={{
                   minWidth: 'auto', padding: '6px 8px', fontSize: '16px',
-                  background: filter.showArchived ? 'var(--tg-theme-button-color)' : 'transparent',
-                  color: filter.showArchived ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                  border: 'none', borderRadius: '10px', lineHeight: 1
+                  background: filter.showArchived ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
+                  color: filter.showArchived ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-text-color)',
+                  border: filter.showArchived ? '1.5px solid var(--tg-theme-button-color)' : '1.5px solid transparent',
+                  borderRadius: '10px', lineHeight: 1
                 }}
                 title={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
               >🗃️</button>
@@ -194,12 +180,7 @@ export function TaskFilterBar({
             <button
               onClick={() => { setFilter(prev => ({ ...prev, doneBy: undefined })); hapticFeedback.light(); }}
               aria-label="Filter by all submitters"
-              style={{
-                minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
-                background: !filter.doneBy ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                color: !filter.doneBy ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                border: 'none', borderRadius: '10px'
-              }}
+              style={{ ...filterBtnStyle(!filter.doneBy), padding: '4px 10px', fontSize: '12px' }}
             >👥 All</button>
             {Object.entries(submitterCounts)
               .sort(([,a], [,b]) => b - a)
@@ -214,10 +195,8 @@ export function TaskFilterBar({
                     onClick={() => { setFilter(prev => ({ ...prev, doneBy: uid })); hapticFeedback.light(); }}
                     aria-label={`Filter by ${name}`}
                     style={{
-                      minWidth: 'auto', padding: '4px 10px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0,
-                      background: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-secondary-bg-color)',
-                      color: isActive ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-                      border: 'none', borderRadius: '10px'
+                      ...filterBtnStyle(isActive),
+                      padding: '4px 10px', fontSize: '12px',
                     }}
                   >{name} ({count})</button>
                 );

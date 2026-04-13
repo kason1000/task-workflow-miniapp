@@ -434,8 +434,8 @@ function App() {
                   padding: '6px 10px',
                   background: 'var(--tg-theme-secondary-bg-color)',
                   color: 'var(--tg-theme-text-color)',
-                  border: 'none',
-                  borderRadius: '6px',
+                  border: '1.5px solid transparent',
+                  borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   cursor: 'pointer',
@@ -458,13 +458,14 @@ function App() {
                     setSelectedTask(null);
                   }
                 }}
-                style={{ 
-                  padding: '6px 10px', 
+                style={{
+                  padding: '6px 10px',
                   fontSize: '14px',
-                  background: 'var(--tg-theme-button-color)',
-                  color: 'var(--tg-theme-button-text-color)',
-                  border: 'none',
-                  borderRadius: '6px'
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  color: 'var(--tg-theme-button-color)',
+                  border: '1.5px solid var(--tg-theme-button-color)',
+                  borderRadius: '10px',
+                  fontWeight: 600,
                 }}
               >
                 {t('common.back')}
@@ -513,10 +514,15 @@ function App() {
             }}>
               {user?.first_name || t('common.userLabel')}
             </p>
-            <span className="badge" style={{
+            <span style={{
               marginTop: '1px',
               fontSize: '10px',
-              padding: '1px 6px'
+              padding: '1px 6px',
+              borderRadius: '8px',
+              background: 'var(--tg-theme-secondary-bg-color)',
+              color: 'var(--tg-theme-button-color)',
+              border: '1px solid var(--tg-theme-button-color)',
+              fontWeight: 600,
             }}>
               {role ? t(`roles.${role}`) : ''}
             </span>
