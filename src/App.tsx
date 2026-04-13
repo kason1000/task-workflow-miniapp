@@ -12,7 +12,7 @@ import { GroupDetail } from './components/GroupDetail';
 import { CreateGroup } from './components/CreateGroup';
 import { config } from './config';
 import { getAppVersion, getAppVersionSync } from './utils/version';
-import { Users } from 'lucide-react';
+import { Users, Menu, X, ArrowLeft, FileText, Palette } from 'lucide-react';
 import { useLocale } from './i18n/LocaleContext';
 import { hapticFeedback } from './utils/telegram';
 import { ThemeSwitcher } from './components/ThemeSwitcher';
@@ -442,7 +442,7 @@ function App() {
                   fontSize: '14px'
                 }}
               >
-                <span>{showHamburgerMenu ? '✕' : '☰'}</span>
+                <span>{showHamburgerMenu ? <X size={18} /> : <Menu size={18} />}</span>
               </button>
             )}
 
@@ -468,7 +468,7 @@ function App() {
                   fontWeight: 600,
                 }}
               >
-                {t('common.back')}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={16} /> {t('common.back')}</span>
               </button>
             )}
           </div>
@@ -557,7 +557,9 @@ function App() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           zIndex: 1001,
         }}
         onClick={() => setShowHamburgerMenu(false)}
@@ -568,13 +570,12 @@ function App() {
               position: 'absolute',
               top: '50px', /* Position below the header */
               left: '16px', /* Match the header padding */
-              width: '200px',
+              width: '220px',
               background: 'var(--tg-theme-bg-color)',
-              borderRadius: '8px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
               display: 'flex',
               flexDirection: 'column',
-              border: '1px solid var(--tg-theme-secondary-bg-color)',
               zIndex: 1002
             }}
             onClick={(e) => e.stopPropagation()}
@@ -589,21 +590,21 @@ function App() {
                   padding: '12px 16px',
                   cursor: 'pointer',
                   background: view === 'list' ? 'var(--tg-theme-secondary-bg-color)' : 'transparent',
-                  borderBottom: '1px solid var(--tg-theme-hint-color)',
+                  borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
                   fontSize: '14px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
                 }}
               >
-                <span>📋</span>
+                <FileText size={16} />
                 <span>{t('app.menuTasks')}</span>
               </div>
 
               {/* Group filter section */}
               {groups.length > 0 && (
                 <div style={{
-                  borderBottom: '1px solid var(--tg-theme-hint-color)',
+                  borderBottom: '1px solid var(--tg-theme-secondary-bg-color)',
                   padding: '8px 0',
                 }}>
                   <div style={{
@@ -625,7 +626,7 @@ function App() {
                       display: 'flex', alignItems: 'center', gap: '8px',
                     }}
                   >
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--tg-theme-hint-color)', flexShrink: 0 }} />
+                    <Users size={14} style={{ flexShrink: 0 }} />
                     <span>{t('taskList.allGroups')}</span>
                     {!selectedGroupId && <span style={{ fontSize: '12px', color: 'var(--tg-theme-button-color)', marginLeft: 'auto' }}>✓</span>}
                   </div>
@@ -687,10 +688,10 @@ function App() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  borderTop: '1px solid var(--tg-theme-hint-color)',
+                  borderTop: '1px solid var(--tg-theme-secondary-bg-color)',
                 }}
               >
-                <span>🎨</span>
+                <Palette size={16} />
                 <span>{t('themeSwitcher.title')}</span>
               </div>
             </div>

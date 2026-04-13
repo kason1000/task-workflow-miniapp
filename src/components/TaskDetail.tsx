@@ -10,6 +10,7 @@ import { TaskActionBar } from './TaskActionBar';
 import { DetailImageViewer } from './DetailImageViewer';
 import { TaskInfoCard } from './TaskInfoCard';
 import { TaskGroupCard } from './TaskGroupCard';
+import { Clock, Share2 } from 'lucide-react';
 
 interface TaskDetailProps {
   task: Task;
@@ -533,7 +534,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
             justifyContent: 'center',
             zIndex: 100
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
+            <div style={{ fontSize: '48px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Clock size={48} style={{ color: 'white' }} /></div>
             <div style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
               {t('taskDetail.processing')}
             </div>
@@ -561,7 +562,7 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 <div style={{
                   height: '100%',
                   width: `${(task.completedSets / task.requireSets) * 100}%`,
-                  background: task.completedSets === task.requireSets ? '#10b981' : 'var(--tg-theme-button-color)',
+                  background: task.completedSets === task.requireSets ? '#10b981' : (taskGroup?.color || 'var(--tg-theme-button-color)'),
                   transition: 'width 0.3s'
                 }} />
               </div>
@@ -580,10 +581,10 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 style={{
                   padding: '6px 12px',
                   fontSize: '12px',
-                  background: selectionMode ? '#ef4444' : '#6b7280',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  color: selectionMode ? '#ef4444' : 'var(--tg-theme-button-color)',
+                  border: selectionMode ? '1.5px solid #ef4444' : '1.5px solid var(--tg-theme-button-color)',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   flexShrink: 0
                 }}
@@ -643,15 +644,18 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
                 style={{
                   padding: '6px 12px',
                   fontSize: '12px',
-                  background: loading ? '#6b7280' : '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  color: 'var(--tg-theme-button-color)',
+                  border: '1.5px solid var(--tg-theme-button-color)',
+                  borderRadius: '10px',
                   cursor: 'pointer',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                {loading ? '⏳' : `📤 ${totalMedia}`}
+                {loading ? <Clock size={14} /> : <><Share2 size={14} /> {totalMedia}</>}
               </button>
             )}
           </div>

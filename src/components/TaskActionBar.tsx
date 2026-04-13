@@ -1,4 +1,5 @@
 import { Task, TaskStatus } from '../types';
+import { Package, RotateCcw, Check, RefreshCw, Archive, Send, Trash2 } from 'lucide-react';
 
 interface TaskActionBarProps {
   task: Task;
@@ -52,24 +53,29 @@ export function TaskActionBar({
           disabled={loading}
           style={{
             flex: '1 1 100%',
-            background: 'var(--tg-theme-button-color)',
-            color: 'var(--tg-theme-button-text-color)',
+            background: 'var(--tg-theme-secondary-bg-color)',
+            color: 'var(--tg-theme-button-color)',
+            border: '1.5px solid var(--tg-theme-button-color)',
             fontWeight: '600',
             padding: '12px',
             fontSize: '15px',
-            borderRadius: '10px'
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
           }}
         >
-          {t('taskDetail.sendToChat')}
+          <Send size={16} /> {t('taskDetail.sendToChat')}
         </button>
 
         {task.status === 'New' && canTransition('Received') && (
           <button
             onClick={() => onTransition('Received')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.receive')}
+            <Package size={16} /> {t('taskDetail.receive')}
           </button>
         )}
 
@@ -77,9 +83,9 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('New')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.moveToNew')}
+            <RotateCcw size={16} /> {t('taskDetail.moveToNew')}
           </button>
         )}
 
@@ -87,9 +93,9 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Submitted')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.submit')}
+            <Check size={16} /> {t('taskDetail.submit')}
           </button>
         )}
 
@@ -97,9 +103,9 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Redo')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#f59e0b', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.redo')}
+            <RefreshCw size={16} /> {t('taskDetail.redo')}
           </button>
         )}
 
@@ -107,9 +113,9 @@ export function TaskActionBar({
           <button
             onClick={() => onTransition('Completed')}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#10b981', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.complete')}
+            <Check size={16} /> {t('taskDetail.complete')}
           </button>
         )}
 
@@ -118,9 +124,9 @@ export function TaskActionBar({
             <button
               onClick={onArchive}
               disabled={loading}
-              style={{ flex: '1 1 calc(50% - 4px)', background: '#6b7280', borderRadius: '10px' }}
+              style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
-              {t('taskDetail.archive')}
+              <Archive size={16} /> {t('taskDetail.archive')}
             </button>
           )
         }
@@ -129,9 +135,9 @@ export function TaskActionBar({
           <button
             onClick={onRestore}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#3b82f6', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-button-color)', border: '1.5px solid var(--tg-theme-button-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.restore')}
+            <RotateCcw size={16} /> {t('taskDetail.restore')}
           </button>
         )}
 
@@ -139,9 +145,9 @@ export function TaskActionBar({
           <button
             onClick={onDelete}
             disabled={loading}
-            style={{ flex: '1 1 calc(50% - 4px)', background: '#ef4444', fontSize: '13px', borderRadius: '10px' }}
+            style={{ flex: '1 1 calc(50% - 4px)', borderRadius: '10px', background: 'var(--tg-theme-secondary-bg-color)', color: '#ef4444', border: '1.5px solid #ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
-            {t('taskDetail.delete')}
+            <Trash2 size={16} /> {t('taskDetail.delete')}
           </button>
         )}
       </div>

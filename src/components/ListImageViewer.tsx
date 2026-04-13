@@ -3,6 +3,7 @@ import { Task, Group } from '../types';
 import { useLocale } from '../i18n/LocaleContext';
 import { statusColors } from '../utils/taskStyles';
 import { prepareTaskCard } from '../designs/shared/taskDisplayData';
+import { X, FileText, Send, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ListImageViewerProps {
   imageUrl: string;
@@ -414,7 +415,7 @@ export function ListImageViewer({
             alignItems: 'center', justifyContent: 'center',
             fontSize: '18px', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', padding: 0,
           }}
-        >✕</div>
+        ><X size={18} /></div>
       </div>
 
       {/* Image — vertically centered in area above bottom panel */}
@@ -533,7 +534,7 @@ export function ListImageViewer({
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '18px', cursor: 'pointer', padding: 0,
                 }}
-              >‹</button>
+              ><ChevronLeft size={20} /></button>
 
               <div
                 ref={thumbStripRef}
@@ -590,7 +591,7 @@ export function ListImageViewer({
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '18px', cursor: 'pointer', padding: 0,
                 }}
-              >›</button>
+              ><ChevronRight size={20} /></button>
             </div>
 
             {/* Action buttons */}
@@ -609,7 +610,7 @@ export function ListImageViewer({
                   cursor: 'pointer', fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 }}
-              >📋 {t('common.details')}</button>
+              ><FileText size={16} /> {t('common.details')}</button>
 
               <button
                 onClick={(e) => { e.stopPropagation(); onSendToChat(currentTask.id, e); }}
@@ -627,7 +628,7 @@ export function ListImageViewer({
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   boxShadow: sending[currentTask.id] ? 'none' : `0 2px 8px ${gc}30`,
                 }}
-              >{sending[currentTask.id] ? '⏳' : '💬'} {t('taskList.sendButton')}</button>
+              >{sending[currentTask.id] ? <Clock size={16} /> : <Send size={16} />} {t('taskList.sendButton')}</button>
             </div>
           </div>
         );

@@ -8,6 +8,7 @@ import { getGroupColor } from '../utils/taskStyles';
 import { TaskFilterBar } from './TaskFilterBar';
 import { TaskCard } from './TaskCard';
 import { ListImageViewer } from './ListImageViewer';
+import { Send, Clock } from 'lucide-react';
 
 interface TaskListProps {
   onTaskClick: (task: Task) => void;
@@ -559,8 +560,8 @@ export function TaskList({ onTaskClick, groupId, refreshKey }: TaskListProps) {
                       zIndex: 0,
                     }}
                   >
-                    <span style={{ fontSize: '18px' }}>
-                      {sending[task.id] ? '⏳' : '💬'}
+                    <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {sending[task.id] ? <Clock size={18} /> : <Send size={18} />}
                     </span>
                     <span style={{ fontSize: '8px', fontWeight: 600, opacity: 0.85 }}>
                       {t('taskList.sendButton')}

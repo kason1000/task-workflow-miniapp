@@ -1,5 +1,6 @@
 import { TaskStatus } from '../types';
 import { hapticFeedback } from '../utils/telegram';
+import { Archive, RefreshCw, Users } from 'lucide-react';
 
 interface TaskFilterBarProps {
   filter: {
@@ -156,7 +157,7 @@ export function TaskFilterBar({
                   borderRadius: '10px', lineHeight: 1
                 }}
                 title={filter.showArchived ? t('taskList.showActiveTitle') : t('taskList.showArchivedTitle')}
-              >🗃️</button>
+              ><Archive size={16} /></button>
             )}
             <button
               onClick={onRefresh}
@@ -167,7 +168,7 @@ export function TaskFilterBar({
                 border: 'none', borderRadius: '10px', lineHeight: 1
               }}
               title={t('taskList.refreshTitle')}
-            >🔄</button>
+            ><RefreshCw size={16} /></button>
           </div>
         </div>
 
@@ -181,7 +182,7 @@ export function TaskFilterBar({
               onClick={() => { setFilter(prev => ({ ...prev, doneBy: undefined })); hapticFeedback.light(); }}
               aria-label="Filter by all submitters"
               style={{ ...filterBtnStyle(!filter.doneBy), padding: '4px 10px', fontSize: '12px' }}
-            >👥 All</button>
+            ><Users size={12} /> All</button>
             {Object.entries(submitterCounts)
               .sort(([,a], [,b]) => b - a)
               .map(([userId, count]) => {
