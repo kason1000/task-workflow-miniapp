@@ -12,6 +12,8 @@ import { api } from '../../services/api';
 import { useTaskDetailData } from './useTaskDetailData';
 import { prepareTaskDetail, type TaskDetailDisplay } from './taskDisplayData';
 import { DetailImageViewer } from '../../components/DetailImageViewer';
+import { CommentSection } from '../../components/CommentSection';
+import { RedoCommentModal } from '../../components/RedoCommentModal';
 
 // ============================================================
 // Render prop types — designs implement these
@@ -115,6 +117,9 @@ export function DesignTaskDetail({
   // Selection mode
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
+
+  // Redo modal
+  const [showRedoModal, setShowRedoModal] = useState(false);
 
   // Fullscreen viewer state
   const [isAnimating, setIsAnimating] = useState(false);
@@ -309,14 +314,14 @@ export function DesignTaskDetail({
   }, [task, t]);
 
   // Transitions
-  const handleTransition = useCallback(async (to: TaskStatus) => {
+  const doTransition = useCallback(async (to: TaskStatus, comment?: string) => {
     const statusLabel = t(`statusLabels.${to}`);
-    const confirmed = await showConfirm(t('taskDetail.transitionConfirm', { status: statusLabel }));
+    const confirmed = to === 'Redo' ? true : await showConfirm(t('taskDetail.transitionConfirm', { status: statusLabel }));
     if (!confirmed) return;
     setLoading(true);
     hapticFeedback.medium();
     try {
-      await api.transitionTask(task.id, to);
+      await api.transitionTask(task.id, to, comment);
       hapticFeedback.success();
       showAlert(t('taskDetail.transitionSuccess', { status: statusLabel }));
       onTaskUpdated();
@@ -327,6 +332,19 @@ export function DesignTaskDetail({
       setLoading(false);
     }
   }, [task.id, t, onTaskUpdated]);
+
+  const handleTransition = useCallback((to: TaskStatus) => {
+    if (to === 'Redo') {
+      setShowRedoModal(true);
+      return;
+    }
+    doTransition(to);
+  }, [doTransition]);
+
+  const handleRedoConfirm = useCallback((comment: string) => {
+    setShowRedoModal(false);
+    doTransition('Redo' as TaskStatus, comment);
+  }, [doTransition]);
 
   const handleArchive = useCallback(async () => {
     const confirmed = await showConfirm(t('taskDetail.archiveConfirm'));
@@ -422,6 +440,14 @@ export function DesignTaskDetail({
         taskGroup, onCreatedPhotoClick: handleCreatedPhotoClick, t, formatDate,
       })}
 
+      {/* Comments Section */}
+      <CommentSection
+        task={task}
+        userRole={userRole}
+        userNames={userNames}
+        onCommentAdded={onTaskUpdated}
+      />
+
       {/* Progress Section */}
       {renderProgressSection({
         task, display: displayData, taskGroup, totalMedia,
@@ -480,6 +506,13 @@ export function DesignTaskDetail({
           taskGroup={taskGroup}
         />
       )}
+
+      {/* Redo Comment Modal */}
+      <RedoCommentModal
+        isOpen={showRedoModal}
+        onConfirm={handleRedoConfirm}
+        onCancel={() => setShowRedoModal(false)}
+      />
     </>
   );
 }

@@ -33,6 +33,15 @@ export interface GroupMember {
   invitedBy: number;
 }
 
+export interface TaskComment {
+  id: string;
+  userId: number;
+  userName?: string;
+  text: string;
+  createdAt: string;
+  type: 'user' | 'redo';
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -72,6 +81,7 @@ export interface Task {
   lockedTo?: number;
   lockedAt?: string;
   lockedByRole?: string;
+  comments?: TaskComment[];
 }
 
 export interface User {

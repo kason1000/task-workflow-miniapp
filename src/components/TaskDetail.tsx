@@ -9,7 +9,8 @@ import { MediaGrid } from './MediaGrid';
 import { TaskActionBar } from './TaskActionBar';
 import { DetailImageViewer } from './DetailImageViewer';
 import { TaskInfoCard } from './TaskInfoCard';
-import { TaskGroupCard } from './TaskGroupCard';
+import { CommentSection } from './CommentSection';
+import { RedoCommentModal } from './RedoCommentModal';
 import { Clock, Share2, Trash2 } from 'lucide-react';
 import { COLORS } from '../utils/colors';
 
@@ -63,6 +64,9 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
   const [allTaskPhotos, setAllTaskPhotos] = useState<string[]>([]);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
   const [viewerMode, setViewerMode] = useState<'title' | 'media' | null>(null);
+
+  // Redo modal state
+  const [showRedoModal, setShowRedoModal] = useState(false);
 
   // NEW: Group state
   const [taskGroup, setTaskGroup] = useState<Group | null>(null);
@@ -378,16 +382,22 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     return displayData.availableTransitions?.includes(to) ?? false;
   };
 
-  const handleTransition = async (to: TaskStatus) => {
+  const handleTransition = async (to: TaskStatus, comment?: string) => {
+    // Intercept Redo to show the comment modal
+    if (to === 'Redo' && !comment) {
+      setShowRedoModal(true);
+      return;
+    }
+
     const statusLabel = t(`statusLabels.${to}`);
-    const confirmed = await showConfirm(t('taskDetail.transitionConfirm', { status: statusLabel }));
+    const confirmed = to === 'Redo' ? true : await showConfirm(t('taskDetail.transitionConfirm', { status: statusLabel }));
     if (!confirmed) return;
 
     setLoading(true);
     hapticFeedback.medium();
 
     try {
-      await api.transitionTask(task.id, to);
+      await api.transitionTask(task.id, to, comment);
 
       hapticFeedback.success();
       showAlert(t('taskDetail.transitionSuccess', { status: statusLabel }));
@@ -399,6 +409,11 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRedoConfirm = (comment: string) => {
+    setShowRedoModal(false);
+    handleTransition('Redo' as TaskStatus, comment);
   };
 
   const handleArchive = async () => {
@@ -505,8 +520,28 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
         onCreatedPhotoClick={handleCreatedPhotoClick}
         t={t}
         formatDate={formatDate}
+        userRole={userRole}
+        onTitleUpdate={async (newTitle: string) => {
+          try {
+            await api.updateTaskTitle(task.id, newTitle);
+            hapticFeedback.success();
+            showAlert(t('taskDetail.titleUpdated'));
+            onTaskUpdated();
+          } catch (error: any) {
+            hapticFeedback.error();
+            showAlert(t('taskDetail.titleUpdateFailed', { error: error.message }));
+            throw error;
+          }
+        }}
       />
 
+      {/* Comments Section */}
+      <CommentSection
+        task={task}
+        userRole={userRole}
+        userNames={userNames}
+        onCommentAdded={onTaskUpdated}
+      />
 
       {/* Sets Section */}
       <div className="card" style={{ position: 'relative' }}>
@@ -746,6 +781,13 @@ export function TaskDetail({ task, userRole, onBack, onTaskUpdated }: TaskDetail
           taskGroup={taskGroup}
         />
       )}
+
+      {/* Redo Comment Modal */}
+      <RedoCommentModal
+        isOpen={showRedoModal}
+        onConfirm={handleRedoConfirm}
+        onCancel={() => setShowRedoModal(false)}
+      />
     </div>
   );
 }

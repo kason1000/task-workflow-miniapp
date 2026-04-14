@@ -1,9 +1,9 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Task, Group } from '../types';
 import WebApp from '@twa-dev/sdk';
 import { getGroupColor } from '../utils/taskStyles';
 import { STATUS_COLORS, COLORS } from '../utils/colors';
-import { Image, Clock } from 'lucide-react';
+import { Image, Clock, Pencil, Check, X } from 'lucide-react';
 
 interface TaskInfoCardProps {
   task: Task;
@@ -19,6 +19,8 @@ interface TaskInfoCardProps {
   onCreatedPhotoClick: () => void;
   t: (key: string, params?: Record<string, any>) => string;
   formatDate: (date: string | Date) => string;
+  userRole?: string;
+  onTitleUpdate?: (newTitle: string) => Promise<void>;
 }
 
 export function TaskInfoCard({
@@ -30,9 +32,15 @@ export function TaskInfoCard({
   onCreatedPhotoClick,
   t,
   formatDate,
+  userRole,
+  onTitleUpdate,
 }: TaskInfoCardProps) {
   const thumbnailRef = useRef<HTMLDivElement>(null);
   const createdPhotoUrl = task.createdPhoto ? mediaCache[task.createdPhoto.file_id] : undefined;
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(task.title);
+  const [savingTitle, setSavingTitle] = useState(false);
+  const canEditTitle = onTitleUpdate && (userRole === 'Admin' || userRole === 'Lead');
 
   return (
     <div
@@ -96,9 +104,55 @@ export function TaskInfoCard({
             alignItems: 'flex-start',
             marginBottom: '8px'
           }}>
-            <h3 style={{ fontSize: '16px', margin: 0, flex: 1, marginRight: '8px' }}>
-              {task.title}
-            </h3>
+            {editingTitle ? (
+              <div style={{ flex: 1, display: 'flex', gap: '4px', alignItems: 'center', marginRight: '8px' }}>
+                <input
+                  value={titleDraft}
+                  onChange={e => setTitleDraft(e.target.value)}
+                  autoFocus
+                  style={{
+                    flex: 1, fontSize: '15px', fontWeight: 600, padding: '4px 8px',
+                    border: '1.5px solid var(--tg-theme-button-color)', borderRadius: '6px',
+                    background: 'var(--tg-theme-bg-color)', color: 'var(--tg-theme-text-color)',
+                    outline: 'none', fontFamily: 'inherit', minWidth: 0,
+                  }}
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter' && titleDraft.trim()) {
+                      setSavingTitle(true);
+                      try { await onTitleUpdate!(titleDraft.trim()); setEditingTitle(false); }
+                      catch {} finally { setSavingTitle(false); }
+                    }
+                    if (e.key === 'Escape') { setTitleDraft(task.title); setEditingTitle(false); }
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!titleDraft.trim()) return;
+                    setSavingTitle(true);
+                    try { await onTitleUpdate!(titleDraft.trim()); setEditingTitle(false); }
+                    catch {} finally { setSavingTitle(false); }
+                  }}
+                  disabled={savingTitle || !titleDraft.trim()}
+                  style={{ padding: '4px', minWidth: 'auto', background: 'none', border: 'none', color: 'var(--tg-theme-button-color)', cursor: 'pointer' }}
+                >
+                  <Check size={18} />
+                </button>
+                <button
+                  onClick={() => { setTitleDraft(task.title); setEditingTitle(false); }}
+                  style={{ padding: '4px', minWidth: 'auto', background: 'none', border: 'none', color: 'var(--tg-theme-hint-color)', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
+              <h3
+                style={{ fontSize: '16px', margin: 0, flex: 1, marginRight: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={canEditTitle ? () => { setTitleDraft(task.title); setEditingTitle(true); } : undefined}
+              >
+                {task.title}
+                {canEditTitle && <Pencil size={12} style={{ color: 'var(--tg-theme-hint-color)', cursor: 'pointer', flexShrink: 0 }} />}
+              </h3>
+            )}
             <span style={{
               fontSize: '10px',
               fontWeight: 600,

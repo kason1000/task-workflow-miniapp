@@ -124,10 +124,24 @@ class ApiService {
     return { task: response.task || response };
   }
 
-  async transitionTask(taskId: string, status: string) {
+  async transitionTask(taskId: string, status: string, comment?: string) {
     return this.request<any>(`/tasks/${taskId}/transition`, {
       method: 'POST',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, ...(comment ? { comment } : {}) }),
+    });
+  }
+
+  async updateTaskTitle(taskId: string, title: string) {
+    return this.request<any>(`/tasks/${taskId}/title`, {
+      method: 'PUT',
+      body: JSON.stringify({ title }),
+    });
+  }
+
+  async addComment(taskId: string, text: string) {
+    return this.request<any>(`/tasks/${taskId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
     });
   }
 
