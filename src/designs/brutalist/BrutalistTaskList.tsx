@@ -170,7 +170,7 @@ function renderTaskCard(props: DesignTaskCardProps): React.ReactNode {
       {/* Send button — thick bordered rectangle */}
       <button className="brutal-task-send" onClick={onSendToChat}>
         <Send size={14} />
-        <span>SEND</span>
+        <span>{t('taskList.sendButton')}</span>
       </button>
     </div>
   );
@@ -238,7 +238,7 @@ function renderArchivedCard(props: DesignTaskCardProps): React.ReactNode {
 
       <button className="brutal-task-send" onClick={onSendToChat}>
         <Send size={14} />
-        <span>SEND</span>
+        <span>{t('taskList.sendButton')}</span>
       </button>
     </div>
   );
@@ -256,7 +256,7 @@ function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
     <div className="brutal-task-count">
       <span className="brutal-task-count-number">{count}</span>
       <span className="brutal-task-count-label">
-        {filter.showArchived ? t('taskList.archivedCount') : t('taskList.taskCount')}
+        {filter.showArchived ? t('taskList.archivedCount', { count }) : t('taskList.taskCount', { count })}
       </span>
     </div>
   );
@@ -307,10 +307,10 @@ function renderLoading(_props: DesignLoadingProps): React.ReactNode {
 // Loading More
 // ============================================================
 
-function renderLoadingMore(_props: DesignLoadingProps): React.ReactNode {
+function renderLoadingMore({ t }: DesignLoadingProps): React.ReactNode {
   return (
     <div className="brutal-loading-more">
-      <span className="brutal-loading-more-text">LOADING...</span>
+      <span className="brutal-loading-more-text">{t('taskList.loadingMore')}</span>
     </div>
   );
 }

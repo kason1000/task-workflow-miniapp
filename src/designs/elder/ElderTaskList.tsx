@@ -41,7 +41,7 @@ function ElderFilterBar({
     <div className="elder-d-filters">
       {/* Refresh */}
       <button className="elder-d-refresh-btn" onClick={onRefresh}>
-        <RefreshCw size={20} /> {t('common.refresh')}
+        <RefreshCw size={20} /> {t('taskList.refreshTitle')}
       </button>
 
       {/* Status filter */}
@@ -83,7 +83,7 @@ function ElderFilterBar({
               className={`elder-d-filter-pill ${filter.showArchived ? 'elder-d-filter-pill--active' : ''}`}
               onClick={() => setFilter(f => ({ ...f, showArchived: !f.showArchived, status: 'all' as const }))}
             >
-              <Archive size={16} /> {t('taskList.filterArchived')}
+              <Archive size={16} /> {t('taskList.filterArchivedBadge')}
             </button>
           )}
         </div>
@@ -177,28 +177,28 @@ function ElderTaskCard({
               color: statusColor,
             }}>
               <span className="elder-d-status-dot-lg" style={{ background: statusColor }} />
-              Status: {t(`statusLabels.${display.status}`)}
+              {t('taskDetail.statusLabel')}: {t(`statusLabels.${display.status}`)}
             </div>
 
             {/* Group */}
             {display.groupName && (
               <div className="elder-d-card-field">
                 <span className="elder-d-status-dot" style={{ background: display.groupColor || COLORS.defaultGroup }} />
-                Group: {display.groupName}
+                {t('taskDetail.groupLabel')}: {display.groupName}
               </div>
             )}
 
             {/* Submitter */}
             {display.submitterName && (
               <div className="elder-d-card-field">
-                <User size={16} /> By: {display.submitterName}
+                <User size={16} /> {t('taskDetail.submittedByLabel')}: {display.submitterName}
               </div>
             )}
 
             {/* Creator */}
             {display.createdByName && !display.submitterName && (
               <div className="elder-d-card-field">
-                <User size={16} /> Created by: {display.createdByName}
+                <User size={16} /> {t('taskDetail.createdByLabel')}: {display.createdByName}
               </div>
             )}
           </div>
@@ -207,7 +207,7 @@ function ElderTaskCard({
         {/* Progress bar */}
         <div className="elder-d-card-progress">
           <div className="elder-d-card-progress-label">
-            {display.completedSets} of {display.requireSets} sets done
+            {t('taskDetail.setsComplete', { done: display.completedSets, total: display.requireSets })}
           </div>
           <div className="elder-d-progress-bar">
             <div
@@ -221,11 +221,11 @@ function ElderTaskCard({
         <div className="elder-d-card-labels">
           {display.hasVideo && (
             <span className="elder-d-card-label">
-              <Video size={16} /> Has Video
+              <Video size={16} /> {t('taskDetail.videoRequired')}
             </span>
           )}
           <span className="elder-d-card-label">
-            <Layers size={16} /> Requires {display.requireSets} sets
+            <Layers size={16} /> {t('taskDetail.setsRequired')}: {display.requireSets}
           </span>
         </div>
       </div>
@@ -252,7 +252,7 @@ function ElderArchivedCard(props: DesignTaskCardProps) {
 
   return (
     <div className="elder-d-card-wrapper elder-d-card-wrapper--archived">
-      <div className="elder-d-archived-badge">ARCHIVED</div>
+      <div className="elder-d-archived-badge">{t('statusLabels.Archived')}</div>
       <div
         className="elder-d-card elder-d-card--archived"
         onClick={onCardClick}
@@ -274,7 +274,7 @@ function ElderArchivedCard(props: DesignTaskCardProps) {
               borderColor: COLORS.gray,
               color: COLORS.gray,
             }}>
-              <Archive size={16} /> Status: {t('statusLabels.Archived')}
+              <Archive size={16} /> {t('taskDetail.statusLabel')}: {t('statusLabels.Archived')}
             </div>
             {display.groupName && (
               <div className="elder-d-card-field" style={{ opacity: 0.7 }}>
@@ -286,7 +286,7 @@ function ElderArchivedCard(props: DesignTaskCardProps) {
 
         <div className="elder-d-card-progress" style={{ opacity: 0.7 }}>
           <div className="elder-d-card-progress-label">
-            {display.completedSets} of {display.requireSets} sets done
+            {t('taskDetail.setsComplete', { done: display.completedSets, total: display.requireSets })}
           </div>
           <div className="elder-d-progress-bar">
             <div className="elder-d-progress-fill" style={{ width: `${display.progressPercent}%`, background: COLORS.gray }} />
@@ -318,8 +318,8 @@ function ElderTaskCount({ tasks, filter, archivedTotalCount }: DesignTaskCountPr
   return (
     <div className="elder-d-task-count">
       {filter.showArchived
-        ? `${count} archived tasks`
-        : `${count} tasks found`
+        ? t('taskList.archivedCount', { count })
+        : t('taskList.found', { count })
       }
     </div>
   );

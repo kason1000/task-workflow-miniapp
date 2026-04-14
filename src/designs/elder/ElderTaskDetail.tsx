@@ -39,7 +39,7 @@ function ElderInfoCard({
 
       {/* Status */}
       <div className="elder-d-detail-row">
-        <span className="elder-d-detail-label">Status:</span>
+        <span className="elder-d-detail-label">{t('taskDetail.statusLabel')}:</span>
         <span className="elder-d-detail-status-pill" style={{
           background: `${statusColor}18`,
           borderColor: statusColor,
@@ -53,7 +53,7 @@ function ElderInfoCard({
       {/* Group */}
       {display.groupName && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Group:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.group')}:</span>
           <span className="elder-d-detail-value">
             <span className="elder-d-status-dot" style={{ background: display.groupColor || COLORS.defaultGroup }} />
             {display.groupName}
@@ -64,11 +64,11 @@ function ElderInfoCard({
       {/* Created by */}
       {display.createdByName && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Created by:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.createdByLabel')}:</span>
           <span className="elder-d-detail-value">
             <User size={18} /> {display.createdByName}
             {display.createdAt && (
-              <span className="elder-d-detail-date"> on {formatDate(display.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+              <span className="elder-d-detail-date"> · {formatDate(display.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
             )}
           </span>
         </div>
@@ -77,7 +77,7 @@ function ElderInfoCard({
       {/* Submitted by */}
       {display.submitterName && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Submitted by:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.submittedByLabel')}:</span>
           <span className="elder-d-detail-value">
             <User size={18} /> {display.submitterName}
           </span>
@@ -87,7 +87,7 @@ function ElderInfoCard({
       {/* Uploaders */}
       {display.uploaderNames.length > 0 && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Uploaded by:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.uploadedByLabel')}:</span>
           <span className="elder-d-detail-value">
             <User size={18} /> {display.uploaderNames.join(', ')}
           </span>
@@ -97,7 +97,7 @@ function ElderInfoCard({
       {/* Locked */}
       {display.isLocked && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Locked to:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.lockedToLabel')}:</span>
           <span className="elder-d-detail-value">
             <Lock size={18} /> {display.lockedToName || t('taskDetail.unknownUser')}
           </span>
@@ -106,28 +106,28 @@ function ElderInfoCard({
 
       {/* Has video */}
       <div className="elder-d-detail-row">
-        <span className="elder-d-detail-label">Video required:</span>
+        <span className="elder-d-detail-label">{t('taskDetail.videoRequired')}:</span>
         <span className="elder-d-detail-value">
           {display.hasVideo ? (
-            <><Video size={18} /> Yes</>
+            <><Video size={18} /> {t('common.yes')}</>
           ) : (
-            <>No</>
+            <>{t('common.no')}</>
           )}
         </span>
       </div>
 
       {/* Sets required */}
       <div className="elder-d-detail-row">
-        <span className="elder-d-detail-label">Sets required:</span>
+        <span className="elder-d-detail-label">{t('taskDetail.setsRequired')}:</span>
         <span className="elder-d-detail-value">
-          <Layers size={18} /> {display.requireSets} sets
+          <Layers size={18} /> {display.requireSets}
         </span>
       </div>
 
       {/* Submitted date */}
       {display.submittedAt && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Submitted on:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.submittedOnLabel')}:</span>
           <span className="elder-d-detail-value">
             <Calendar size={18} /> {formatDate(display.submittedAt, { year: 'numeric', month: 'short', day: 'numeric' })}
           </span>
@@ -137,7 +137,7 @@ function ElderInfoCard({
       {/* Completed date */}
       {display.completedAt && (
         <div className="elder-d-detail-row">
-          <span className="elder-d-detail-label">Completed on:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.completedOnLabel')}:</span>
           <span className="elder-d-detail-value">
             <Calendar size={18} /> {formatDate(display.completedAt, { year: 'numeric', month: 'short', day: 'numeric' })}
           </span>
@@ -147,7 +147,7 @@ function ElderInfoCard({
       {/* Created photo — large */}
       {createdPhotoUrl && (
         <div className="elder-d-detail-photo-section">
-          <span className="elder-d-detail-label">Task Photo:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.taskPhoto')}:</span>
           <img
             src={createdPhotoUrl}
             alt={display.title}
@@ -158,9 +158,9 @@ function ElderInfoCard({
       )}
       {display.createdPhotoFileId && !createdPhotoUrl && loadingMedia.has(display.createdPhotoFileId) && (
         <div className="elder-d-detail-photo-section">
-          <span className="elder-d-detail-label">Task Photo:</span>
+          <span className="elder-d-detail-label">{t('taskDetail.taskPhoto')}:</span>
           <div className="elder-d-detail-photo-placeholder">
-            Loading photo...
+            {t('taskDetail.loadingPhoto')}
           </div>
         </div>
       )}
@@ -180,12 +180,12 @@ function ElderProgressSection({
   return (
     <div className="elder-d-detail-progress">
       <div className="elder-d-detail-section-title">
-        <Layers size={22} /> Progress
+        <Layers size={22} /> {t('taskDetail.progress')}
       </div>
 
       {/* Progress text */}
       <div className="elder-d-detail-progress-text">
-        {display.completedSets} of {display.requireSets} sets completed
+        {t('taskDetail.setsComplete', { done: display.completedSets, total: display.requireSets })}
       </div>
 
       {/* Large progress bar */}
@@ -199,12 +199,12 @@ function ElderProgressSection({
         />
       </div>
       <div className="elder-d-detail-progress-percent">
-        {display.progressPercent}% complete
+        {t('taskDetail.percentComplete', { percent: display.progressPercent })}
       </div>
 
       {/* Total media count */}
       <div className="elder-d-detail-media-count">
-        Total media: {totalMedia} files
+        {t('taskDetail.totalMediaFiles', { count: totalMedia })}
       </div>
 
       {/* Selection mode toggle + actions */}
@@ -251,13 +251,13 @@ function ElderMediaGrid({
   display, mediaCache, loadingMedia,
   selectionMode, selectedMedia,
   onMediaClick, onToggleMediaSelection, onShareSet,
-  loading,
+  loading, t,
 }: DesignMediaGridProps) {
   if (display.sets.length === 0) {
     return (
       <div className="elder-d-detail-media-empty">
         <Image size={40} />
-        <div>No media uploaded yet</div>
+        <div>{t('taskDetail.noMediaYet')}</div>
       </div>
     );
   }
@@ -265,17 +265,17 @@ function ElderMediaGrid({
   return (
     <div className="elder-d-detail-media">
       <div className="elder-d-detail-section-title">
-        <Image size={22} /> Media
+        <Image size={22} /> {t('taskDetail.media')}
       </div>
 
       {display.sets.map((set, setIndex) => (
         <div key={setIndex} className="elder-d-media-set">
           <div className="elder-d-media-set-header">
             <span className="elder-d-media-set-title">
-              Set {setIndex + 1}
+              {t('taskDetail.setNumber', { index: setIndex + 1 })}
               {set.isComplete && (
                 <span className="elder-d-media-set-complete">
-                  <CheckCircle size={18} /> Complete
+                  <CheckCircle size={18} /> {t('taskDetail.setComplete')}
                 </span>
               )}
             </span>
@@ -340,7 +340,7 @@ function ElderMediaGrid({
                     </div>
                   )}
                   <div className="elder-d-media-video-label">
-                    <Video size={14} /> Video
+                    <Video size={14} /> {t('taskDetail.video')}
                   </div>
 
                   {selectionMode && (
@@ -365,7 +365,7 @@ function ElderMediaGrid({
             onClick={() => onShareSet(setIndex)}
             disabled={loading}
           >
-            <Share2 size={20} /> Share Set {setIndex + 1}
+            <Share2 size={20} /> {t('taskDetail.shareSet', { index: setIndex + 1 })}
           </button>
         </div>
       ))}
@@ -388,7 +388,7 @@ function ElderActionBar({
   return (
     <div className="elder-d-detail-actions">
       <div className="elder-d-detail-section-title">
-        Actions
+        {t('taskDetail.actions')}
       </div>
 
       {/* Send to chat */}
@@ -412,7 +412,7 @@ function ElderActionBar({
             disabled={loading}
             style={{ borderColor: statusColor, color: statusColor }}
           >
-            <ArrowRight size={22} /> {t('taskDetail.moveTo')} {t(`statusLabels.${status}`)}
+            <ArrowRight size={22} /> {t('taskDetail.moveTo', { status: t(`statusLabels.${status}`) })}
           </button>
         );
       })}

@@ -267,7 +267,7 @@ function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
     <div className="zen-task-count">
       <span className="zen-task-count-number">{count}</span>
       <span className="zen-task-count-label">
-        {filter.showArchived ? t('taskList.archivedCount') : t('taskList.taskCount')}
+        {filter.showArchived ? t('taskList.archivedCount', { count }) : t('taskList.taskCount', { count })}
       </span>
     </div>
   );

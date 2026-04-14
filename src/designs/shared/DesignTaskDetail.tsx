@@ -4,7 +4,6 @@
  * Designs provide render functions for visual output only.
  */
 import { useState, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { Task, TaskStatus, Group } from '../../types';
 import { useLocale } from '../../i18n/LocaleContext';
 import { hapticFeedback, showAlert, showConfirm } from '../../utils/telegram';
@@ -12,7 +11,7 @@ import WebApp from '@twa-dev/sdk';
 import { api } from '../../services/api';
 import { useTaskDetailData } from './useTaskDetailData';
 import { prepareTaskDetail, type TaskDetailDisplay } from './taskDisplayData';
-import { FullImageViewer } from './FullImageViewer';
+import { DetailImageViewer } from '../../components/DetailImageViewer';
 
 // ============================================================
 // Render prop types — designs implement these
@@ -459,18 +458,27 @@ export function DesignTaskDetail({
     <>
       {wrapDetail ? wrapDetail(content) : content}
 
-      {/* Fullscreen Viewer */}
-      {fullscreenImage && viewerMode && createPortal(
-        <FullImageViewer
+      {/* Fullscreen Viewer — uses classic DetailImageViewer for full feature parity */}
+      {fullscreenImage && viewerMode && (
+        <DetailImageViewer
           imageUrl={fullscreenImage}
-          isVisible={isAnimating}
+          isAnimating={isAnimating}
           onClose={closeFullscreen}
-          allPhotos={allTaskPhotos.map((url, i) => ({ url, taskId: task.id, taskIndex: i }))}
-          currentIndex={currentPhotoIndex}
-          onIndexChange={setCurrentPhotoIndex}
-          onImageChange={(url) => setFullscreenImage(url)}
-        />,
-        document.body
+          allPhotos={allTaskPhotos}
+          currentPhotoIndex={currentPhotoIndex}
+          setCurrentPhotoIndex={setCurrentPhotoIndex}
+          setFullscreenImage={setFullscreenImage}
+          mode={viewerMode}
+          task={task}
+          userRole={userRole}
+          onTaskUpdated={onTaskUpdated}
+          onSendToChat={handleSendToChat}
+          sending={isLoading}
+          mediaItems={buildSetMedia()}
+          shareSetDirect={shareSetDirect}
+          userNames={userNames}
+          taskGroup={taskGroup}
+        />
       )}
     </>
   );

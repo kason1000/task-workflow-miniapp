@@ -289,7 +289,7 @@ function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
     <div className="mosaic-task-count">
       <span className="mosaic-count-number">{count}</span>
       <span className="mosaic-count-label">
-        {filter.showArchived ? t('taskList.archivedCount') : t('taskList.taskCount')}
+        {filter.showArchived ? t('taskList.archivedCount', { count }) : t('taskList.taskCount', { count })}
       </span>
     </div>
   );
@@ -343,10 +343,10 @@ function renderLoading(_props: DesignLoadingProps): React.ReactNode {
 // Loading More
 // ============================================================
 
-function renderLoadingMore(_props: DesignLoadingProps): React.ReactNode {
+function renderLoadingMore({ t }: DesignLoadingProps): React.ReactNode {
   return (
     <div className="mosaic-load-more">
-      <span className="mosaic-load-more-link">Loading...</span>
+      <span className="mosaic-load-more-link">{t('taskList.loadingMore')}</span>
     </div>
   );
 }

@@ -4,7 +4,6 @@
  * Designs provide render functions for visual output only.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { Task, TaskStatus, Group } from '../../types';
 import { useLocale } from '../../i18n/LocaleContext';
 import { hapticFeedback, showAlert } from '../../utils/telegram';
@@ -12,7 +11,7 @@ import WebApp from '@twa-dev/sdk';
 import { api } from '../../services/api';
 import { useTaskListData, type TaskFilter } from './useTaskListData';
 import { prepareTaskCard, type TaskCardDisplay } from './taskDisplayData';
-import { FullImageViewer, type FullImageTaskInfo } from './FullImageViewer';
+import { ListImageViewer } from '../../components/ListImageViewer';
 
 // ============================================================
 // Render prop types — designs implement these
@@ -102,7 +101,8 @@ export function DesignTaskList({
     userRole, userNames, groups, archivedTotalCount, submitterCounts,
     filter, setFilter, getFilterOrder, getMonthOptions,
     fullscreenImage, allPhotos, currentPhotoIndex,
-    setCurrentPhotoIndex, setFullscreenImage, setCurrentFullscreenTaskId,
+    setCurrentPhotoIndex, setFullscreenImage,
+    currentFullscreenTaskId, setCurrentFullscreenTaskId,
     loadMoreTasks, handleRefresh,
     isAnimating, setIsAnimating,
   } = data;
@@ -253,36 +253,30 @@ export function DesignTaskList({
     </>
   );
 
-  // Current fullscreen photo info
-  const currentPhoto = allPhotos[currentPhotoIndex];
-
   return (
     <>
       {wrapList ? wrapList(listContent) : listContent}
 
-      {/* Fullscreen Image Viewer — shared across all designs */}
-      {fullscreenImage && createPortal(
-        <FullImageViewer
+      {/* Fullscreen Image Viewer — uses the classic ListImageViewer for full feature parity */}
+      {fullscreenImage && (
+        <ListImageViewer
           imageUrl={fullscreenImage}
-          isVisible={isAnimating}
+          isAnimating={isAnimating}
           onClose={handleCloseFullscreen}
+          tasks={tasks}
+          currentTaskIndex={tasks.findIndex(t => t.id === currentFullscreenTaskId)}
+          onTaskClick={onTaskClick}
+          onSendToChat={(taskId, e) => handleSendToChat(taskId, e)}
+          sending={sending}
           allPhotos={allPhotos}
-          currentIndex={currentPhotoIndex}
-          onIndexChange={setCurrentPhotoIndex}
-          onImageChange={(url, taskId) => {
-            setFullscreenImage(url);
-            setCurrentFullscreenTaskId(taskId);
-          }}
-          currentTaskInfo={currentPhoto?.taskInfo as FullImageTaskInfo}
-          onGoToDetail={currentPhoto ? () => {
-            const task = tasks.find(t => t.id === currentPhoto.taskId);
-            if (task) { handleCloseFullscreen(); onTaskClick(task); }
-          } : undefined}
-          onSendToChat={currentPhoto ? () => {
-            handleSendToChat(currentPhoto.taskId, { stopPropagation: () => {} } as any);
-          } : undefined}
-        />,
-        document.body
+          currentPhotoIndex={currentPhotoIndex}
+          setCurrentPhotoIndex={setCurrentPhotoIndex}
+          setFullscreenImage={setFullscreenImage}
+          setCurrentFullscreenTaskId={setCurrentFullscreenTaskId}
+          userNames={userNames}
+          groups={groups}
+          onLoadMore={hasMore ? loadMoreTasks : undefined}
+        />
       )}
     </>
   );

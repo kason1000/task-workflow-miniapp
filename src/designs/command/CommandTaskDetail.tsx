@@ -92,11 +92,11 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
       <div className="cmd-box-row">
         <span className="cmd-box-border">{'\u2502'}</span>
         <span className="cmd-box-content">
-          <span className="cmd-detail-key">STATUS:</span>
+          <span className="cmd-detail-key">{t('taskDetail.statusLabel').toUpperCase()}:</span>
           {' '}
           <span className={`cmd-status ${statusClass}`}>[{statusCode}]</span>
           {'  '}
-          <span className="cmd-detail-key">GROUP:</span>
+          <span className="cmd-detail-key">{t('taskDetail.groupLabel').toUpperCase()}:</span>
           {' '}
           <span className="cmd-detail-value" style={{ color: display.groupColor || COLORS.defaultGroup }}>
             {groupName}
@@ -110,7 +110,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">CREATED:</span>
+            <span className="cmd-detail-key">{t('taskDetail.createdByLabel').toUpperCase()}:</span>
             {' '}
             <span className="cmd-detail-value">
               {display.createdByName} @ {formatDate(display.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -125,7 +125,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">SUBMITTED:</span>
+            <span className="cmd-detail-key">{t('taskDetail.submittedByLabel').toUpperCase()}:</span>
             {' '}
             <span className="cmd-detail-value">
               {display.submitterName} @ {formatDate(display.submittedAt, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -140,7 +140,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">COMPLETED:</span>
+            <span className="cmd-detail-key">{t('statusLabels.Completed').toUpperCase()}:</span>
             {' '}
             <span className="cmd-detail-value">
               {formatDate(display.completedAt, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -155,7 +155,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">ARCHIVED:</span>
+            <span className="cmd-detail-key">{t('statusLabels.Archived').toUpperCase()}:</span>
             {' '}
             <span className="cmd-detail-value">
               {formatDate(display.archivedAt, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -170,7 +170,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">LOCKED:</span>
+            <span className="cmd-detail-key">{t('taskDetail.lockedToLabel').toUpperCase()}:</span>
             {' '}
             <Lock size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />
             <span className="cmd-detail-value">{display.lockedToName}</span>
@@ -184,10 +184,9 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">VIDEO:</span>
+            <span className="cmd-detail-key">{t('taskDetail.videoRequired').toUpperCase()}:</span>
             {' '}
             <Video size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />
-            <span className="cmd-detail-value">{t('taskDetail.required')}</span>
           </span>
           <span className="cmd-box-border">{'\u2502'}</span>
         </div>
@@ -198,7 +197,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
         <div className="cmd-box-row">
           <span className="cmd-box-border">{'\u2502'}</span>
           <span className="cmd-box-content">
-            <span className="cmd-detail-key">UPLOADERS:</span>
+            <span className="cmd-detail-key">{t('taskDetail.uploadedByLabel').toUpperCase()}:</span>
             {' '}
             <span className="cmd-detail-value">{display.uploaderNames.join(', ')}</span>
           </span>
@@ -210,7 +209,7 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
       <div className="cmd-box-row">
         <span className="cmd-box-border">{'\u2502'}</span>
         <span className="cmd-box-content">
-          <span className="cmd-detail-key">PROGRESS:</span>
+          <span className="cmd-detail-key">{t('taskDetail.progress').toUpperCase()}:</span>
           {' '}
           <span className="cmd-progress cmd-progress--detail">
             {asciiBar(display.progressPercent)} {Math.round(display.progressPercent)}% ({display.progressLabel})
@@ -223,9 +222,9 @@ function renderInfoCard(props: DesignInfoCardProps): React.ReactNode {
       <div className="cmd-box-row">
         <span className="cmd-box-border">{'\u2502'}</span>
         <span className="cmd-box-content">
-          <span className="cmd-detail-key">MEDIA:</span>
+          <span className="cmd-detail-key">{t('taskDetail.media').toUpperCase()}:</span>
           {' '}
-          <span className="cmd-detail-value">{display.totalMediaCount} file(s)</span>
+          <span className="cmd-detail-value">{t('taskDetail.filesLabel', { count: display.totalMediaCount })}</span>
         </span>
         <span className="cmd-box-border">{'\u2502'}</span>
       </div>
@@ -253,7 +252,7 @@ function renderProgressSection(props: DesignProgressSectionProps): React.ReactNo
       <div className="cmd-progress-header">
         <span className="cmd-progress-title">
           <Terminal size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-          {t('taskDetail.progress')}: {display.progressLabel} {t('taskDetail.setsComplete')}
+          {t('taskDetail.progress')}: {t('taskDetail.setsComplete', { done: display.completedSets, total: display.requireSets })}
         </span>
 
         <div className="cmd-progress-actions">
@@ -305,7 +304,7 @@ function renderProgressSection(props: DesignProgressSectionProps): React.ReactNo
       {/* Media count line */}
       <div className="cmd-media-count-line">
         <FileText size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-        {t('taskDetail.totalMedia', { count: totalMedia })}
+        {t('taskDetail.totalMediaFiles', { count: totalMedia })}
       </div>
     </div>
   );
@@ -319,7 +318,7 @@ function renderMediaGrid(props: DesignMediaGridProps): React.ReactNode {
   const {
     display, mediaCache, loadingMedia, selectionMode, selectedMedia,
     onMediaClick, onToggleMediaSelection, onShareSet,
-    loading,
+    loading, t,
   } = props;
 
   if (display.sets.length === 0) return null;
@@ -331,7 +330,7 @@ function renderMediaGrid(props: DesignMediaGridProps): React.ReactNode {
           {/* Set header — terminal separator style */}
           <div className="cmd-set-header">
             <span className="cmd-set-divider">
-              {repeat('\u2500', 2)} SET {setIndex + 1} [{set.isComplete ? 'COMPLETE' : 'PENDING'}] {repeat('\u2500', 10)}
+              {repeat('\u2500', 2)} {t('taskDetail.setNumber', { index: setIndex + 1 }).toUpperCase()} [{set.isComplete ? t('taskDetail.setComplete').toUpperCase() : t('taskDetail.setPending').toUpperCase()}] {repeat('\u2500', 10)}
             </span>
           </div>
 

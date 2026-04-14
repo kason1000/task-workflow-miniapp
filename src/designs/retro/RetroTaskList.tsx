@@ -241,10 +241,10 @@ function renderTaskCard(props: DesignTaskCardProps): React.ReactNode {
         <button
           className="retro-card-send-btn"
           onClick={onSendToChat}
-          title={t('taskList.sendToChat')}
+          title={t('taskList.sendButton')}
         >
           <Send size={12} />
-          {t('taskList.sendToChat')}
+          {t('taskList.sendButton')}
         </button>
       </div>
     </div>
@@ -324,10 +324,10 @@ function renderArchivedCard(props: DesignTaskCardProps): React.ReactNode {
         <button
           className="retro-card-send-btn"
           onClick={onSendToChat}
-          title={t('taskList.sendToChat')}
+          title={t('taskList.sendButton')}
         >
           <Send size={12} />
-          {t('taskList.sendToChat')}
+          {t('taskList.sendButton')}
         </button>
       </div>
     </div>
@@ -346,7 +346,7 @@ function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
     <div className="retro-task-count">
       <span className="retro-count-number">&gt; {count}</span>
       <span className="retro-count-label">
-        {filter.showArchived ? t('taskList.archivedCount') : t('taskList.taskCount')}
+        {filter.showArchived ? t('taskList.archivedCount', { count }) : t('taskList.taskCount', { count })}
       </span>
     </div>
   );
@@ -409,10 +409,10 @@ function renderLoading(_props: DesignLoadingProps): React.ReactNode {
 // Loading More
 // ============================================================
 
-function renderLoadingMore(_props: DesignLoadingProps): React.ReactNode {
+function renderLoadingMore({ t }: DesignLoadingProps): React.ReactNode {
   return (
     <div className="retro-load-more">
-      <span className="retro-load-more-text">LOADING...</span>
+      <span className="retro-load-more-text">{t('taskList.loadingMore')}</span>
     </div>
   );
 }

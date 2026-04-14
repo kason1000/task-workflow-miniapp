@@ -52,7 +52,7 @@ function asciiBar(percent: number, width: number = 6): string {
 function renderFilterBar(props: DesignFilterBarProps): React.ReactNode {
   const {
     filter, setFilter, statusOrder, canSeeArchived,
-    submitterCounts, userNames, onRefresh, monthOptions,
+    submitterCounts, userNames, onRefresh, monthOptions, t,
   } = props;
 
   return (
@@ -90,7 +90,7 @@ function renderFilterBar(props: DesignFilterBarProps): React.ReactNode {
         )}
 
         {/* Refresh */}
-        <button className="cmd-filter-btn cmd-filter-btn--icon" onClick={onRefresh} title="refresh">
+        <button className="cmd-filter-btn cmd-filter-btn--icon" onClick={onRefresh} title={t('taskList.refreshTitle')}>
           <RefreshCw size={11} />
         </button>
       </div>
@@ -321,7 +321,7 @@ function renderArchivedCard(props: DesignTaskCardProps): React.ReactNode {
 // ============================================================
 
 function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
-  const { tasks, filter, archivedTotalCount } = props;
+  const { tasks, filter, archivedTotalCount, t } = props;
   const count = filter.showArchived && archivedTotalCount !== null ? archivedTotalCount : tasks.length;
 
   return (
@@ -329,7 +329,7 @@ function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
       <Terminal size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
       <span className="cmd-task-count-prompt">$</span>
       {' '}
-      <span className="cmd-task-count-text">found {count} tasks</span>
+      <span className="cmd-task-count-text">{count === 1 ? t('taskList.foundOne') : t('taskList.found', { count })}</span>
     </div>
   );
 }
@@ -339,7 +339,7 @@ function renderTaskCount(props: DesignTaskCountProps): React.ReactNode {
 // ============================================================
 
 function renderEmpty(props: DesignEmptyStateProps): React.ReactNode {
-  const { isArchived } = props;
+  const { isArchived, t } = props;
 
   return (
     <div className="cmd-empty-state">
@@ -347,7 +347,7 @@ function renderEmpty(props: DesignEmptyStateProps): React.ReactNode {
         <span className="cmd-empty-prompt">$</span> ls tasks
       </div>
       <div className="cmd-empty-line cmd-empty-result">
-        {isArchived ? '(no archived entries)' : '(empty)'}
+        {isArchived ? t('taskList.noArchivedTasks') : t('taskList.noTasks')}
       </div>
       <div className="cmd-empty-line">
         <span className="cmd-empty-prompt">$</span>
@@ -361,11 +361,12 @@ function renderEmpty(props: DesignEmptyStateProps): React.ReactNode {
 // Loading — blinking cursor animation
 // ============================================================
 
-function renderLoading(_props: DesignLoadingProps): React.ReactNode {
+function renderLoading(props: DesignLoadingProps): React.ReactNode {
+  const { t } = props;
   return (
     <div className="cmd-loading-state">
       <div className="cmd-loading-line">
-        <span className="cmd-loading-prompt">$</span> loading tasks
+        <span className="cmd-loading-prompt">$</span> {t('taskList.loading')}
         <span className="cmd-cursor" />
       </div>
     </div>
@@ -376,10 +377,11 @@ function renderLoading(_props: DesignLoadingProps): React.ReactNode {
 // Loading More
 // ============================================================
 
-function renderLoadingMore(_props: DesignLoadingProps): React.ReactNode {
+function renderLoadingMore(props: DesignLoadingProps): React.ReactNode {
+  const { t } = props;
   return (
     <div className="cmd-loading-more">
-      <span className="cmd-loading-prompt">$</span> fetching more
+      <span className="cmd-loading-prompt">$</span> {t('taskList.loadingMore')}
       <span className="cmd-cursor" />
     </div>
   );

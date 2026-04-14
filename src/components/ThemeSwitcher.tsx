@@ -111,6 +111,11 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
             const currentCore = isCoreMode ? mode : coreMode;
             const { label, Icon } = modeLabels[currentCore];
             const handleCycle = () => {
+              if (!isCoreMode) {
+                // Restore last core mode without cycling
+                handleSelect(currentCore);
+                return;
+              }
               const idx = modeOrder.indexOf(currentCore);
               const next = modeOrder[(idx + 1) % modeOrder.length];
               handleSelect(next);
