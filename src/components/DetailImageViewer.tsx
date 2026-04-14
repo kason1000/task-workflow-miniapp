@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
 import { useLocale } from '../i18n/LocaleContext';
 import { VideoThumb } from './VideoThumb';
-import { X, Send, Clock, ChevronLeft, ChevronRight, Share2, Trash2 } from 'lucide-react';
+import { X, Send, Clock, ChevronLeft, ChevronRight, Share2, Trash2, Video } from 'lucide-react';
 import { STATUS_COLORS, COLORS } from '../utils/colors';
 
 export function DetailImageViewer({
@@ -342,6 +342,31 @@ export function DetailImageViewer({
                   </span>
                 );
               })()}
+              {/* Video indicator */}
+              {task.labels?.video && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '3px',
+                  fontSize: '10px', fontWeight: 600, padding: '2px 6px',
+                  borderRadius: '8px', whiteSpace: 'nowrap',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  <Video size={9} /> vid
+                </span>
+              )}
+
+              {/* Sets indicator */}
+              {task.requireSets > 1 && (
+                <span style={{
+                  fontSize: '10px', fontWeight: 600, padding: '2px 6px',
+                  borderRadius: '8px', whiteSpace: 'nowrap',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  {task.requireSets}sets
+                </span>
+              )}
+
               {doneName && task.status !== 'New' && (
                 <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {doneName}

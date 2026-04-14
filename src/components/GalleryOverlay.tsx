@@ -709,6 +709,25 @@ export function GalleryOverlay({
         <span style={{ fontWeight: '600' }}>{t('gallery.setHeader', { current: currentSetIndex + 1, total: task.sets.length })}</span>
         <span style={{ color: '#888' }}>•</span>
         <span>{currentMedia.type === 'photo' ? t('gallery.photoLabel', { index: (currentMedia.photoIndex ?? 0) + 1 }) : t('gallery.videoLabel')}</span>
+        {task.labels?.video && (
+          <>
+            <span style={{ color: '#888' }}>•</span>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '2px',
+              fontSize: '9px', fontWeight: 600, padding: '1px 5px',
+              borderRadius: '6px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)',
+            }}>vid</span>
+          </>
+        )}
+        {task.requireSets > 1 && (
+          <>
+            <span style={{ color: '#888' }}>•</span>
+            <span style={{
+              fontSize: '9px', fontWeight: 600, padding: '1px 5px',
+              borderRadius: '6px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)',
+            }}>{task.requireSets}sets</span>
+          </>
+        )}
         <span style={{ color: '#888' }}>•</span>
         <span style={{ color: '#aaa' }}>{getUploaderName(currentMedia.uploadedBy)}</span>
         {currentMedia.uploadedAt && (

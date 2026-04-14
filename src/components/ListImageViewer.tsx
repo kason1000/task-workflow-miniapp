@@ -4,7 +4,7 @@ import { Task, Group } from '../types';
 import { useLocale } from '../i18n/LocaleContext';
 import { statusColors } from '../utils/taskStyles';
 import { prepareTaskCard } from '../designs/shared/taskDisplayData';
-import { X, FileText, Send, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, FileText, Send, Clock, ChevronLeft, ChevronRight, Video } from 'lucide-react';
 import { STATUS_COLORS, COLORS } from '../utils/colors';
 
 interface ListImageViewerProps {
@@ -514,6 +514,31 @@ export function ListImageViewer({
               }}>
                 {cd.progressLabel}
               </span>
+
+              {/* Video indicator */}
+              {cd.hasVideo && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '3px',
+                  fontSize: '10px', fontWeight: 600, padding: '2px 6px',
+                  borderRadius: '8px', whiteSpace: 'nowrap',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  <Video size={9} /> vid
+                </span>
+              )}
+
+              {/* Sets indicator */}
+              {cd.requireSets > 1 && (
+                <span style={{
+                  fontSize: '10px', fontWeight: 600, padding: '2px 6px',
+                  borderRadius: '8px', whiteSpace: 'nowrap',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  {cd.requireSets}sets
+                </span>
+              )}
 
               {/* Submitter */}
               {cd.submitterName && cd.status !== 'New' && cd.status !== 'Received' && (
