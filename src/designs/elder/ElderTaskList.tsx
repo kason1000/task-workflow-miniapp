@@ -310,7 +310,7 @@ function ElderArchivedCard(props: DesignTaskCardProps) {
 // Task Count
 // ============================================================
 
-function ElderTaskCount({ tasks, filter, archivedTotalCount }: DesignTaskCountProps) {
+function ElderTaskCount({ tasks, filter, archivedTotalCount, t }: DesignTaskCountProps) {
   const count = filter.showArchived && archivedTotalCount !== null
     ? archivedTotalCount
     : tasks.length;

@@ -1071,3 +1071,19 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+
+
+/* ============================================================
+   Fullscreen Viewer Overlay — Design-aware styling
+   ============================================================ */
+[data-design="retro"] [role="dialog"] {
+  font-family: 'VT323', 'Share Tech Mono', monospace !important;
+  background: rgba(26,10,46,0.97) !important;
+}
+[data-design="retro"] [role="dialog"] button {
+  font-family: 'VT323', monospace !important;
+  border-radius: 0 !important;
+  border: 2px solid rgba(255,110,199,0.5) !important;
+  text-transform: uppercase;
+}
+

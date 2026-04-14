@@ -1530,3 +1530,22 @@
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+
+/* ============================================================
+   Fullscreen Viewer Overlay — Design-aware styling
+   ============================================================ */
+[data-design="command"] [role="dialog"] {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace !important;
+  background: rgba(0,8,0,0.97) !important;
+}
+[data-design="command"] [role="dialog"] button {
+  font-family: 'IBM Plex Mono', monospace !important;
+  border-radius: 0 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+[data-design="command"] [role="dialog"] span {
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+

@@ -1009,3 +1009,21 @@
 [data-design="glass"] .glass-detail-media-section {
   animation: glass-fade-up 0.4s var(--glass-spring) both;
 }
+
+
+/* ============================================================
+   Fullscreen Viewer Overlay — Design-aware styling
+   ============================================================ */
+[data-design="glass"] [role="dialog"] {
+  font-family: 'Poppins', -apple-system, sans-serif !important;
+  background: rgba(20,30,60,0.92) !important;
+  backdrop-filter: blur(30px) !important;
+  -webkit-backdrop-filter: blur(30px) !important;
+}
+[data-design="glass"] [role="dialog"] button {
+  font-family: 'Poppins', sans-serif !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.12) !important;
+}
+

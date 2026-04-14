@@ -1658,3 +1658,21 @@
   background: #ffffff;
   font-size: 16px;
 }
+
+
+/* ============================================================
+   Fullscreen Viewer Overlay — Design-aware styling
+   ============================================================ */
+[data-design="elder"] [role="dialog"] {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+[data-design="elder"] [role="dialog"] button {
+  font-size: 16px !important;
+  min-height: 48px !important;
+  border-radius: 14px !important;
+  font-weight: 600 !important;
+}
+[data-design="elder"] [role="dialog"] span {
+  font-size: 14px !important;
+}
+

@@ -1504,3 +1504,18 @@
   background: #b57a7a;
   color: #f5f2eb;
 }
+
+
+/* ============================================================
+   Fullscreen Viewer Overlay — Design-aware styling
+   ============================================================ */
+[data-design="zen"] [role="dialog"] {
+  font-family: 'Noto Serif', Georgia, serif !important;
+  background: rgba(45,58,46,0.97) !important;
+}
+[data-design="zen"] [role="dialog"] button {
+  font-family: -apple-system, sans-serif !important;
+  border-radius: 20px !important;
+  font-weight: 300 !important;
+}
+

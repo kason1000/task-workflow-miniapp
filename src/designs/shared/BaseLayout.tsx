@@ -50,6 +50,12 @@ export function BaseLayout({
   const [showThemeSwitcher, setShowThemeSwitcher] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Set data-design on documentElement so portal content (fullscreen viewers) can be styled per design
+  useEffect(() => {
+    document.documentElement.setAttribute('data-design', designId);
+    return () => document.documentElement.removeAttribute('data-design');
+  }, [designId]);
+
   // Close menu on outside click
   useEffect(() => {
     if (!showMenu) return;

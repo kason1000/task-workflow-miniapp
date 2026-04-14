@@ -1362,3 +1362,16 @@
 [data-design="mosaic"] ::-webkit-scrollbar { width: 3px; }
 [data-design="mosaic"] ::-webkit-scrollbar-track { background: transparent; }
 [data-design="mosaic"] ::-webkit-scrollbar-thumb { background: #e8e4e0; border-radius: 3px; }
+
+
+/* ============================================================
+   Fullscreen Viewer Overlay — Design-aware styling
+   ============================================================ */
+[data-design="mosaic"] [role="dialog"] {
+  font-family: 'Karla', 'Cormorant Garamond', sans-serif !important;
+}
+[data-design="mosaic"] [role="dialog"] button {
+  font-family: 'Karla', sans-serif !important;
+  border-radius: 6px !important;
+}
+
