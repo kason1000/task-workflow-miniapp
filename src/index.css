@@ -58,6 +58,10 @@ body {
 [data-fontsize="2"] #root { zoom: 1.12; }
 [data-fontsize="3"] #root { zoom: 1.25; }
 
+/* Font size also applies to fullscreen overlay info sections (rendered via portal outside #root) */
+[data-fontsize="2"] [role="dialog"] { font-size: 112%; }
+[data-fontsize="3"] [role="dialog"] { font-size: 125%; }
+
 #root {
   min-height: 100vh;
   padding: 16px;
