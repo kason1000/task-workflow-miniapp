@@ -84,7 +84,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* Section: Appearance */}
+        {/* Section: Theme — one row: toggle + color swatches */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
           <Palette size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
           <span style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
@@ -92,47 +92,47 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           </span>
         </div>
 
-        {/* Auto / Light / Dark segmented control */}
-        <div style={{
-          display: 'flex', gap: '0',
-          background: 'var(--tg-theme-secondary-bg-color)',
-          borderRadius: '10px',
-          padding: '3px',
-          marginBottom: '10px',
-        }}>
-          {([
-            { m: 'auto' as ThemeMode, label: 'Auto', Icon: Monitor },
-            { m: 'classic' as ThemeMode, label: 'Light', Icon: Sun },
-            { m: 'black' as ThemeMode, label: 'Dark', Icon: Moon },
-          ]).map(({ m, label, Icon }) => {
-            const isActive = mode === m;
+        <div style={{ display: 'flex', gap: '5px', marginBottom: '16px', alignItems: 'center' }}>
+          {/* Auto/Light/Dark toggle — single button cycles through */}
+          {(() => {
+            const modeOrder: ThemeMode[] = ['auto', 'classic', 'black'];
+            const modeLabels: Record<string, { label: string; Icon: typeof Monitor }> = {
+              auto: { label: 'Auto', Icon: Monitor },
+              classic: { label: 'Light', Icon: Sun },
+              black: { label: 'Dark', Icon: Moon },
+            };
+            const isCoreMode = mode === 'auto' || mode === 'classic' || mode === 'black';
+            const currentCore = isCoreMode ? mode : 'auto';
+            const { label, Icon } = modeLabels[currentCore];
+            const handleCycle = () => {
+              const idx = modeOrder.indexOf(currentCore);
+              const next = modeOrder[(idx + 1) % modeOrder.length];
+              handleSelect(next);
+            };
             return (
               <button
-                key={m}
-                onClick={() => handleSelect(m)}
+                onClick={handleCycle}
                 style={{
-                  flex: 1,
                   height: '36px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: isActive ? 'var(--tg-theme-bg-color)' : 'transparent',
-                  color: isActive ? 'var(--tg-theme-text-color)' : 'var(--tg-theme-hint-color)',
-                  fontSize: '12px', fontWeight: isActive ? 600 : 400,
+                  padding: '0 12px',
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  borderRadius: '10px',
+                  border: isCoreMode ? '1.5px solid var(--tg-theme-button-color)' : '1.5px solid transparent',
+                  background: isCoreMode ? 'var(--tg-theme-secondary-bg-color)' : 'var(--tg-theme-secondary-bg-color)',
+                  color: isCoreMode ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-hint-color)',
+                  fontSize: '12px', fontWeight: 600,
                   cursor: 'pointer',
-                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                  minWidth: 'auto',
                 }}
               >
                 <Icon size={14} />
                 {label}
               </button>
             );
-          })}
-        </div>
+          })()}
 
-        {/* Additional color themes */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+          {/* Color theme swatches — each is a square showing bg+accent */}
           {COLOR_THEMES.map(ct => {
             const colors = THEME_COLORS[ct.id];
             const isActive = mode === ct.id;
@@ -140,24 +140,19 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
               <button
                 key={ct.id}
                 onClick={() => handleSelect(ct.id)}
+                title={ct.label}
                 style={{
-                  flex: 1, height: '40px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  width: '36px', height: '36px', flexShrink: 0,
                   borderRadius: '10px',
-                  border: isActive ? `1.5px solid ${colors.accent}` : '1.5px solid transparent',
-                  background: 'var(--tg-theme-secondary-bg-color)',
-                  color: isActive ? colors.accent : 'var(--tg-theme-hint-color)',
-                  fontSize: '12px', fontWeight: isActive ? 600 : 400,
+                  border: isActive ? `2px solid ${colors.accent}` : '2px solid transparent',
+                  background: colors.bg,
                   cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 0, minWidth: 'auto',
+                  boxShadow: isActive ? `0 0 8px ${colors.accent}40` : '0 0 0 1px rgba(128,128,128,0.15)',
                 }}
               >
-                <div style={{
-                  width: '14px', height: '14px', borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${colors.bg}, ${colors.accent})`,
-                  border: `1px solid ${colors.accent}40`,
-                  flexShrink: 0,
-                }} />
-                {ct.label}
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: colors.accent }} />
               </button>
             );
           })}
