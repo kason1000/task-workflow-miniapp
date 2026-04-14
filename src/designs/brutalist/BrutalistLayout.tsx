@@ -1,5 +1,10 @@
 import { BaseLayout } from '../shared/BaseLayout';
+import { DesignTaskList } from '../shared/DesignTaskList';
+import { DesignTaskDetail } from '../shared/DesignTaskDetail';
+import { brutalistRenderProps } from './BrutalistTaskList';
+import { brutalistDetailRenderProps } from './BrutalistTaskDetail';
 import { Task, Group } from '../../types';
+import './brutalist.css';
 
 interface BrutalistLayoutProps {
   view: string; role: string; user: any; appVersion: string;
@@ -11,7 +16,17 @@ interface BrutalistLayoutProps {
 }
 
 export function BrutalistLayout(props: BrutalistLayoutProps) {
-  return <BaseLayout {...props} designId="brutalist" />;
+  const listProps = brutalistRenderProps();
+  const detailProps = brutalistDetailRenderProps();
+  return (
+    <BaseLayout {...props} designId="brutalist"
+      renderTaskList={({ onTaskClick, groupId, refreshKey }) => (
+        <DesignTaskList onTaskClick={onTaskClick} groupId={groupId} refreshKey={refreshKey} {...listProps} />
+      )}
+      renderTaskDetail={({ task, userRole, onBack, onTaskUpdated }) => (
+        <DesignTaskDetail task={task} userRole={userRole} onBack={onBack} onTaskUpdated={onTaskUpdated} {...detailProps} />
+      )}
+    />
+  );
 }
-
 export default BrutalistLayout;

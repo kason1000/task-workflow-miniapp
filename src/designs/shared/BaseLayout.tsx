@@ -3,7 +3,7 @@
  * Provides complete feature parity with the classic view.
  * Designs customize appearance via CSS using [data-design="xxx"] selectors.
  */
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Task, Group } from '../../types';
 import { useLocale } from '../../i18n/LocaleContext';
 import { hapticFeedback } from '../../utils/telegram';
@@ -33,13 +33,17 @@ interface BaseLayoutProps {
   onGroupFilterChange?: (groupId: string | undefined) => void;
   /** Design identifier — used for CSS scoping */
   designId: string;
+  /** Optional custom task list renderer — if provided, replaces the classic TaskList */
+  renderTaskList?: (props: { onTaskClick: (task: Task) => void; groupId?: string; refreshKey: number }) => React.ReactNode;
+  /** Optional custom task detail renderer — if provided, replaces the classic TaskDetail */
+  renderTaskDetail?: (props: { task: Task; userRole: string; onBack: () => void; onTaskUpdated: () => void }) => React.ReactNode;
 }
 
 export function BaseLayout({
   view, role, user, appVersion, groups, selectedGroupId,
   selectedTask, refreshKey, onTaskClick, onBack, onTaskUpdated,
   onGroupsClick, onLogout, onThemeClick, onGroupFilterChange,
-  designId,
+  designId, renderTaskList, renderTaskDetail,
 }: BaseLayoutProps) {
   const { t } = useLocale();
   const [showMenu, setShowMenu] = useState(false);
@@ -216,11 +220,16 @@ export function BaseLayout({
       {/* Content */}
       <div style={{ paddingTop: view === 'list' ? '42px' : '60px' }}>
         <div style={{ display: view === 'list' ? 'block' : 'none' }}>
-          <TaskList onTaskClick={onTaskClick} groupId={selectedGroupId} refreshKey={refreshKey} />
+          {renderTaskList
+            ? renderTaskList({ onTaskClick, groupId: selectedGroupId, refreshKey })
+            : <TaskList onTaskClick={onTaskClick} groupId={selectedGroupId} refreshKey={refreshKey} />
+          }
         </div>
 
         {view === 'detail' && selectedTask && (
-          <TaskDetail task={selectedTask} userRole={role} onBack={() => onBack()} onTaskUpdated={() => onTaskUpdated()} />
+          renderTaskDetail
+            ? renderTaskDetail({ task: selectedTask, userRole: role, onBack: () => onBack(), onTaskUpdated: () => onTaskUpdated() })
+            : <TaskDetail task={selectedTask} userRole={role} onBack={() => onBack()} onTaskUpdated={() => onTaskUpdated()} />
         )}
 
         {view === 'groups' && (

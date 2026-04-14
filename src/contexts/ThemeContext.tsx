@@ -12,6 +12,8 @@ interface ThemeInfo {
   hasCustomLayout: boolean;
 }
 
+export type CoreMode = 'auto' | 'classic' | 'black';
+
 interface ThemeContextValue {
   theme: ThemeId;
   mode: ThemeMode;
@@ -23,10 +25,13 @@ interface ThemeContextValue {
   /** User's selected font size mode (can be 'auto') */
   fontSizeMode: FontSizeMode;
   setFontSizeMode: (mode: FontSizeMode) => void;
+  /** Last selected core mode (auto/classic/black) — persists across theme switches */
+  coreMode: CoreMode;
 }
 
 const STORAGE_KEY = 'taskflow_theme';
 const FONT_SIZE_KEY = 'taskflow_fontsize';
+const CORE_MODE_KEY = 'taskflow_core_mode';
 
 const THEMES: ThemeInfo[] = [
   { id: 'classic', name: 'Classic', description: 'Original Telegram theme', hasCustomLayout: false },
@@ -70,6 +75,14 @@ function readStoredMode(): ThemeMode {
   return 'auto';
 }
 
+function readStoredCoreMode(): CoreMode {
+  try {
+    const stored = localStorage.getItem(CORE_MODE_KEY);
+    if (stored === 'auto' || stored === 'classic' || stored === 'black') return stored;
+  } catch {}
+  return 'auto';
+}
+
 function readStoredFontSizeMode(): FontSizeMode {
   try {
     const stored = localStorage.getItem(FONT_SIZE_KEY);
@@ -86,6 +99,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [systemDark, setSystemDark] = useState(getSystemDark);
   const [fontSizeMode, setFontSizeModeState] = useState<FontSizeMode>(readStoredFontSizeMode);
   const [systemFontSize, setSystemFontSize] = useState<FontSize>(getSystemFontSize);
+  const [coreMode, setCoreModeState] = useState<CoreMode>(readStoredCoreMode);
 
   // Listen for system dark mode
   useEffect(() => {
@@ -110,6 +124,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setMode = useCallback((next: ThemeMode) => {
     setModeState(next);
     try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    // Track core mode separately so the toggle remembers the user's preference
+    if (next === 'auto' || next === 'classic' || next === 'black') {
+      setCoreModeState(next);
+      try { localStorage.setItem(CORE_MODE_KEY, next); } catch {}
+    }
   }, []);
 
   const setFontSizeMode = useCallback((next: FontSizeMode) => {
@@ -133,8 +152,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ThemeContextValue>(() => ({
     theme, mode, setMode, themes: THEMES, isCustomLayout,
-    fontSize, fontSizeMode, setFontSizeMode,
-  }), [theme, mode, setMode, isCustomLayout, fontSize, fontSizeMode, setFontSizeMode]);
+    fontSize, fontSizeMode, setFontSizeMode, coreMode,
+  }), [theme, mode, setMode, isCustomLayout, fontSize, fontSizeMode, setFontSizeMode, coreMode]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

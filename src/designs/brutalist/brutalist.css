@@ -872,3 +872,817 @@
   background: #ffffff;
   text-transform: uppercase;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN-SYSTEM COMPONENTS (BrutalistTaskList / BrutalistTaskDetail)
+   Scoped to [data-design="brutalist"]
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---- Design variables ---- */
+[data-design="brutalist"] {
+  --brutal-ds-bg: #ffffff;
+  --brutal-ds-text: #000000;
+  --brutal-ds-accent: #ff0000;
+  --brutal-ds-border: #000000;
+  --brutal-ds-border-w: 3px;
+  --brutal-ds-gray: #888888;
+  --brutal-ds-light-gray: #e0e0e0;
+  --brutal-ds-font: Arial, Helvetica, 'Liberation Sans', sans-serif;
+}
+
+/* ============================================================
+   LIST — Filter Bar
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-filters {
+  padding: 12px 12px 0;
+  border-bottom: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  display: block;
+  flex-wrap: initial;
+  gap: initial;
+}
+
+[data-design="brutalist"] .brutal-filter-row {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+[data-design="brutalist"] .brutal-filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+[data-design="brutalist"] .brutal-filter-tab {
+  all: unset;
+  cursor: pointer;
+  font-family: var(--brutal-ds-font);
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 14px;
+  border-bottom: var(--brutal-ds-border-w) solid transparent;
+  white-space: nowrap;
+  color: var(--brutal-ds-gray);
+  transition: none;
+  border-radius: 0 !important;
+}
+
+[data-design="brutalist"] .brutal-filter-tab--active {
+  color: var(--brutal-ds-text);
+  border-bottom-color: var(--brutal-ds-accent);
+}
+
+[data-design="brutalist"] .brutal-filter-tab:active {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-filter-refresh {
+  margin-left: auto;
+  padding: 8px 12px;
+}
+
+/* Archive sub-filters */
+[data-design="brutalist"] .brutal-filter-secondary {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 2px solid var(--brutal-ds-light-gray);
+  margin-top: 4px;
+}
+
+[data-design="brutalist"] .brutal-filter-select {
+  font-family: var(--brutal-ds-font);
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border: 2px solid var(--brutal-ds-border) !important;
+  border-radius: 0 !important;
+  background: var(--brutal-ds-bg);
+  color: var(--brutal-ds-text);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ============================================================
+   LIST — Task Card
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-list-wrapper {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-design="brutalist"] .brutal-task-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  background: var(--brutal-ds-bg);
+  cursor: pointer;
+  transition: none;
+}
+
+[data-design="brutalist"] .brutal-task-card:active {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+/* Archived — thinner border, crossed-out feel */
+[data-design="brutalist"] .brutal-task-card--archived {
+  border-width: 1px;
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+/* Thumbnail — sharp square, thick border */
+[data-design="brutalist"] .brutal-task-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  flex-shrink: 0;
+}
+
+[data-design="brutalist"] .brutal-task-thumb-placeholder {
+  width: 60px;
+  height: 60px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-light-gray);
+  border-radius: 0 !important;
+  background: var(--brutal-ds-light-gray);
+  flex-shrink: 0;
+}
+
+/* Content */
+[data-design="brutalist"] .brutal-task-content {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-design="brutalist"] .brutal-task-title {
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-task-title--struck {
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+}
+
+/* Status — large uppercase with thick underline */
+[data-design="brutalist"] .brutal-task-status {
+  margin-bottom: 4px;
+}
+
+[data-design="brutalist"] .brutal-task-status-text {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 3px solid;
+  padding-bottom: 1px;
+  font-family: var(--brutal-ds-font);
+}
+
+/* Group — bold uppercase, no capsule */
+[data-design="brutalist"] .brutal-task-group {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  font-family: var(--brutal-ds-font);
+}
+
+/* Submitter */
+[data-design="brutalist"] .brutal-task-submitter {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--brutal-ds-gray);
+  margin-bottom: 4px;
+  font-family: var(--brutal-ds-font);
+}
+
+/* Progress — THICK 10px bar */
+[data-design="brutalist"] .brutal-task-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+[data-design="brutalist"] .brutal-task-progress-track {
+  flex: 1;
+  height: 10px;
+  background: var(--brutal-ds-light-gray);
+  border: 2px solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+
+[data-design="brutalist"] .brutal-task-progress-fill {
+  height: 100%;
+  border-radius: 0 !important;
+  transition: width 0.2s linear;
+}
+
+[data-design="brutalist"] .brutal-task-progress-label {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-family: var(--brutal-ds-font);
+}
+
+/* Send button — thick bordered rectangle */
+[data-design="brutalist"] .brutal-task-send {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  font-family: var(--brutal-ds-font);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  transition: none;
+}
+
+[data-design="brutalist"] .brutal-task-send:active {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+/* ============================================================
+   LIST — Task Count
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-task-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 12px 4px;
+}
+
+[data-design="brutalist"] .brutal-task-count-number {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-task-count-label {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--brutal-ds-gray);
+  font-family: var(--brutal-ds-font);
+}
+
+/* ============================================================
+   LIST — Empty State
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-empty {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+[data-design="brutalist"] .brutal-empty-text {
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--brutal-ds-gray);
+  font-family: var(--brutal-ds-font);
+}
+
+/* ============================================================
+   LIST — Loading Skeleton
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-loading-skeleton {
+  padding: 12px;
+}
+
+[data-design="brutalist"] .brutal-skeleton-filter {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: var(--brutal-ds-border-w) solid var(--brutal-ds-light-gray);
+  margin-bottom: 12px;
+}
+
+[data-design="brutalist"] .brutal-skeleton-block {
+  background: var(--brutal-ds-light-gray);
+  border-radius: 0 !important;
+  animation: brutal-ds-pulse 1s infinite alternate;
+}
+
+[data-design="brutalist"] .brutal-skeleton-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid var(--brutal-ds-light-gray);
+  margin-bottom: 12px;
+}
+
+[data-design="brutalist"] .brutal-skeleton-square {
+  width: 60px;
+  height: 60px;
+  background: var(--brutal-ds-light-gray);
+  border-radius: 0 !important;
+  flex-shrink: 0;
+  animation: brutal-ds-pulse 1s infinite alternate;
+}
+
+[data-design="brutalist"] .brutal-skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+@keyframes brutal-ds-pulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+[data-design="brutalist"] .brutal-skeleton-pulse {
+  animation: brutal-ds-pulse 1s infinite alternate;
+}
+
+/* Loading More */
+[data-design="brutalist"] .brutal-loading-more {
+  text-align: center;
+  padding: 20px;
+}
+
+[data-design="brutalist"] .brutal-loading-more-text {
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-family: var(--brutal-ds-font);
+  animation: brutal-ds-pulse 0.5s infinite alternate;
+}
+
+/* ============================================================
+   DETAIL — Info Card
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-detail-info {
+  padding: 16px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  margin: 12px;
+  background: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-detail-photo-wrap {
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+[data-design="brutalist"] .brutal-detail-created-photo {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  display: block;
+}
+
+[data-design="brutalist"] .brutal-detail-photo-placeholder {
+  width: 100%;
+  height: 160px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-light-gray);
+  border-radius: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brutal-ds-light-gray);
+}
+
+[data-design="brutalist"] .brutal-detail-title {
+  font-size: 28px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1.1;
+  margin: 0 0 10px;
+  word-break: break-word;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-detail-status-row {
+  margin-bottom: 12px;
+}
+
+[data-design="brutalist"] .brutal-detail-status-text {
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-bottom: 4px solid;
+  padding-bottom: 2px;
+  font-family: var(--brutal-ds-font);
+}
+
+/* Thick divider */
+[data-design="brutalist"] .brutal-detail-divider {
+  height: var(--brutal-ds-border-w);
+  background: var(--brutal-ds-border);
+  margin: 14px 0;
+}
+
+/* Metadata grid */
+[data-design="brutalist"] .brutal-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+[data-design="brutalist"] .brutal-detail-meta-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--brutal-ds-light-gray);
+}
+
+[data-design="brutalist"] .brutal-detail-meta-label {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--brutal-ds-gray);
+  min-width: 100px;
+  flex-shrink: 0;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-detail-meta-value {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-family: var(--brutal-ds-font);
+}
+
+/* ============================================================
+   DETAIL — Progress Section (design-system override)
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-detail-progress {
+  padding: 16px;
+  margin: 0 12px 12px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  display: block;
+  gap: initial;
+  align-items: initial;
+}
+
+[data-design="brutalist"] .brutal-detail-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+[data-design="brutalist"] .brutal-detail-section-label {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-detail-progress-text {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-family: var(--brutal-ds-font);
+}
+
+/* Massive 12px progress bar */
+[data-design="brutalist"] .brutal-detail-progress-track {
+  height: 12px;
+  background: var(--brutal-ds-light-gray);
+  border: 2px solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+[data-design="brutalist"] .brutal-detail-progress-fill {
+  height: 100%;
+  border-radius: 0 !important;
+  transition: width 0.2s linear;
+}
+
+/* Progress actions */
+[data-design="brutalist"] .brutal-detail-progress-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+[data-design="brutalist"] .brutal-text-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--brutal-ds-font);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 10px;
+  border: 2px solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  transition: none;
+}
+
+[data-design="brutalist"] .brutal-text-btn:active {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-text-btn--active {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-text-btn--danger {
+  border-color: var(--brutal-ds-accent);
+  color: var(--brutal-ds-accent);
+}
+
+[data-design="brutalist"] .brutal-text-btn--danger:active {
+  background: var(--brutal-ds-accent);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-text-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Selection bar */
+[data-design="brutalist"] .brutal-detail-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 2px solid var(--brutal-ds-accent);
+  background: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-detail-selection-count {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: var(--brutal-ds-font);
+}
+
+/* ============================================================
+   DETAIL — Media Grid
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-detail-media-section {
+  padding: 0 12px 12px;
+}
+
+[data-design="brutalist"] .brutal-detail-media-set {
+  margin-bottom: 16px;
+}
+
+[data-design="brutalist"] .brutal-detail-set-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  margin-bottom: 10px;
+}
+
+[data-design="brutalist"] .brutal-detail-set-label {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-detail-set-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-design="brutalist"] .brutal-detail-set-complete {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--brutal-ds-accent);
+  border: 2px solid var(--brutal-ds-accent);
+  padding: 2px 8px;
+  font-family: var(--brutal-ds-font);
+}
+
+[data-design="brutalist"] .brutal-detail-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+[data-design="brutalist"] .brutal-detail-media-item {
+  position: relative;
+  aspect-ratio: 1;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+[data-design="brutalist"] .brutal-detail-media-item--selected {
+  border-color: var(--brutal-ds-accent);
+  box-shadow: inset 0 0 0 3px var(--brutal-ds-accent);
+}
+
+[data-design="brutalist"] .brutal-detail-media-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 0 !important;
+}
+
+[data-design="brutalist"] .brutal-detail-media-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brutal-ds-light-gray);
+  color: var(--brutal-ds-gray);
+}
+
+[data-design="brutalist"] .brutal-detail-media-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 3px solid #ffffff;
+  border-radius: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-design="brutalist"] .brutal-detail-media-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: var(--brutal-ds-gray);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px;
+  border: 2px solid var(--brutal-ds-border);
+}
+
+[data-design="brutalist"] .brutal-detail-media-check--on {
+  color: var(--brutal-ds-accent);
+  border-color: var(--brutal-ds-accent);
+}
+
+[data-design="brutalist"] .brutal-detail-media-uploader {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  font-family: var(--brutal-ds-font);
+}
+
+/* ============================================================
+   DETAIL — Action Bar (design-system version)
+   ============================================================ */
+
+[data-design="brutalist"] .brutal-detail-action-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--brutal-ds-bg);
+  border-top: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  padding: 12px;
+  z-index: 10;
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn {
+  font-family: var(--brutal-ds-font);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 10px 16px;
+  border: var(--brutal-ds-border-w) solid var(--brutal-ds-border);
+  border-radius: 0 !important;
+  background: var(--brutal-ds-bg);
+  color: var(--brutal-ds-text);
+  cursor: pointer;
+  transition: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  margin-top: 0;
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn:active {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn--primary {
+  background: var(--brutal-ds-text);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn--primary:active {
+  background: var(--brutal-ds-bg);
+  color: var(--brutal-ds-text);
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn--danger {
+  border-color: var(--brutal-ds-accent);
+  color: var(--brutal-ds-accent);
+  background: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn--danger:active {
+  background: var(--brutal-ds-accent);
+  color: var(--brutal-ds-bg);
+}
+
+[data-design="brutalist"] .brutal-detail-action-bar-inner .brutal-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   GLOBAL — Ensure zero radius everywhere in brutalist
+   ============================================================ */
+
+[data-design="brutalist"] *,
+[data-design="brutalist"] *::before,
+[data-design="brutalist"] *::after {
+  border-radius: 0 !important;
+}

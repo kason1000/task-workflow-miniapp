@@ -1,5 +1,10 @@
 import { BaseLayout } from '../shared/BaseLayout';
+import { DesignTaskList } from '../shared/DesignTaskList';
+import { DesignTaskDetail } from '../shared/DesignTaskDetail';
+import { retroRenderProps } from './RetroTaskList';
+import { retroDetailRenderProps } from './RetroTaskDetail';
 import { Task, Group } from '../../types';
+import './retro.css';
 
 interface RetroLayoutProps {
   view: string; role: string; user: any; appVersion: string;
@@ -11,7 +16,32 @@ interface RetroLayoutProps {
 }
 
 export function RetroLayout(props: RetroLayoutProps) {
-  return <BaseLayout {...props} designId="retro" />;
+  const listProps = retroRenderProps();
+  const detailProps = retroDetailRenderProps();
+
+  return (
+    <BaseLayout
+      {...props}
+      designId="retro"
+      renderTaskList={({ onTaskClick, groupId, refreshKey }) => (
+        <DesignTaskList
+          onTaskClick={onTaskClick}
+          groupId={groupId}
+          refreshKey={refreshKey}
+          {...listProps}
+        />
+      )}
+      renderTaskDetail={({ task, userRole, onBack, onTaskUpdated }) => (
+        <DesignTaskDetail
+          task={task}
+          userRole={userRole}
+          onBack={onBack}
+          onTaskUpdated={onTaskUpdated}
+          {...detailProps}
+        />
+      )}
+    />
+  );
 }
 
 export default RetroLayout;

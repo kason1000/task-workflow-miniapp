@@ -115,578 +115,6 @@
   100% { transform: translate(0); }
 }
 
-/* ===== Windows 95 Taskbar Header ===== */
-[data-theme="retro"] .retro-taskbar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px;
-  background: linear-gradient(180deg, #4a2a6e 0%, #3a1a5e 50%, #2a1448 100%);
-  border-bottom: 2px solid var(--retro-pink);
-  box-shadow: 0 2px 8px rgba(255, 110, 199, 0.2);
-}
-
-[data-theme="retro"] .retro-start-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  background: var(--retro-surface);
-  border: 2px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-yellow);
-  font-family: 'VT323', monospace !important;
-  font-size: 16px;
-  cursor: pointer;
-  text-shadow: 0 0 4px rgba(255, 247, 0, 0.5);
-}
-
-[data-theme="retro"] .retro-start-btn:active {
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-}
-
-[data-theme="retro"] .retro-taskbar-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-[data-theme="retro"] .retro-taskbar-clock {
-  font-family: 'VT323', monospace !important;
-  font-size: 14px;
-  color: var(--retro-cyan);
-  text-shadow: var(--retro-cyan-glow);
-  padding: 2px 6px;
-  border: 1px inset var(--retro-border);
-  background: rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="retro"] .retro-role-badge {
-  font-family: 'VT323', monospace !important;
-  font-size: 14px;
-  color: var(--retro-yellow);
-  text-shadow: 0 0 4px rgba(255, 247, 0, 0.4);
-}
-
-/* ===== 90s Tab Buttons ===== */
-[data-theme="retro"] .retro-tab-btn {
-  padding: 2px 8px;
-  background: var(--retro-surface);
-  border: 2px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-text-dim);
-  font-family: 'VT323', monospace !important;
-  font-size: 13px;
-  cursor: pointer;
-  transition: color 0.1s;
-}
-
-[data-theme="retro"] .retro-tab-btn:hover,
-[data-theme="retro"] .retro-tab-btn.active {
-  color: var(--retro-cyan);
-  text-shadow: var(--retro-cyan-glow);
-}
-
-[data-theme="retro"] .retro-tab-btn:active {
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-}
-
-/* ===== Content Area ===== */
-[data-theme="retro"] .retro-content {
-  padding-top: 42px;
-  min-height: 100vh;
-  background: var(--retro-bg);
-}
-
-/* ===== Window Chrome Card ===== */
-[data-theme="retro"] .retro-window {
-  margin: 6px 8px;
-  border: 2px solid var(--retro-border);
-  background: var(--retro-surface);
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="retro"] .retro-window-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px;
-  background: linear-gradient(90deg, var(--retro-titlebar-active), var(--retro-titlebar));
-  font-family: 'VT323', monospace !important;
-  font-size: 13px;
-  color: var(--retro-white);
-  user-select: none;
-}
-
-[data-theme="retro"] .retro-window-buttons {
-  display: flex;
-  gap: 2px;
-}
-
-[data-theme="retro"] .retro-window-btn {
-  width: 16px;
-  height: 14px;
-  background: var(--retro-surface);
-  border: 1px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-text);
-  font-size: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-[data-theme="retro"] .retro-window-body {
-  padding: 6px;
-}
-
-/* ===== Filter Bar (3D Button Style) ===== */
-[data-theme="retro"] .retro-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
-  flex-wrap: wrap;
-  border-bottom: 2px solid var(--retro-border);
-}
-
-[data-theme="retro"] .retro-filter-label {
-  font-family: 'VT323', monospace !important;
-  font-size: 14px;
-  color: var(--retro-pink);
-  text-shadow: var(--retro-glow);
-  margin-right: 4px;
-}
-
-[data-theme="retro"] .retro-filter-btn {
-  padding: 2px 8px;
-  background: var(--retro-surface);
-  border: 2px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-text-dim);
-  font-family: 'VT323', monospace !important;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.1s;
-}
-
-[data-theme="retro"] .retro-filter-btn:hover {
-  color: var(--retro-cyan);
-}
-
-[data-theme="retro"] .retro-filter-btn.active {
-  color: var(--retro-yellow);
-  text-shadow: 0 0 4px rgba(255, 247, 0, 0.5);
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-  background: rgba(255, 247, 0, 0.08);
-}
-
-[data-theme="retro"] .retro-filter-btn:active {
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-}
-
-/* Dropdown select (month, submitter) */
-[data-theme="retro"] .retro-select {
-  padding: 2px 6px;
-  background: var(--retro-bg);
-  border: 2px solid;
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-  color: var(--retro-cyan);
-  font-family: 'VT323', monospace !important;
-  font-size: 13px;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-[data-theme="retro"] .retro-select option {
-  background: var(--retro-bg);
-  color: var(--retro-text);
-}
-
-/* ===== Status Badges (Pixelated Neon) ===== */
-[data-theme="retro"] .retro-status {
-  font-family: 'VT323', monospace !important;
-  font-size: 14px;
-  font-weight: normal;
-  letter-spacing: 0.05em;
-  padding: 1px 6px;
-  border: 2px solid;
-  display: inline-block;
-}
-
-[data-theme="retro"] .retro-status-new {
-  color: var(--retro-cyan);
-  border-color: var(--retro-cyan);
-  text-shadow: var(--retro-cyan-glow);
-  background: rgba(0, 255, 245, 0.08);
-}
-
-[data-theme="retro"] .retro-status-received {
-  color: #88aaff;
-  border-color: #88aaff;
-  text-shadow: 0 0 6px rgba(136, 170, 255, 0.4);
-  background: rgba(136, 170, 255, 0.08);
-}
-
-[data-theme="retro"] .retro-status-submitted {
-  color: var(--retro-yellow);
-  border-color: var(--retro-yellow);
-  text-shadow: 0 0 6px rgba(255, 247, 0, 0.4);
-  background: rgba(255, 247, 0, 0.08);
-}
-
-[data-theme="retro"] .retro-status-redo {
-  color: #ff4444;
-  border-color: #ff4444;
-  text-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
-  background: rgba(255, 68, 68, 0.08);
-}
-
-[data-theme="retro"] .retro-status-completed {
-  color: #44ff88;
-  border-color: #44ff88;
-  text-shadow: 0 0 6px rgba(68, 255, 136, 0.4);
-  background: rgba(68, 255, 136, 0.08);
-}
-
-[data-theme="retro"] .retro-status-archived {
-  color: #888888;
-  border-color: #666666;
-  background: rgba(136, 136, 136, 0.08);
-}
-
-/* ===== Progress Bar (Chunky Blocky) ===== */
-[data-theme="retro"] .retro-progress-bar {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-}
-
-[data-theme="retro"] .retro-progress-segment {
-  width: 10px;
-  height: 10px;
-  border: 1px solid var(--retro-border);
-  background: var(--retro-bg);
-}
-
-[data-theme="retro"] .retro-progress-segment.filled {
-  background: var(--retro-pink);
-  border-color: var(--retro-pink);
-  box-shadow: 0 0 4px rgba(255, 110, 199, 0.4);
-}
-
-[data-theme="retro"] .retro-progress-text {
-  font-family: 'VT323', monospace !important;
-  font-size: 13px;
-  color: var(--retro-text-dim);
-  margin-left: 4px;
-}
-
-/* ===== Task Card (Window Style) ===== */
-[data-theme="retro"] .retro-task-card {
-  margin: 4px 8px;
-  border: 2px solid var(--retro-border);
-  background: var(--retro-surface);
-  cursor: pointer;
-  transition: border-color 0.15s;
-  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="retro"] .retro-task-card:hover {
-  border-color: var(--retro-pink);
-  box-shadow: 3px 3px 0px rgba(255, 110, 199, 0.3);
-}
-
-[data-theme="retro"] .retro-task-card-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 6px;
-  background: linear-gradient(90deg, var(--retro-titlebar-active), var(--retro-titlebar));
-  font-family: 'VT323', monospace !important;
-  font-size: 12px;
-  color: var(--retro-white);
-}
-
-[data-theme="retro"] .retro-task-card-body {
-  display: flex;
-  gap: 8px;
-  padding: 6px;
-  align-items: center;
-}
-
-[data-theme="retro"] .retro-task-thumb {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border: 2px solid var(--retro-border);
-  flex-shrink: 0;
-  image-rendering: auto;
-}
-
-[data-theme="retro"] .retro-task-card:hover .retro-task-thumb {
-  border-color: var(--retro-pink);
-}
-
-[data-theme="retro"] .retro-thumb-placeholder {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--retro-border);
-  background: var(--retro-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'VT323', monospace !important;
-  font-size: 14px;
-  color: var(--retro-text-dim);
-  flex-shrink: 0;
-}
-
-[data-theme="retro"] .retro-task-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-[data-theme="retro"] .retro-task-title {
-  font-family: 'VT323', monospace !important;
-  font-size: 15px;
-  color: var(--retro-white);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-[data-theme="retro"] .retro-task-meta {
-  font-size: 10px;
-  color: var(--retro-text-dim);
-  display: flex;
-  gap: 8px;
-}
-
-/* ===== Detail View (File Properties Window) ===== */
-[data-theme="retro"] .retro-detail {
-  padding: 8px;
-  padding-bottom: 80px;
-}
-
-[data-theme="retro"] .retro-detail-prop-row {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 4px;
-  padding: 3px 6px;
-  border-bottom: 1px solid rgba(74, 42, 110, 0.4);
-  font-size: 12px;
-}
-
-[data-theme="retro"] .retro-detail-prop-key {
-  font-family: 'VT323', monospace !important;
-  font-size: 14px;
-  color: var(--retro-pink);
-  text-transform: uppercase;
-}
-
-[data-theme="retro"] .retro-detail-prop-value {
-  color: var(--retro-text);
-  word-break: break-word;
-}
-
-/* ===== Photo Grid (Detail) ===== */
-[data-theme="retro"] .retro-photo-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 0;
-}
-
-[data-theme="retro"] .retro-photo-thumb {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border: 2px solid var(--retro-cyan);
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-[data-theme="retro"] .retro-photo-thumb:hover {
-  border-color: var(--retro-pink);
-  box-shadow: var(--retro-glow);
-}
-
-[data-theme="retro"] .retro-video-badge {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  font-family: 'VT323', monospace !important;
-  font-size: 10px;
-  color: var(--retro-yellow);
-  background: rgba(0, 0, 0, 0.8);
-  padding: 0 3px;
-}
-
-/* ===== Action Buttons (Big Chunky 90s Style) ===== */
-[data-theme="retro"] .retro-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px 0;
-  border-top: 2px solid var(--retro-border);
-  margin-top: 8px;
-}
-
-[data-theme="retro"] .retro-action-btn {
-  padding: 4px 14px;
-  background: var(--retro-surface);
-  border: 2px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-cyan);
-  font-family: 'VT323', monospace !important;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.1s;
-  text-shadow: var(--retro-cyan-glow);
-}
-
-[data-theme="retro"] .retro-action-btn:hover {
-  color: var(--retro-yellow);
-  text-shadow: 0 0 6px rgba(255, 247, 0, 0.5);
-}
-
-[data-theme="retro"] .retro-action-btn:active {
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-}
-
-[data-theme="retro"] .retro-action-btn.danger {
-  color: #ff4444;
-  text-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
-}
-
-[data-theme="retro"] .retro-action-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* ===== Load More ===== */
-[data-theme="retro"] .retro-load-more {
-  display: block;
-  width: calc(100% - 16px);
-  margin: 8px;
-  padding: 6px 12px;
-  background: var(--retro-surface);
-  border: 2px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-pink);
-  font-family: 'VT323', monospace !important;
-  font-size: 16px;
-  cursor: pointer;
-  text-align: center;
-  text-shadow: var(--retro-glow);
-}
-
-[data-theme="retro"] .retro-load-more:hover {
-  background: rgba(255, 110, 199, 0.08);
-}
-
-[data-theme="retro"] .retro-load-more:active {
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-}
-
-/* ===== Loading / Error / Empty ===== */
-[data-theme="retro"] .retro-loading {
-  font-family: 'VT323', monospace !important;
-  font-size: 18px;
-  color: var(--retro-cyan);
-  text-shadow: var(--retro-cyan-glow);
-  padding: 24px;
-  text-align: center;
-}
-
-@keyframes retro-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-[data-theme="retro"] .retro-loading::after {
-  content: '...';
-  animation: retro-blink 1s step-end infinite;
-}
-
-[data-theme="retro"] .retro-error {
-  font-family: 'VT323', monospace !important;
-  font-size: 16px;
-  color: #ff4444;
-  padding: 16px 8px;
-  border: 2px solid #ff4444;
-  margin: 8px;
-  background: rgba(255, 68, 68, 0.08);
-  text-shadow: 0 0 4px rgba(255, 68, 68, 0.4);
-}
-
-[data-theme="retro"] .retro-empty {
-  font-family: 'VT323', monospace !important;
-  font-size: 18px;
-  color: var(--retro-text-dim);
-  padding: 32px;
-  text-align: center;
-}
-
-/* ===== Set Section ===== */
-[data-theme="retro"] .retro-set-section {
-  margin: 6px 0;
-  border: 2px solid var(--retro-border);
-  background: var(--retro-surface);
-}
-
-[data-theme="retro"] .retro-set-title {
-  padding: 2px 6px;
-  background: linear-gradient(90deg, var(--retro-titlebar-active), var(--retro-titlebar));
-  font-family: 'VT323', monospace !important;
-  font-size: 13px;
-  color: var(--retro-white);
-}
-
-/* ===== Back Button ===== */
-[data-theme="retro"] .retro-back-btn {
-  padding: 4px 12px;
-  background: var(--retro-surface);
-  border: 2px solid;
-  border-color: var(--retro-btn-highlight) var(--retro-btn-shadow) var(--retro-btn-shadow) var(--retro-btn-highlight);
-  color: var(--retro-pink);
-  font-family: 'VT323', monospace !important;
-  font-size: 16px;
-  cursor: pointer;
-  text-shadow: var(--retro-glow);
-}
-
-[data-theme="retro"] .retro-back-btn:active {
-  border-color: var(--retro-btn-shadow) var(--retro-btn-highlight) var(--retro-btn-highlight) var(--retro-btn-shadow);
-}
-
-/* ===== Theme Button ===== */
-[data-theme="retro"] .retro-theme-btn {
-  background: transparent;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 2px 4px;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-}
-
-[data-theme="retro"] .retro-theme-btn:hover {
-  opacity: 1;
-}
-
 /* ===== Scrollbar ===== */
 [data-theme="retro"] ::-webkit-scrollbar {
   width: 12px;
@@ -709,36 +137,6 @@
   color: var(--retro-white);
 }
 
-/* ===== Hero image in detail ===== */
-[data-theme="retro"] .retro-hero-img {
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  border: 2px solid var(--retro-cyan);
-  cursor: pointer;
-}
-
-[data-theme="retro"] .retro-hero-img:hover {
-  border-color: var(--retro-pink);
-}
-
-/* ── Group color visual differentiation ── */
-[data-theme="retro"] .retro-group-accent {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-}
-
-[data-theme="retro"] .retro-group-badge {
-  display: inline-block;
-  padding: 1px 6px;
-  font-size: 10px;
-  font-family: 'VT323', monospace;
-  border-radius: 2px;
-  letter-spacing: 0.05em;
-}
 
 /* ═══════════════════════════════════════════════════════
    BaseLayout overrides via [data-design="retro"]
@@ -832,4 +230,844 @@
   background: #2a1448;
   border: 2px solid;
   border-color: #c8b8e0 #1a0a2e #1a0a2e #c8b8e0;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   DesignTaskList — Retro component styles
+   ═══════════════════════════════════════════════════════ */
+
+/* --- Filter Bar --- */
+[data-design="retro"] .retro-filter-bar {
+  padding: 8px;
+  border-bottom: 3px solid #4a2a6e;
+  background: #2a1448;
+}
+
+[data-design="retro"] .retro-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+[data-design="retro"] .retro-tab {
+  padding: 4px 10px;
+  background: #2a1448;
+  border: 3px solid;
+  border-color: #c8b8e0 #1a0a2e #1a0a2e #c8b8e0;
+  color: #8866aa;
+  font-family: 'VT323', monospace !important;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+[data-design="retro"] .retro-tab:hover {
+  color: #00fff5;
+  text-shadow: 0 0 6px rgba(0, 255, 245, 0.4);
+}
+
+[data-design="retro"] .retro-tab--active {
+  color: #ff6ec7 !important;
+  text-shadow: 0 0 6px rgba(255, 110, 199, 0.4);
+  border-color: #1a0a2e #c8b8e0 #c8b8e0 #1a0a2e;
+  background: rgba(255, 110, 199, 0.08);
+}
+
+[data-design="retro"] .retro-tab--sm {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+[data-design="retro"] .retro-tab--icon {
+  padding: 4px 8px;
+}
+
+[data-design="retro"] .retro-tab--archive {
+  color: #888;
+}
+
+[data-design="retro"] .retro-tab-separator {
+  display: inline-block;
+  width: 2px;
+  height: 20px;
+  background: #4a2a6e;
+  margin: 0 4px;
+}
+
+[data-design="retro"] .retro-archive-filters {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* --- Task Card (Window Chrome) --- */
+[data-design="retro"] .retro-card {
+  margin: 6px 8px;
+  border: 3px solid #4a2a6e;
+  background: #2a1448;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
+}
+
+[data-design="retro"] .retro-card:hover {
+  border-color: #ff6ec7;
+  box-shadow: 4px 4px 0px rgba(255, 110, 199, 0.3);
+}
+
+/* Window title bar */
+[data-design="retro"] .retro-card-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: linear-gradient(90deg, #6a2aae, #3a1a5e);
+  font-family: 'VT323', monospace !important;
+  font-size: 12px;
+  color: #f0e6ff;
+  user-select: none;
+  min-height: 22px;
+}
+
+[data-design="retro"] .retro-card-titlebar--archived {
+  background: linear-gradient(90deg, #444, #333);
+}
+
+[data-design="retro"] .retro-card-titlebar-dots {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+[data-design="retro"] .retro-dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0,0,0,0.3);
+  display: inline-block;
+}
+
+[data-design="retro"] .retro-dot--red { background: #ff4444; }
+[data-design="retro"] .retro-dot--yellow { background: #ffbb00; }
+[data-design="retro"] .retro-dot--green { background: #39ff14; }
+[data-design="retro"] .retro-dot--gray { background: #666; }
+
+[data-design="retro"] .retro-card-titlebar-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  font-size: 12px;
+}
+
+/* Window content */
+[data-design="retro"] .retro-card-content {
+  padding: 8px;
+  border-top: 2px dotted #4a2a6e;
+}
+
+[data-design="retro"] .retro-card-content--archived {
+  filter: grayscale(0.5);
+  opacity: 0.7;
+}
+
+[data-design="retro"] .retro-card-body {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* Thumbnail */
+[data-design="retro"] .retro-card-thumb-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+[data-design="retro"] .retro-card-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 4px solid #6b3fa0;
+  image-rendering: auto;
+}
+
+[data-design="retro"] .retro-card:hover .retro-card-thumb {
+  border-color: #ff6ec7;
+}
+
+[data-design="retro"] .retro-card-placeholder {
+  width: 56px;
+  height: 56px;
+  border: 4px solid #6b3fa0;
+  background: #1a0a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8866aa;
+  flex-shrink: 0;
+}
+
+[data-design="retro"] .retro-card-video-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.8);
+  color: #fff700;
+  padding: 1px 3px;
+  font-size: 10px;
+}
+
+/* Card info */
+[data-design="retro"] .retro-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+[data-design="retro"] .retro-card-title {
+  font-family: 'VT323', monospace !important;
+  font-size: 16px;
+  color: #ff6ec7;
+  text-shadow: 0 0 4px rgba(255, 110, 199, 0.3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+[data-design="retro"] .retro-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Status badge — square, chunky */
+[data-design="retro"] .retro-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  font-family: 'VT323', monospace !important;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  border-radius: 0 !important;
+  border: 2px solid rgba(255,255,255,0.2);
+  text-transform: uppercase;
+}
+
+[data-design="retro"] .retro-badge--lg {
+  font-size: 16px;
+  padding: 2px 12px;
+}
+
+[data-design="retro"] .retro-badge--archived {
+  background: #555;
+  color: #aaa;
+}
+
+/* Group with neon square */
+[data-design="retro"] .retro-card-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #e8d8ff;
+}
+
+[data-design="retro"] .retro-group-square {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+}
+
+[data-design="retro"] .retro-card-sets {
+  font-family: 'VT323', monospace !important;
+  font-size: 12px;
+  color: #00fff5;
+  text-shadow: 0 0 4px rgba(0, 255, 245, 0.3);
+}
+
+[data-design="retro"] .retro-card-submitter {
+  font-size: 11px;
+  color: #8866aa;
+}
+
+/* Progress bar — chunky pixel */
+[data-design="retro"] .retro-card-progress-track {
+  height: 8px;
+  background: #1a0a2e;
+  border: 2px solid #4a2a6e;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+[data-design="retro"] .retro-card-progress-fill {
+  height: 100%;
+  transition: width 0.3s;
+  image-rendering: pixelated;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 6px,
+    rgba(0,0,0,0.3) 6px,
+    rgba(0,0,0,0.3) 8px
+  );
+  background-size: 8px 100%;
+}
+
+/* Send button — 3D effect */
+[data-design="retro"] .retro-card-send-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: #2a1448;
+  border: 3px solid;
+  border-color: #c8b8e0 #1a0a2e #1a0a2e #c8b8e0;
+  color: #00fff5;
+  font-family: 'VT323', monospace !important;
+  font-size: 13px;
+  cursor: pointer;
+  text-shadow: 0 0 4px rgba(0, 255, 245, 0.3);
+  width: fit-content;
+}
+
+[data-design="retro"] .retro-card-send-btn:hover {
+  color: #ff6ec7;
+  text-shadow: 0 0 6px rgba(255, 110, 199, 0.4);
+}
+
+[data-design="retro"] .retro-card-send-btn:active {
+  border-color: #1a0a2e #c8b8e0 #c8b8e0 #1a0a2e;
+}
+
+/* --- Task Count --- */
+[data-design="retro"] .retro-task-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-family: 'VT323', monospace !important;
+}
+
+[data-design="retro"] .retro-count-number {
+  font-size: 18px;
+  color: #39ff14;
+  text-shadow: 0 0 6px rgba(57, 255, 20, 0.4);
+}
+
+[data-design="retro"] .retro-count-label {
+  font-size: 14px;
+  color: #8866aa;
+}
+
+/* --- Empty State --- */
+[data-design="retro"] .retro-empty {
+  padding: 24px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+[data-design="retro"] .retro-empty-window {
+  width: 100%;
+  max-width: 320px;
+  border: 3px solid #4a2a6e;
+  background: #2a1448;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
+}
+
+[data-design="retro"] .retro-empty-content {
+  padding: 24px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #8866aa;
+}
+
+[data-design="retro"] .retro-empty-text {
+  font-family: 'VT323', monospace !important;
+  font-size: 16px;
+  color: #8866aa;
+  margin: 0;
+}
+
+/* --- Loading --- */
+[data-design="retro"] .retro-loading {
+  padding: 8px;
+}
+
+[data-design="retro"] .retro-skeleton {
+  background: linear-gradient(90deg, #2a1448 25%, #3a1a5e 50%, #2a1448 75%);
+  background-size: 200% 100%;
+  animation: retro-shimmer 1.5s infinite;
+}
+
+[data-design="retro"] .retro-skeleton-card {
+  margin: 6px 8px;
+  padding: 8px;
+  border: 3px solid #4a2a6e;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@keyframes retro-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+[data-design="retro"] .retro-load-more {
+  padding: 12px;
+  text-align: center;
+}
+
+[data-design="retro"] .retro-load-more-text {
+  font-family: 'VT323', monospace !important;
+  font-size: 16px;
+  color: #ff6ec7;
+  text-shadow: 0 0 6px rgba(255, 110, 199, 0.4);
+}
+
+@keyframes retro-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+[data-design="retro"] .retro-load-more-text {
+  animation: retro-blink 1s step-end infinite;
+}
+
+/* --- List Wrapper --- */
+[data-design="retro"] .retro-list-wrapper {
+  padding-bottom: 16px;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   DesignTaskDetail — Retro component styles
+   ═══════════════════════════════════════════════════════ */
+
+/* --- Detail Window --- */
+[data-design="retro"] .retro-detail-window {
+  margin: 8px;
+  border: 3px solid #4a2a6e;
+  background: #2a1448;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
+}
+
+[data-design="retro"] .retro-detail-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, #6a2aae, #3a1a5e);
+  font-family: 'VT323', monospace !important;
+  font-size: 14px;
+  color: #f0e6ff;
+  user-select: none;
+  min-height: 26px;
+}
+
+[data-design="retro"] .retro-detail-titlebar--sm {
+  min-height: 22px;
+  font-size: 12px;
+}
+
+[data-design="retro"] .retro-detail-titlebar-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+[data-design="retro"] .retro-detail-content {
+  padding: 10px;
+  border-top: 2px dotted #4a2a6e;
+}
+
+/* Hero image */
+[data-design="retro"] .retro-detail-hero {
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+[data-design="retro"] .retro-detail-hero-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border: 4px solid #6b3fa0;
+}
+
+[data-design="retro"] .retro-detail-hero-img:hover {
+  border-color: #ff6ec7;
+}
+
+[data-design="retro"] .retro-detail-hero-placeholder {
+  width: 100%;
+  height: 120px;
+  border: 4px solid #6b3fa0;
+  background: #1a0a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Title */
+[data-design="retro"] .retro-detail-title {
+  font-family: 'VT323', monospace !important;
+  font-size: 22px;
+  color: #ff6ec7;
+  text-shadow: 0 0 8px rgba(255, 110, 199, 0.4);
+  margin: 0 0 8px 0;
+  word-break: break-word;
+}
+
+[data-design="retro"] .retro-detail-status-row {
+  margin-bottom: 12px;
+}
+
+/* Info fields table */
+[data-design="retro"] .retro-detail-fields {
+  border: 2px solid #4a2a6e;
+  background: #1a0a2e;
+}
+
+[data-design="retro"] .retro-detail-field {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(74, 42, 110, 0.5);
+  font-size: 13px;
+}
+
+[data-design="retro"] .retro-detail-field:last-child {
+  border-bottom: none;
+}
+
+[data-design="retro"] .retro-detail-field-label {
+  font-family: 'VT323', monospace !important;
+  font-size: 14px;
+  color: #ff6ec7;
+  text-transform: uppercase;
+  text-shadow: 0 0 4px rgba(255, 110, 199, 0.3);
+}
+
+[data-design="retro"] .retro-detail-field-value {
+  color: #e8d8ff;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* --- Progress Window --- */
+[data-design="retro"] .retro-progress-window {
+  margin: 8px;
+  border: 3px solid #4a2a6e;
+  background: #2a1448;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.4);
+}
+
+[data-design="retro"] .retro-progress-content {
+  padding: 10px;
+  border-top: 2px dotted #4a2a6e;
+}
+
+[data-design="retro"] .retro-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+[data-design="retro"] .retro-progress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-design="retro"] .retro-progress-title {
+  font-family: 'VT323', monospace !important;
+  font-size: 16px;
+  color: #00fff5;
+  text-shadow: 0 0 6px rgba(0, 255, 245, 0.4);
+}
+
+[data-design="retro"] .retro-progress-label {
+  font-size: 12px;
+  color: #8866aa;
+}
+
+[data-design="retro"] .retro-progress-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* Chunky progress bar */
+[data-design="retro"] .retro-progress-bar-track {
+  height: 10px;
+  background: #1a0a2e;
+  border: 3px solid #4a2a6e;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+[data-design="retro"] .retro-progress-bar-fill {
+  height: 100%;
+  transition: width 0.3s;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 8px,
+    rgba(0,0,0,0.3) 8px,
+    rgba(0,0,0,0.3) 10px
+  );
+  background-size: 10px 100%;
+}
+
+[data-design="retro"] .retro-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-top: 2px dotted #4a2a6e;
+  margin-top: 6px;
+}
+
+[data-design="retro"] .retro-selection-count {
+  font-family: 'VT323', monospace !important;
+  font-size: 14px;
+  color: #ff6ec7;
+}
+
+[data-design="retro"] .retro-media-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8866aa;
+}
+
+/* --- Media Section --- */
+[data-design="retro"] .retro-media-section {
+  margin: 8px;
+}
+
+[data-design="retro"] .retro-media-set {
+  margin-bottom: 10px;
+}
+
+[data-design="retro"] .retro-set-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, #3a1a5e, #2a1448);
+  border: 2px solid #4a2a6e;
+  border-bottom: none;
+}
+
+[data-design="retro"] .retro-set-title {
+  font-family: 'VT323', monospace !important;
+  font-size: 14px;
+  color: #00fff5;
+  text-shadow: 0 0 4px rgba(0, 255, 245, 0.3);
+}
+
+[data-design="retro"] .retro-set-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-design="retro"] .retro-set-complete-badge {
+  font-family: 'VT323', monospace !important;
+  font-size: 12px;
+  color: #39ff14;
+  text-shadow: 0 0 4px rgba(57, 255, 20, 0.4);
+  padding: 1px 6px;
+  border: 2px solid #39ff14;
+  background: rgba(57, 255, 20, 0.08);
+}
+
+/* Photo grid — pixel frames */
+[data-design="retro"] .retro-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 6px;
+  background: #1a0a2e;
+  border: 2px solid #4a2a6e;
+}
+
+[data-design="retro"] .retro-media-item {
+  position: relative;
+  aspect-ratio: 1;
+  cursor: pointer;
+  border: 4px solid #6b3fa0;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+[data-design="retro"] .retro-media-item:hover {
+  border-color: #ff6ec7;
+  box-shadow: 0 0 6px rgba(255, 110, 199, 0.4);
+}
+
+[data-design="retro"] .retro-media-item--selected {
+  border-color: #00fff5 !important;
+  box-shadow: 0 0 8px rgba(0, 255, 245, 0.5);
+}
+
+[data-design="retro"] .retro-media-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-design="retro"] .retro-media-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a1448;
+  color: #8866aa;
+}
+
+[data-design="retro"] .retro-media-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.7);
+  padding: 6px;
+  border: 2px solid #fff700;
+}
+
+[data-design="retro"] .retro-media-checkbox {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  color: #8866aa;
+  background: rgba(0,0,0,0.6);
+  padding: 2px;
+}
+
+[data-design="retro"] .retro-media-checkbox--checked {
+  color: #00fff5;
+  text-shadow: 0 0 6px rgba(0, 255, 245, 0.5);
+}
+
+[data-design="retro"] .retro-media-uploader {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.75);
+  color: #e8d8ff;
+  font-size: 10px;
+  padding: 1px 4px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Buttons (3D outset effect) --- */
+[data-design="retro"] .retro-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #2a1448;
+  border: 3px solid;
+  border-color: #c8b8e0 #1a0a2e #1a0a2e #c8b8e0;
+  color: #00fff5;
+  font-family: 'VT323', monospace !important;
+  font-size: 14px;
+  cursor: pointer;
+  text-shadow: 0 0 4px rgba(0, 255, 245, 0.3);
+  transition: color 0.1s;
+  white-space: nowrap;
+}
+
+[data-design="retro"] .retro-btn:hover {
+  color: #ff6ec7;
+  text-shadow: 0 0 6px rgba(255, 110, 199, 0.4);
+}
+
+[data-design="retro"] .retro-btn:active {
+  border-color: #1a0a2e #c8b8e0 #c8b8e0 #1a0a2e;
+}
+
+[data-design="retro"] .retro-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+[data-design="retro"] .retro-btn--sm {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+[data-design="retro"] .retro-btn--active {
+  border-color: #1a0a2e #c8b8e0 #c8b8e0 #1a0a2e;
+  color: #ff6ec7;
+  background: rgba(255, 110, 199, 0.08);
+}
+
+[data-design="retro"] .retro-btn--primary {
+  color: #1a0a2e !important;
+  font-weight: bold;
+  text-shadow: none;
+  border-color: #c8b8e0 #1a0a2e #1a0a2e #c8b8e0;
+}
+
+[data-design="retro"] .retro-btn--primary:hover {
+  filter: brightness(1.1);
+}
+
+[data-design="retro"] .retro-btn--danger {
+  color: #ff4444;
+  text-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
+}
+
+[data-design="retro"] .retro-btn--danger:hover {
+  color: #ff6666;
+}
+
+/* --- Action Bar (fixed bottom) --- */
+[data-design="retro"] .retro-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #2a1448;
+  border-top: 3px solid #ff6ec7;
+  box-shadow: 0 -2px 8px rgba(255, 110, 199, 0.2);
+  padding: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+[data-design="retro"] .retro-action-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }

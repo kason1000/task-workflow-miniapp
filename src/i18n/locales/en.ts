@@ -293,6 +293,11 @@ export const en = {
     colorThemes: 'Color Themes',
     fullDesigns: 'Full UI Designs',
     active: 'Active',
+    done: 'Done',
+    textSize: 'Text Size',
+    modeAuto: 'Auto',
+    modeLight: 'Light',
+    modeDark: 'Dark',
   },
 };
 

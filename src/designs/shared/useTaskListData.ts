@@ -41,7 +41,7 @@ export interface TaskListData {
   setFullscreenImage: React.Dispatch<React.SetStateAction<string | null>>;
   isAnimating: boolean;
   setIsAnimating: React.Dispatch<React.SetStateAction<boolean>>;
-  allPhotos: Array<{ url: string; taskId: string; taskIndex: number }>;
+  allPhotos: Array<{ url: string; taskId: string; taskIndex: number; taskInfo?: any }>;
   currentPhotoIndex: number;
   setCurrentPhotoIndex: React.Dispatch<React.SetStateAction<number>>;
   currentFullscreenTaskId: string | null;

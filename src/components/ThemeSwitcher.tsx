@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme, type ThemeId, type ThemeMode, type FontSize, type FontSizeMode } from '../contexts/ThemeContext';
+import { useTheme, type ThemeId, type ThemeMode, type FontSizeMode } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
 import { Sun, Moon, Monitor, Check, Layout, Palette, Type } from 'lucide-react';
@@ -23,7 +23,7 @@ const DESIGN_NAMES: Record<string, string> = {
 };
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
-  const { theme, mode, setMode, themes, fontSize, fontSizeMode, setFontSizeMode } = useTheme();
+  const { mode, setMode, themes, fontSizeMode, setFontSizeMode, coreMode } = useTheme();
   const { t } = useLocale();
   const [exiting, setExiting] = useState(false);
 
@@ -80,7 +80,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
               minHeight: 'auto',
             }}
           >
-            Done
+            {t('themeSwitcher.done')}
           </button>
         </div>
 
@@ -103,12 +103,12 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           {(() => {
             const modeOrder: ThemeMode[] = ['auto', 'classic', 'black'];
             const modeLabels: Record<string, { label: string; Icon: typeof Monitor }> = {
-              auto: { label: 'Auto', Icon: Monitor },
-              classic: { label: 'Light', Icon: Sun },
-              black: { label: 'Dark', Icon: Moon },
+              auto: { label: t('themeSwitcher.modeAuto'), Icon: Monitor },
+              classic: { label: t('themeSwitcher.modeLight'), Icon: Sun },
+              black: { label: t('themeSwitcher.modeDark'), Icon: Moon },
             };
             const isCoreMode = mode === 'auto' || mode === 'classic' || mode === 'black';
-            const currentCore = isCoreMode ? mode : 'auto';
+            const currentCore = isCoreMode ? mode : coreMode;
             const { label, Icon } = modeLabels[currentCore];
             const handleCycle = () => {
               const idx = modeOrder.indexOf(currentCore);
@@ -171,7 +171,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
           <Type size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
           <span style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-            Text Size
+            {t('themeSwitcher.textSize')}
           </span>
         </div>
 
@@ -183,7 +183,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           marginBottom: '16px',
         }}>
           {([
-            { value: 'auto' as FontSizeMode, label: 'Auto', displaySize: 14 },
+            { value: 'auto' as FontSizeMode, label: t('themeSwitcher.modeAuto'), displaySize: 14 },
             { value: 1 as FontSizeMode, label: 'A', displaySize: 12 },
             { value: 2 as FontSizeMode, label: 'A', displaySize: 16 },
             { value: 3 as FontSizeMode, label: 'A', displaySize: 20 },

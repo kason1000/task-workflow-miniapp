@@ -295,5 +295,10 @@ export const zh: Dictionary = {
     colorThemes: '颜色主题',
     fullDesigns: '完整 UI 设计',
     active: '当前',
+    done: '完成',
+    textSize: '字体大小',
+    modeAuto: '自动',
+    modeLight: '浅色',
+    modeDark: '深色',
   },
 };

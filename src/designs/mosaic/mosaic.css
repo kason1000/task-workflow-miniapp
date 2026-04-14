@@ -798,6 +798,513 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   Design Render Props — Task List
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Filter Bar ── */
+[data-design="mosaic"] .mosaic-filter-bar {
+  padding: 0;
+  border-bottom: 1px solid var(--mosaic-border, #e8e4e0);
+  background: #faf8f5;
+}
+
+[data-design="mosaic"] .mosaic-filter-pills {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space: nowrap;
+  align-items: center;
+}
+
+[data-design="mosaic"] .mosaic-filter-pills::-webkit-scrollbar {
+  display: none;
+}
+
+[data-design="mosaic"] .mosaic-pill {
+  font-family: 'Karla', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #6a6560;
+  background: transparent;
+  border: 1px solid #e8e4e0;
+  border-radius: 14px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: auto;
+  letter-spacing: 0.02em;
+}
+
+[data-design="mosaic"] .mosaic-pill:hover {
+  border-color: #c45d3e;
+  color: #c45d3e;
+}
+
+[data-design="mosaic"] .mosaic-pill--active {
+  background: #c45d3e;
+  border-color: #c45d3e;
+  color: #fff;
+  font-weight: 500;
+}
+
+[data-design="mosaic"] .mosaic-pill--icon {
+  padding: 5px 8px;
+}
+
+[data-design="mosaic"] .mosaic-pill--sm {
+  font-size: 10px;
+  padding: 3px 10px;
+}
+
+[data-design="mosaic"] .mosaic-pill--archive {
+  border-style: dashed;
+}
+
+[data-design="mosaic"] .mosaic-pill-separator {
+  width: 1px;
+  height: 16px;
+  background: #e8e4e0;
+  flex-shrink: 0;
+}
+
+[data-design="mosaic"] .mosaic-archive-filters {
+  border-top: 1px solid #e8e4e0;
+  background: #f5f2ed;
+}
+
+/* ── Task Count ── */
+[data-design="mosaic"] .mosaic-task-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 16px 6px;
+}
+
+/* ── List wrapper — 2-column grid ── */
+[data-design="mosaic"] .mosaic-list-wrapper > div:last-child {
+  /* The card container rendered by DesignTaskList */
+}
+
+[data-design="mosaic"] .mosaic-list-wrapper > div:last-child > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 0 2px 2px;
+}
+
+/* ── Task Card ── */
+[data-design="mosaic"] .mosaic-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f5f2ed;
+  animation: mosaicFadeIn 0.5s ease both;
+}
+
+[data-design="mosaic"] .mosaic-card--archived {
+  filter: saturate(0.35);
+  opacity: 0.75;
+}
+
+[data-design="mosaic"] .mosaic-card--archived:hover {
+  filter: saturate(0.6);
+  opacity: 0.9;
+}
+
+[data-design="mosaic"] .mosaic-card-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+}
+
+[data-design="mosaic"] .mosaic-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+[data-design="mosaic"] .mosaic-card:hover .mosaic-card-img {
+  transform: scale(1.03);
+}
+
+[data-design="mosaic"] .mosaic-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0ece7;
+  color: #e8e4e0;
+}
+
+/* Video badge — top-right */
+[data-design="mosaic"] .mosaic-card-video-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-radius: 4px;
+  padding: 3px 5px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+/* Sets count badge — top-left */
+[data-design="mosaic"] .mosaic-card-sets-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  z-index: 3;
+  font-family: 'Karla', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+/* Bottom overlay gradient with info */
+[data-design="mosaic"] .mosaic-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(26, 26, 26, 0.78) 0%, rgba(26, 26, 26, 0.3) 60%, transparent 100%);
+  padding: 36px 10px 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+[data-design="mosaic"] .mosaic-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-design="mosaic"] .mosaic-card-meta {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+[data-design="mosaic"] .mosaic-card-status {
+  font-family: 'Karla', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 7px;
+  border-radius: 8px;
+  border: 1px solid;
+  color: #fff;
+  background: transparent;
+}
+
+[data-design="mosaic"] .mosaic-card-status--archived {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-design="mosaic"] .mosaic-card-group {
+  font-family: 'Karla', sans-serif;
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 1px 7px;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+[data-design="mosaic"] .mosaic-card-submitter {
+  font-family: 'Karla', sans-serif;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Progress bar at very bottom of card */
+[data-design="mosaic"] .mosaic-card-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  z-index: 4;
+  transition: width 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Design Render Props — Task Detail
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Hero placeholder ── */
+[data-design="mosaic"] .mosaic-detail-hero-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0ece7;
+  min-height: 40vh;
+}
+
+/* ── Progress Section ── */
+[data-design="mosaic"] .mosaic-progress-section {
+  padding: 16px;
+  border-bottom: 1px solid #e8e4e0;
+}
+
+[data-design="mosaic"] .mosaic-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+[data-design="mosaic"] .mosaic-progress-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+[data-design="mosaic"] .mosaic-progress-label {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  color: #9a9590;
+}
+
+[data-design="mosaic"] .mosaic-progress-actions {
+  display: flex;
+  gap: 6px;
+}
+
+[data-design="mosaic"] .mosaic-action-btn--sm {
+  padding: 5px 10px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-design="mosaic"] .mosaic-progress-bar-track {
+  width: 100%;
+  height: 3px;
+  background: #e8e4e0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+[data-design="mosaic"] .mosaic-progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+[data-design="mosaic"] .mosaic-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid #e8e4e0;
+  margin-top: 8px;
+}
+
+[data-design="mosaic"] .mosaic-selection-count {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  color: #6a6560;
+}
+
+[data-design="mosaic"] .mosaic-media-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Karla', sans-serif;
+  font-size: 11px;
+  color: #9a9590;
+}
+
+/* ── Media Section ── */
+[data-design="mosaic"] .mosaic-media-section {
+  padding: 0 16px 16px;
+}
+
+[data-design="mosaic"] .mosaic-media-set {
+  margin-bottom: 20px;
+}
+
+[data-design="mosaic"] .mosaic-set-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-top: 12px;
+}
+
+[data-design="mosaic"] .mosaic-set-header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+[data-design="mosaic"] .mosaic-set-complete-badge {
+  font-family: 'Karla', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5a7a5a;
+  border: 1px solid #5a7a5a;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 3-column grid for media */
+[data-design="mosaic"] .mosaic-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+[data-design="mosaic"] .mosaic-media-item {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 3px;
+  background: #f0ece7;
+}
+
+[data-design="mosaic"] .mosaic-media-item--selected {
+  outline: 2px solid #c45d3e;
+  outline-offset: -2px;
+}
+
+[data-design="mosaic"] .mosaic-media-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+[data-design="mosaic"] .mosaic-media-item:hover .mosaic-media-thumb {
+  transform: scale(1.05);
+}
+
+[data-design="mosaic"] .mosaic-media-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8e4e0;
+}
+
+/* Video play indicator */
+[data-design="mosaic"] .mosaic-media-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  pointer-events: none;
+}
+
+/* Selection checkbox */
+[data-design="mosaic"] .mosaic-media-checkbox {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+  z-index: 2;
+  pointer-events: none;
+}
+
+[data-design="mosaic"] .mosaic-media-checkbox--checked {
+  color: #c45d3e;
+}
+
+/* Uploader name */
+[data-design="mosaic"] .mosaic-media-uploader {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%);
+  font-family: 'Karla', sans-serif;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 12px 5px 3px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ── Action Bar — fixed bottom ── */
+[data-design="mosaic"] .mosaic-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #faf8f5;
+  border-top: 1px solid #e8e4e0;
+  padding: 10px 12px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 50;
+}
+
+[data-design="mosaic"] .mosaic-action-bar-inner {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space: nowrap;
+  align-items: center;
+}
+
+[data-design="mosaic"] .mosaic-action-bar-inner::-webkit-scrollbar {
+  display: none;
+}
+
+[data-design="mosaic"] .mosaic-action-bar .mosaic-action-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ═══════════════════════════════════════════════════════
    BaseLayout overrides via [data-design="mosaic"]
    ═══════════════════════════════════════════════════════ */
 
