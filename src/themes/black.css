@@ -1,0 +1,69 @@
+/*
+ * BLACK THEME — True OLED Black
+ * Pure black background for OLED screens (saves battery, high contrast)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+[data-theme="black"] {
+  --tg-theme-bg-color: #000000 !important;
+  --tg-theme-text-color: #e8e8e8 !important;
+  --tg-theme-hint-color: #5a5a5a !important;
+  --tg-theme-link-color: #5e9fd4 !important;
+  --tg-theme-button-color: #2ea6ff !important;
+  --tg-theme-button-text-color: #ffffff !important;
+  --tg-theme-secondary-bg-color: #111111 !important;
+}
+
+[data-theme="black"] body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #000000;
+  color: #e8e8e8;
+}
+
+[data-theme="black"] button {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+[data-theme="black"] .card {
+  background: #111111;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+}
+
+[data-theme="black"] input,
+[data-theme="black"] textarea,
+[data-theme="black"] select {
+  background: #0a0a0a;
+  border: 1px solid #222222;
+  color: #e8e8e8;
+  border-radius: 8px;
+}
+
+[data-theme="black"] input:focus,
+[data-theme="black"] textarea:focus {
+  border-color: #2ea6ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(46, 166, 255, 0.15);
+}
+
+[data-theme="black"] .badge-new { background: rgba(59, 130, 246, 0.2); color: #93bbfd; }
+[data-theme="black"] .badge-received { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+[data-theme="black"] .badge-submitted { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+[data-theme="black"] .badge-redo { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+[data-theme="black"] .badge-completed { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+[data-theme="black"] .badge-archived { background: rgba(113, 113, 122, 0.2); color: #a1a1aa; }
+
+[data-theme="black"] .btn-ghost {
+  background: transparent;
+  color: #888;
+  border: 1px solid #222;
+}
+
+[data-theme="black"] .text-muted { color: #5a5a5a; }
+
+[data-theme="black"] ::-webkit-scrollbar { width: 4px; }
+[data-theme="black"] ::-webkit-scrollbar-track { background: transparent; }
+[data-theme="black"] ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }

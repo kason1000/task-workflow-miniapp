@@ -8,6 +8,7 @@ import { GroupProvider } from './contexts/GroupContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import './index.css';
 import './themes/dark.css';
+import './themes/black.css';
 import './themes/ocean.css';
 import './themes/sunset.css';
 import './themes/forest.css';

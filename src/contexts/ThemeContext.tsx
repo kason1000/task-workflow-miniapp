@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-export type ThemeId = 'classic' | 'dark' | 'ocean' | 'sunset' | 'forest' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
+export type ThemeId = 'classic' | 'dark' | 'black' | 'ocean' | 'sunset' | 'forest' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
 export type ThemeMode = ThemeId | 'auto';
 export type FontSize = 1 | 2 | 3;
 export type FontSizeMode = FontSize | 'auto';
@@ -31,6 +31,7 @@ const FONT_SIZE_KEY = 'taskflow_fontsize';
 const THEMES: ThemeInfo[] = [
   { id: 'classic', name: 'Classic', description: 'Original Telegram theme', hasCustomLayout: false },
   { id: 'dark', name: 'Dark', description: 'Dark mode for comfortable viewing', hasCustomLayout: false },
+  { id: 'black', name: 'Black', description: 'OLED true black', hasCustomLayout: false },
   { id: 'ocean', name: 'Ocean', description: 'Deep navy with cyan accents', hasCustomLayout: false },
   { id: 'sunset', name: 'Sunset', description: 'Warm cream with coral accents', hasCustomLayout: false },
   { id: 'forest', name: 'Forest', description: 'Dark green with emerald accents', hasCustomLayout: false },
@@ -94,9 +95,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  // Resolve theme
+  // Resolve theme — auto uses black for dark mode (true OLED black)
   const theme = useMemo(() => {
-    if (mode === 'auto') return systemDark ? 'dark' : 'classic';
+    if (mode === 'auto') return systemDark ? 'black' : 'classic';
     return mode;
   }, [mode, systemDark]);
 

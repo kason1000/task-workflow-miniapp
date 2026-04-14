@@ -6,6 +6,7 @@ import { THEME_COLORS } from '../utils/colors';
 import { Sun, Moon, Monitor, Check, Layout, Palette, Type } from 'lucide-react';
 
 const COLOR_THEMES: { id: ThemeId; label: string }[] = [
+  { id: 'dark', label: 'Midnight' },
   { id: 'ocean', label: 'Ocean' },
   { id: 'sunset', label: 'Sunset' },
   { id: 'forest', label: 'Forest' },
@@ -102,7 +103,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           {([
             { m: 'auto' as ThemeMode, label: 'Auto', Icon: Monitor },
             { m: 'classic' as ThemeMode, label: 'Light', Icon: Sun },
-            { m: 'dark' as ThemeMode, label: 'Dark', Icon: Moon },
+            { m: 'black' as ThemeMode, label: 'Dark', Icon: Moon },
           ]).map(({ m, label, Icon }) => {
             const isActive = mode === m;
             return (
