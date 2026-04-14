@@ -92,7 +92,13 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+        <div style={{
+          display: 'flex', gap: '0',
+          background: 'var(--tg-theme-secondary-bg-color)',
+          borderRadius: '10px',
+          padding: '3px',
+          marginBottom: '16px',
+        }}>
           {/* Auto/Light/Dark toggle — single button cycles through */}
           {(() => {
             const modeOrder: ThemeMode[] = ['auto', 'classic', 'black'];
@@ -117,9 +123,10 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                   height: '36px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                   borderRadius: '10px',
-                  border: isCoreMode ? '1.5px solid var(--tg-theme-button-color)' : '1.5px solid transparent',
-                  background: 'var(--tg-theme-secondary-bg-color)',
-                  color: isCoreMode ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-hint-color)',
+                  border: 'none',
+                  background: isCoreMode ? 'var(--tg-theme-bg-color)' : 'transparent',
+                  color: isCoreMode ? 'var(--tg-theme-text-color)' : 'var(--tg-theme-hint-color)',
+                  boxShadow: isCoreMode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                   fontSize: '11px', fontWeight: 600,
                   cursor: 'pointer',
                   minWidth: 'auto',
@@ -143,14 +150,15 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
                   flex: 1,
                   height: '36px',
                   borderRadius: '10px',
-                  border: isActive ? `1.5px solid ${colors.accent}` : '1.5px solid transparent',
-                  background: colors.bg,
-                  color: colors.accent,
+                  border: 'none',
+                  background: isActive ? colors.bg : 'transparent',
+                  color: isActive ? colors.accent : 'var(--tg-theme-hint-color)',
                   cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '10px', fontWeight: 600,
+                  fontSize: '10px', fontWeight: isActive ? 600 : 400,
                   minWidth: 'auto', padding: '0 4px',
-                  boxShadow: isActive ? `0 0 6px ${colors.accent}30` : '0 0 0 1px rgba(128,128,128,0.12)',
+                  boxShadow: isActive ? `0 1px 3px rgba(0,0,0,0.1)` : 'none',
+                  transition: 'all 0.3s ease',
                 }}
               >
                 {ct.label}

@@ -49,10 +49,12 @@ body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--tg-theme-bg-color);
   color: var(--tg-theme-text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
   font-size: var(--fs-md);
 }
 
 /* Font size scale — zoom on #root scales main content */
+#root { transition: zoom 0.3s ease; }
 [data-fontsize="2"] #root { zoom: 1.12; }
 [data-fontsize="3"] #root { zoom: 1.25; }
 
@@ -71,7 +73,7 @@ button {
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 button:hover:not(:disabled) {
@@ -93,6 +95,7 @@ button:disabled {
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .badge {
