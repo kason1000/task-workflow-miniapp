@@ -498,26 +498,6 @@ function App() {
               v{appVersion}</span>
           </div>
 
-          {/* Theme/Design switcher button */}
-          <button
-            onClick={() => { setShowThemeSwitcher(true); hapticFeedback.light(); }}
-            aria-label="Theme"
-            style={{
-              background: 'var(--tg-theme-secondary-bg-color)',
-              border: '1.5px solid transparent',
-              borderRadius: '10px',
-              padding: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: '4px',
-              minWidth: 'auto',
-            }}
-          >
-            <Palette size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
-          </button>
-
           <div style={{
             marginLeft: 'auto',  /* Push to the right */
             textAlign: 'right',
@@ -564,6 +544,27 @@ function App() {
               </button>
             )}
           </div>
+
+          {/* Theme/Design switcher — far right */}
+          <button
+            onClick={() => { setShowThemeSwitcher(true); hapticFeedback.light(); }}
+            aria-label="Theme"
+            style={{
+              background: 'var(--tg-theme-secondary-bg-color)',
+              border: '1.5px solid transparent',
+              borderRadius: '10px',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '6px',
+              minWidth: 'auto',
+              flexShrink: 0,
+            }}
+          >
+            <Palette size={14} style={{ color: 'var(--tg-theme-hint-color)' }} />
+          </button>
         </div>
       </div>
 
