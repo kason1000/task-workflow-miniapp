@@ -34,6 +34,17 @@
   --touch-min: 42px;
 }
 
+/* Explicit classic (light) theme — overrides Telegram's dark mode injection */
+[data-theme="classic"] {
+  --tg-theme-bg-color: #ffffff !important;
+  --tg-theme-text-color: #000000 !important;
+  --tg-theme-hint-color: #999999 !important;
+  --tg-theme-link-color: #2481cc !important;
+  --tg-theme-button-color: #2481cc !important;
+  --tg-theme-button-text-color: #ffffff !important;
+  --tg-theme-secondary-bg-color: #f4f4f5 !important;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--tg-theme-bg-color);
