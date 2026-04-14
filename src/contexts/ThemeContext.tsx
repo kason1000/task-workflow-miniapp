@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 export type ThemeId = 'classic' | 'dark' | 'ocean' | 'sunset' | 'forest' | 'mosaic' | 'command' | 'elder' | 'zen' | 'retro' | 'glass' | 'brutalist';
 export type ThemeMode = ThemeId | 'auto';
 export type FontSize = 1 | 2 | 3;
+export type FontSizeMode = FontSize | 'auto';
 
 interface ThemeInfo {
   id: ThemeId;
@@ -17,8 +18,11 @@ interface ThemeContextValue {
   setMode: (mode: ThemeMode) => void;
   themes: ThemeInfo[];
   isCustomLayout: boolean;
+  /** Resolved font size (never 'auto') */
   fontSize: FontSize;
-  setFontSize: (size: FontSize) => void;
+  /** User's selected font size mode (can be 'auto') */
+  fontSizeMode: FontSizeMode;
+  setFontSizeMode: (mode: FontSizeMode) => void;
 }
 
 const STORAGE_KEY = 'taskflow_theme';
@@ -42,9 +46,19 @@ const THEMES: ThemeInfo[] = [
 const VALID_MODES = [...THEMES.map(t => t.id), 'auto'];
 
 function getSystemDark(): boolean {
+  try { return window.matchMedia('(prefers-color-scheme: dark)').matches; }
+  catch { return false; }
+}
+
+function getSystemFontSize(): FontSize {
   try {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  } catch { return false; }
+    // Check browser's default root font size (normally 16px)
+    // If user increased it via system/browser settings, it'll be larger
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    if (rootFontSize >= 20) return 3;
+    if (rootFontSize >= 18) return 2;
+    return 1;
+  } catch { return 1; }
 }
 
 function readStoredMode(): ThemeMode {
@@ -55,64 +69,24 @@ function readStoredMode(): ThemeMode {
   return 'auto';
 }
 
-function readStoredFontSize(): FontSize {
+function readStoredFontSizeMode(): FontSizeMode {
   try {
     const stored = localStorage.getItem(FONT_SIZE_KEY);
+    if (stored === 'auto') return 'auto';
     if (stored === '1' || stored === '2' || stored === '3') return parseInt(stored) as FontSize;
   } catch {}
-  return 1;
+  return 'auto';
 }
-
-// Font scale CSS custom properties per level
-const FONT_SCALES: Record<FontSize, Record<string, string>> = {
-  1: {
-    '--fs-xs': '10px',
-    '--fs-sm': '12px',
-    '--fs-md': '14px',
-    '--fs-lg': '16px',
-    '--fs-xl': '18px',
-    '--fs-card-title': '14px',
-    '--fs-card-meta': '11px',
-    '--fs-badge': '10px',
-    '--fs-button': '13px',
-    '--fs-header': '15px',
-    '--touch-min': '42px',
-  },
-  2: {
-    '--fs-xs': '12px',
-    '--fs-sm': '14px',
-    '--fs-md': '16px',
-    '--fs-lg': '18px',
-    '--fs-xl': '22px',
-    '--fs-card-title': '16px',
-    '--fs-card-meta': '13px',
-    '--fs-badge': '12px',
-    '--fs-button': '15px',
-    '--fs-header': '17px',
-    '--touch-min': '48px',
-  },
-  3: {
-    '--fs-xs': '14px',
-    '--fs-sm': '16px',
-    '--fs-md': '18px',
-    '--fs-lg': '22px',
-    '--fs-xl': '26px',
-    '--fs-card-title': '18px',
-    '--fs-card-meta': '15px',
-    '--fs-badge': '14px',
-    '--fs-button': '17px',
-    '--fs-header': '20px',
-    '--touch-min': '56px',
-  },
-};
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(readStoredMode);
   const [systemDark, setSystemDark] = useState(getSystemDark);
-  const [fontSize, setFontSizeState] = useState<FontSize>(readStoredFontSize);
+  const [fontSizeMode, setFontSizeModeState] = useState<FontSizeMode>(readStoredFontSizeMode);
+  const [systemFontSize, setSystemFontSize] = useState<FontSize>(getSystemFontSize);
 
+  // Listen for system dark mode
   useEffect(() => {
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
@@ -120,18 +94,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mql.removeEventListener('change', handler);
   }, []);
 
+  // Resolve theme
   const theme = useMemo(() => {
     if (mode === 'auto') return systemDark ? 'dark' : 'classic';
     return mode;
   }, [mode, systemDark]);
+
+  // Resolve font size
+  const fontSize = useMemo((): FontSize => {
+    if (fontSizeMode === 'auto') return systemFontSize;
+    return fontSizeMode;
+  }, [fontSizeMode, systemFontSize]);
 
   const setMode = useCallback((next: ThemeMode) => {
     setModeState(next);
     try { localStorage.setItem(STORAGE_KEY, next); } catch {}
   }, []);
 
-  const setFontSize = useCallback((next: FontSize) => {
-    setFontSizeState(next);
+  const setFontSizeMode = useCallback((next: FontSizeMode) => {
+    setFontSizeModeState(next);
     try { localStorage.setItem(FONT_SIZE_KEY, String(next)); } catch {}
   }, []);
 
@@ -141,28 +122,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => document.documentElement.removeAttribute('data-theme');
   }, [theme]);
 
-  // Apply font size CSS custom properties
+  // Apply font size attribute (CSS zoom picks it up)
   useEffect(() => {
-    const scale = FONT_SCALES[fontSize];
-    const root = document.documentElement;
-    for (const [key, value] of Object.entries(scale)) {
-      root.style.setProperty(key, value);
-    }
-    root.setAttribute('data-fontsize', String(fontSize));
-    return () => {
-      for (const key of Object.keys(scale)) {
-        root.style.removeProperty(key);
-      }
-      root.removeAttribute('data-fontsize');
-    };
+    document.documentElement.setAttribute('data-fontsize', String(fontSize));
+    return () => document.documentElement.removeAttribute('data-fontsize');
   }, [fontSize]);
 
   const isCustomLayout = THEMES.find(t => t.id === theme)?.hasCustomLayout ?? false;
 
   const value = useMemo<ThemeContextValue>(() => ({
     theme, mode, setMode, themes: THEMES, isCustomLayout,
-    fontSize, setFontSize,
-  }), [theme, mode, setMode, isCustomLayout, fontSize, setFontSize]);
+    fontSize, fontSizeMode, setFontSizeMode,
+  }), [theme, mode, setMode, isCustomLayout, fontSize, fontSizeMode, setFontSizeMode]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

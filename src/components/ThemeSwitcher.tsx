@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme, type ThemeId, type ThemeMode, type FontSize } from '../contexts/ThemeContext';
+import { useTheme, type ThemeId, type ThemeMode, type FontSize, type FontSizeMode } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
 import { Sun, Moon, Monitor, Check, Layout, Palette, Type } from 'lucide-react';
@@ -22,7 +22,7 @@ const DESIGN_NAMES: Record<string, string> = {
 };
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
-  const { theme, mode, setMode, themes, fontSize, setFontSize } = useTheme();
+  const { theme, mode, setMode, themes, fontSize, fontSizeMode, setFontSizeMode } = useTheme();
   const { t } = useLocale();
   const [exiting, setExiting] = useState(false);
 
@@ -34,12 +34,6 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
     setExiting(true);
     setTimeout(() => onClose(), 250);
   };
-
-  const FONT_SIZE_OPTIONS: { value: FontSize; label: string; aLabel: string }[] = [
-    { value: 1, label: 'A', aLabel: 'Small' },
-    { value: 2, label: 'A', aLabel: 'Medium' },
-    { value: 3, label: 'A', aLabel: 'Large' },
-  ];
 
   return createPortal(
     <div
@@ -183,28 +177,34 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           padding: '3px',
           marginBottom: '16px',
         }}>
-          {FONT_SIZE_OPTIONS.map((opt) => {
-            const isActive = fontSize === opt.value;
-            const size = opt.value === 1 ? 12 : opt.value === 2 ? 15 : 19;
+          {([
+            { value: 'auto' as FontSizeMode, label: 'Auto', displaySize: 14 },
+            { value: 1 as FontSizeMode, label: 'A', displaySize: 12 },
+            { value: 2 as FontSizeMode, label: 'A', displaySize: 16 },
+            { value: 3 as FontSizeMode, label: 'A', displaySize: 20 },
+          ]).map((opt) => {
+            const isActive = fontSizeMode === opt.value;
             return (
               <button
-                key={opt.value}
-                onClick={() => setFontSize(opt.value)}
+                key={String(opt.value)}
+                onClick={() => setFontSizeMode(opt.value)}
                 style={{
                   flex: 1,
                   height: '40px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
                   borderRadius: '8px',
                   border: 'none',
                   background: isActive ? 'var(--tg-theme-bg-color)' : 'transparent',
                   color: isActive ? 'var(--tg-theme-text-color)' : 'var(--tg-theme-hint-color)',
-                  fontSize: `${size}px`, fontWeight: isActive ? 700 : 400,
+                  fontSize: opt.value === 'auto' ? '12px' : `${opt.displaySize}px`,
+                  fontWeight: isActive ? 700 : 400,
                   cursor: 'pointer',
                   boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                   transition: 'all 0.15s ease',
                   minHeight: 'auto',
                 }}
               >
+                {opt.value === 'auto' && <Monitor size={12} />}
                 {opt.label}
               </button>
             );
