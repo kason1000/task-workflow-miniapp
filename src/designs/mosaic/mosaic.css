@@ -888,11 +888,7 @@
 }
 
 /* ── List wrapper — 2-column grid ── */
-[data-design="mosaic"] .mosaic-list-wrapper > div:last-child {
-  /* The card container rendered by DesignTaskList */
-}
-
-[data-design="mosaic"] .mosaic-list-wrapper > div:last-child > div {
+[data-design="mosaic"] .design-card-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px;

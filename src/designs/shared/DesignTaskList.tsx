@@ -235,7 +235,7 @@ export function DesignTaskList({
 
       {/* Task Cards */}
       {tasks.length > 0 && (
-        <div>
+        <div className="design-card-container">
           {cardList.map(({ key, cardProps }) => (
             <div key={key}>
               {cardProps.isArchived
