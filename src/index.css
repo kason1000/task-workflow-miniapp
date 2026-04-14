@@ -41,9 +41,9 @@ body {
   font-size: var(--fs-md);
 }
 
-/* Font size scale — zoom on html scales everything including fixed elements and overlays */
-[data-fontsize="2"] { zoom: 1.12; }
-[data-fontsize="3"] { zoom: 1.25; }
+/* Font size scale — zoom on #root scales main content */
+[data-fontsize="2"] #root { zoom: 1.12; }
+[data-fontsize="3"] #root { zoom: 1.25; }
 
 #root {
   min-height: 100vh;

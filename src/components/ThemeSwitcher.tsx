@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme, type ThemeId, type ThemeMode, type FontSize } from '../contexts/ThemeContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { THEME_COLORS } from '../utils/colors';
@@ -40,7 +41,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
     { value: 3, label: 'A', aLabel: 'Large' },
   ];
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed', inset: 0,
@@ -275,6 +276,7 @@ export function ThemeSwitcher({ onClose }: { onClose: () => void }) {
           to { transform: translateY(100%); opacity: 0; }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

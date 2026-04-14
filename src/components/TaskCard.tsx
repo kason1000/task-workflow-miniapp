@@ -99,8 +99,9 @@ export const TaskCard = React.memo(function TaskCard({
                     display: 'inline-flex', alignItems: 'center', gap: '2px',
                     fontSize: '9px', fontWeight: 600, padding: '1px 5px',
                     borderRadius: '6px',
-                    background: 'var(--tg-theme-secondary-bg-color)',
+                    background: 'var(--tg-theme-bg-color)',
                     color: 'var(--tg-theme-hint-color)',
+                    border: '1px solid var(--tg-theme-hint-color)',
                   }}>
                     <Video size={9} /> vid
                   </span>
@@ -109,8 +110,9 @@ export const TaskCard = React.memo(function TaskCard({
                   <span style={{
                     fontSize: '9px', fontWeight: 600, padding: '1px 5px',
                     borderRadius: '6px',
-                    background: 'var(--tg-theme-secondary-bg-color)',
+                    background: 'var(--tg-theme-bg-color)',
                     color: 'var(--tg-theme-hint-color)',
+                    border: '1px solid var(--tg-theme-hint-color)',
                   }}>
                     {d.requireSets}sets
                   </span>
