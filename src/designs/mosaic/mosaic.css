@@ -796,3 +796,62 @@
   max-width: 600px;
   margin: 0 auto;
 }
+
+/* ═══════════════════════════════════════════════════════
+   BaseLayout overrides via [data-design="mosaic"]
+   ═══════════════════════════════════════════════════════ */
+
+[data-design="mosaic"] {
+  --tg-theme-bg-color: #faf8f5 !important;
+  --tg-theme-text-color: #1a1a1a !important;
+  --tg-theme-hint-color: #9a9590 !important;
+  --tg-theme-link-color: #c45d3e !important;
+  --tg-theme-button-color: #c45d3e !important;
+  --tg-theme-button-text-color: #faf8f5 !important;
+  --tg-theme-secondary-bg-color: #f0ece7 !important;
+  font-family: 'Karla', -apple-system, sans-serif;
+  background: #faf8f5;
+  color: #1a1a1a;
+}
+
+[data-design="mosaic"] .base-header {
+  background: #faf8f5 !important;
+  border-bottom-color: #e8e4e0 !important;
+}
+
+[data-design="mosaic"] .base-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-size: 13px !important;
+}
+
+[data-design="mosaic"] .card {
+  background: #faf8f5;
+  border: 1px solid #e8e4e0;
+  border-radius: 6px;
+}
+
+[data-design="mosaic"] button {
+  font-family: 'Karla', sans-serif;
+  border-radius: 10px;
+}
+
+[data-design="mosaic"] .badge-new { color: #c45d3e; border-color: #c45d3e; }
+[data-design="mosaic"] .badge-received { color: #4a7ab5; border-color: #4a7ab5; }
+[data-design="mosaic"] .badge-submitted { color: #8a7a5a; border-color: #8a7a5a; }
+[data-design="mosaic"] .badge-redo { color: #b54a4a; border-color: #b54a4a; }
+[data-design="mosaic"] .badge-completed { color: #5a7a5a; border-color: #5a7a5a; }
+[data-design="mosaic"] .badge-archived { color: #9a9590; border-color: #9a9590; }
+
+[data-design="mosaic"] input,
+[data-design="mosaic"] textarea,
+[data-design="mosaic"] select {
+  font-family: 'Karla', sans-serif;
+  border-radius: 6px;
+}
+
+[data-design="mosaic"] ::-webkit-scrollbar { width: 3px; }
+[data-design="mosaic"] ::-webkit-scrollbar-track { background: transparent; }
+[data-design="mosaic"] ::-webkit-scrollbar-thumb { background: #e8e4e0; border-radius: 3px; }
