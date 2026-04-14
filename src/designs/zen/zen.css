@@ -708,3 +708,72 @@
   gap: 4px;
   margin-bottom: 4px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   BaseLayout overrides via [data-design="zen"]
+   ═══════════════════════════════════════════════════════ */
+
+[data-design="zen"] {
+  --tg-theme-bg-color: #f5f2eb !important;
+  --tg-theme-text-color: #2d2d2d !important;
+  --tg-theme-hint-color: #8a8580 !important;
+  --tg-theme-link-color: #6b8f71 !important;
+  --tg-theme-button-color: #6b8f71 !important;
+  --tg-theme-button-text-color: #f5f2eb !important;
+  --tg-theme-secondary-bg-color: #ece8e0 !important;
+  font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 300;
+  background: #f5f2eb;
+  background-image: radial-gradient(circle, rgba(45, 45, 45, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  color: #2d2d2d;
+}
+
+[data-design="zen"] .base-header {
+  background: rgba(245, 242, 235, 0.92) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid #ddd8d0 !important;
+}
+
+[data-design="zen"] .base-header h1 {
+  font-family: 'Noto Serif', serif;
+  font-weight: 400;
+  font-size: 18px !important;
+  letter-spacing: 0.05em;
+}
+
+[data-design="zen"] .card {
+  background: #f5f2eb;
+  border-bottom: 1px solid #ddd8d0;
+  border-radius: 0;
+  box-shadow: 0 1px 3px rgba(45, 45, 45, 0.04);
+}
+
+[data-design="zen"] button {
+  font-family: 'Work Sans', sans-serif;
+  font-weight: 400;
+  border-radius: 24px;
+}
+
+[data-design="zen"] .badge-new { color: #6b8f71; border-color: #6b8f71; }
+[data-design="zen"] .badge-received { color: #7a8eb5; border-color: #7a8eb5; }
+[data-design="zen"] .badge-submitted { color: #c2a882; border-color: #c2a882; }
+[data-design="zen"] .badge-redo { color: #b57a7a; border-color: #b57a7a; }
+[data-design="zen"] .badge-completed { color: #6b8f71; border-color: #6b8f71; }
+[data-design="zen"] .badge-archived { color: #8a8580; border-color: #8a8580; }
+
+[data-design="zen"] input,
+[data-design="zen"] textarea,
+[data-design="zen"] select {
+  font-family: 'Work Sans', sans-serif;
+  font-weight: 300;
+  border: none;
+  border-bottom: 1px solid #ddd8d0;
+  border-radius: 0;
+  background: transparent;
+}
+
+[data-design="zen"] ::-webkit-scrollbar { width: 3px; }
+[data-design="zen"] ::-webkit-scrollbar-track { background: transparent; }
+[data-design="zen"] ::-webkit-scrollbar-thumb { background: #ddd8d0; border-radius: 3px; }

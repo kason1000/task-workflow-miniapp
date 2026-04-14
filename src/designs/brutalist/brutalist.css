@@ -788,3 +788,87 @@
   margin-left: 6px;
   letter-spacing: 0.05em;
 }
+
+/* ═══════════════════════════════════════════════════════
+   BaseLayout overrides via [data-design="brutalist"]
+   ═══════════════════════════════════════════════════════ */
+
+[data-design="brutalist"] {
+  --tg-theme-bg-color: #ffffff !important;
+  --tg-theme-text-color: #000000 !important;
+  --tg-theme-hint-color: #666666 !important;
+  --tg-theme-button-color: #000000 !important;
+  --tg-theme-button-text-color: #ffffff !important;
+  --tg-theme-secondary-bg-color: #f0f0f0 !important;
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-size: 16px;
+}
+
+[data-design="brutalist"] .base-header {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-bottom: 3px solid #000000 !important;
+  min-height: 52px !important;
+}
+
+[data-design="brutalist"] .base-header h1 {
+  font-family: 'Anybody', sans-serif !important;
+  font-weight: 900 !important;
+  font-size: 24px !important;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ffffff !important;
+}
+
+[data-design="brutalist"] .base-header span {
+  color: #ffffff !important;
+}
+
+[data-design="brutalist"] .base-header button {
+  background: none !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+  border-radius: 0 !important;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+[data-design="brutalist"] .card {
+  border: 3px solid #000000 !important;
+  border-radius: 0 !important;
+  background: #ffffff;
+  transition: none;
+}
+
+[data-design="brutalist"] .card:hover {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+[data-design="brutalist"] button {
+  font-family: 'Anybody', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-radius: 0 !important;
+}
+
+[data-design="brutalist"] .badge-new { background: #ffff00; color: #000000; border: 2px solid #000000; border-radius: 0; font-weight: 900; text-transform: uppercase; }
+[data-design="brutalist"] .badge-received { background: #ffffff; color: #000000; border: 2px solid #000000; border-radius: 0; font-weight: 900; text-transform: uppercase; }
+[data-design="brutalist"] .badge-submitted { background: #000000; color: #ffffff; border: 2px solid #000000; border-radius: 0; font-weight: 900; text-transform: uppercase; }
+[data-design="brutalist"] .badge-redo { background: #ff0000; color: #ffffff; border: 2px solid #ff0000; border-radius: 0; font-weight: 900; text-transform: uppercase; }
+[data-design="brutalist"] .badge-completed { background: #000000; color: #ffffff; border: 2px solid #000000; border-radius: 0; font-weight: 900; text-transform: uppercase; }
+[data-design="brutalist"] .badge-archived { background: #ffffff; color: #999999; border: 2px solid #999999; border-radius: 0; font-weight: 900; text-transform: uppercase; }
+
+[data-design="brutalist"] input,
+[data-design="brutalist"] textarea,
+[data-design="brutalist"] select {
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  border: 3px solid #000000 !important;
+  border-radius: 0 !important;
+  background: #ffffff;
+  text-transform: uppercase;
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Task, Group } from '../types';
 import { useLocale } from '../i18n/LocaleContext';
 import { statusColors } from '../utils/taskStyles';
@@ -376,7 +377,7 @@ export function ListImageViewer({
 
   const isVisible = isAnimating;
 
-  return (
+  return createPortal(
     <div
       ref={containerRef}
       role="dialog"
@@ -634,6 +635,7 @@ export function ListImageViewer({
           </div>
         );
       })()}
-    </div>
+    </div>,
+    document.body
   );
 }

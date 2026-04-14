@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Task, Group } from '../types';
 import { api } from '../services/api';
 import { hapticFeedback, showAlert, showConfirm } from '../utils/telegram';
@@ -212,7 +213,7 @@ export function DetailImageViewer({
   const goPrevLocal = () => { if (!hasMultiple) return; let i = currentPhotoIndex - 1; if (i < 0) i = allPhotos.length - 1; setCurrentPhotoIndex(i); setFullscreenImage(allPhotos[i]); };
 
 
-  return (
+  return createPortal(
     <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Image viewer" onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }} tabIndex={-1} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: isVisible ? 'rgba(0,0,0,0.97)' : 'rgba(0,0,0,0)',
@@ -410,6 +411,7 @@ export function DetailImageViewer({
           </div>
         );
       })()}
-    </div>
+    </div>,
+    document.body
   );
 }
