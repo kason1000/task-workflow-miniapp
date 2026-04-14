@@ -58,9 +58,13 @@ body {
 [data-fontsize="2"] #root { zoom: 1.12; }
 [data-fontsize="3"] #root { zoom: 1.25; }
 
-/* Font size also applies to fullscreen overlay info sections (rendered via portal outside #root) */
-[data-fontsize="2"] [role="dialog"] { font-size: 112%; }
-[data-fontsize="3"] [role="dialog"] { font-size: 125%; }
+/* Font size for fullscreen overlays — scale text elements without breaking layout */
+/* Use CSS zoom on leaf text/button elements only */
+[data-fontsize="2"] [role="dialog"] span { zoom: 1.12; }
+[data-fontsize="2"] [role="dialog"] button { zoom: 1.12; }
+
+[data-fontsize="3"] [role="dialog"] span { zoom: 1.25; }
+[data-fontsize="3"] [role="dialog"] button { zoom: 1.25; }
 
 #root {
   min-height: 100vh;

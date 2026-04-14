@@ -555,13 +555,13 @@ export function ListImageViewer({
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label="Previous"
                 style={{
-                  width: '28px', height: '56px', flexShrink: 0, borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  width: '40px', height: '64px', flexShrink: 0, borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '18px', cursor: 'pointer', padding: 0,
+                  cursor: 'pointer', padding: 0,
                 }}
-              ><ChevronLeft size={20} /></button>
+              ><ChevronLeft size={22} /></button>
 
               <div
                 ref={thumbStripRef}
@@ -612,13 +612,13 @@ export function ListImageViewer({
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label="Next"
                 style={{
-                  width: '28px', height: '56px', flexShrink: 0, borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  width: '40px', height: '64px', flexShrink: 0, borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '18px', cursor: 'pointer', padding: 0,
+                  cursor: 'pointer', padding: 0,
                 }}
-              ><ChevronRight size={20} /></button>
+              ><ChevronRight size={22} /></button>
             </div>
 
             {/* Action buttons */}
