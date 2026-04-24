@@ -145,7 +145,7 @@ export const en = {
     archiveConfirm: 'Archive this task?',
     archiveSuccess: 'Task archived',
     restoreConfirm: 'Restore from archive?',
-    restoreSuccess: 'Task restored to Redo',
+    restoreSuccess: 'Task restored',
     deleteConfirm: '⚠️ Permanently delete this task? This cannot be undone!',
     deleteSuccess: 'Task deleted',
     shareFailed: 'Failed to share: {error}',
