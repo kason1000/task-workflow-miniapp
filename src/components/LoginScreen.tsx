@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useLocale } from '../i18n/LocaleContext';
+import { config } from '../config';
 
 interface LoginScreenProps {
   onLoginSuccess: (sessionToken: string, role: string, userId: number) => void;
@@ -24,7 +25,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setError('');
 
     try {
-      const response = await fetch('https://clawdbot-task-workflow-backend.pages.dev/auth/verify-code', {
+      const response = await fetch(`${config.apiBaseUrl}/auth/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code })

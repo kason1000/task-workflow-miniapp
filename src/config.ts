@@ -1,31 +1,22 @@
-// Detect if we're in development mode
-const isDevelopment = (() => {
-  try {
-    return import.meta.env.DEV;
-  } catch {
-    return false;
-  }
-})();
+import type { Role } from './types';
 
-// Detect if running in Telegram
+const isDevelopment = import.meta.env.DEV;
+
 const isInTelegram = () => {
   return typeof window !== 'undefined' && window.Telegram?.WebApp?.initData;
 };
 
+const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const envMockUserId = Number(import.meta.env.VITE_MOCK_USER_ID);
+const envMockRole = import.meta.env.VITE_MOCK_ROLE as Role | undefined;
+const validMockRoles: Role[] = ['Admin', 'Lead', 'Member', 'Viewer'];
+
 export const config = {
-  // Use local backend in development, production backend in production/Telegram
-  apiBaseUrl: isDevelopment
+  apiBaseUrl: envApiBaseUrl || (isDevelopment
     ? 'http://localhost:8787'
-    : 'https://task-workflow-backend.kason1000.workers.dev',
-  
-  // Enable mock auth only in local development and not in Telegram
+    : 'https://task-workflow-backend.kason1000.workers.dev'),
+
   useMockAuth: isDevelopment && !isInTelegram(),
-  
-  // Your user ID for mock auth
-  mockUserId: 8432601826,
-  mockRole: 'Admin' as const,
-  
-  // Telegram bot token (only used for fallback in development, optional)
-  // In production, all media URLs come from the backend API
-  telegramBotToken: '',
+  mockUserId: Number.isFinite(envMockUserId) ? envMockUserId : 1,
+  mockRole: envMockRole && validMockRoles.includes(envMockRole) ? envMockRole : 'Admin',
 };

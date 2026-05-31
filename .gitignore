@@ -5,6 +5,8 @@ node_modules
 dist
 dist-ssr
 *.local
+*.bak
+*.original
 
 # Editor
 .vscode
@@ -27,6 +29,7 @@ yarn-error.log*
 .env
 .env.local
 .env.production
+.env.*.local
 
 # gh-pages
 .gh-pages

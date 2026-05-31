@@ -4,6 +4,8 @@ React + Vite frontend for the Task Workflow system. This repository is the Teleg
 
 The backend API and Telegram bot live in a separate repository: `task-workflow-backend`.
 
+This project is open source under the MIT License. See [LICENSE](./LICENSE).
+
 ## What This Repo Contains
 
 - React application entrypoint in `src/main.tsx`
@@ -53,10 +55,8 @@ package.json
 
 - Node.js 20+ recommended
 - npm
-- Git access to the repository
-- ability to push to:
-  - the `main` branch
-  - the `gh-pages` branch
+- a compatible Task Workflow backend if you want live API calls
+- GitHub Pages push access only if you plan to deploy this repo yourself
 
 ## First-Time Setup
 
@@ -84,10 +84,26 @@ package.json
 
 ### Backend Base URL
 
-Frontend API configuration is in `src/config.ts`.
+Frontend API configuration is in `src/config.ts`. Runtime values are read from Vite environment variables at build time.
 
-- Development: `http://localhost:8787`
-- Production: `https://task-workflow-backend.kason1000.workers.dev`
+Supported variables:
+
+```bash
+VITE_API_BASE_URL=https://your-backend.example.com
+VITE_MOCK_USER_ID=1
+VITE_MOCK_ROLE=Admin
+```
+
+Defaults:
+
+- Development API URL: `http://localhost:8787`
+- Production API URL: `https://task-workflow-backend.kason1000.workers.dev`
+- Local mock user ID: `1`
+- Local mock role: `Admin`
+
+For a public fork, set `VITE_API_BASE_URL` to your own backend before building for production.
+
+Do not commit `.env` files. They are ignored by git.
 
 ### Deploy Base Path
 
@@ -101,6 +117,7 @@ This assumes GitHub Pages is serving the app from the repository path rather tha
 
 - Telegram mode uses `X-Telegram-InitData`
 - Browser mode uses session token auth from `/auth/verify-code` and `/auth/validate-session`
+- Local browser development can use mock auth through `VITE_MOCK_USER_ID` and `VITE_MOCK_ROLE`
 
 ## Local Development
 
@@ -146,7 +163,7 @@ Before deploying, make sure all of these are true:
 - `npm run build` succeeds
 - git remote `origin` is configured
 - you have permission to push to GitHub
-- the backend production URL in `src/config.ts` is correct
+- `VITE_API_BASE_URL` points to the backend you intend to use, or the default backend URL is intentionally being used
 - the Vite `base` path in `vite.config.ts` matches the GitHub Pages repo path
 
 ### Current Production URL
@@ -183,6 +200,25 @@ The app UI reads the runtime version from `public/version.json`, so the displaye
 - `npm run preview`: preview built app locally
 - `npm run deploy`: run `scripts/update-version.cjs`, build, and publish to GitHub Pages
 
+## Open Source Notes
+
+- License: MIT
+- No backend secrets, Telegram bot tokens, Redis credentials, Cloudflare tokens, GitHub tokens, or private keys are required in this frontend repo.
+- The frontend stores browser session tokens in `sessionStorage` at runtime only; those tokens are not committed.
+- Public deployment URLs in this repo are not credentials. Forks should replace them with their own backend and Pages URLs.
+- Generated dependencies and build output are ignored by git. Use `npm install` to recreate `node_modules` and `npm run build` to recreate `dist`.
+
+## Secret Hygiene Check
+
+Before publishing or accepting outside contributions, run:
+
+```bash
+git grep -n -I -E '(token|secret|password|api[_-]?key|private[_-]?key|client[_-]?secret|bearer|ghp_|github_pat_|sk-|AKIA|-----BEGIN)' -- ':!package-lock.json'
+find . -maxdepth 3 -type f \( -name '.env*' -o -name '*.pem' -o -name '*.p12' -o -name '*.p8' \) -not -path './node_modules/*' -not -path './.git/*' -print
+```
+
+Review any hits before pushing. Expected matches are usually documentation, runtime `sessionStorage` key names, and auth header code.
+
 ## Deployment Scripts
 
 - `deploy-production.sh`: full production deploy helper
@@ -191,9 +227,8 @@ The app UI reads the runtime version from `public/version.json`, so the displaye
 
 ## Operational Notes
 
-- This repo is separate from the backend repo, but the two are still operationally coupled by hardcoded URLs.
+- This repo is separate from the backend repo, but the two are still operationally coupled by the configured backend URL.
 - Browser login currently depends on backend auth routes.
-- Some components still fetch media or auth paths directly instead of going only through the central API client.
 - The deployment script not only publishes to `gh-pages`, it also commits and pushes to `main`.
 
 ## Common Failure Modes
